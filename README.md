@@ -1,4 +1,4 @@
-# RustCrypto: SSH [![Project Chat][chat-image]][chat-link] [![dependency status][deps-image]][deps-link]
+# [RustCrypto]: SSH [![Project Chat][chat-image]][chat-link] [![dependency status][deps-image]][deps-link]
 
 Pure Rust implementation of components of the Secure Shell ([SSH]) protocol.
 
@@ -24,4 +24,5 @@ dual licensed as above, without any additional terms or conditions.
 [deps-link]: https://deps.rs/repo/github/RustCrypto/SSH
 
 [//]: # "links"
+[RustCrypto]: https://github.com/RustCrypto/
 [SSH]: https://en.wikipedia.org/wiki/Secure_Shell
