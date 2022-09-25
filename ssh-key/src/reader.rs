@@ -62,7 +62,7 @@ pub(crate) trait Reader: Sized {
         self.read_nested(|reader| {
             let slice = out.get_mut(..reader.remaining_len()).ok_or(Error::Length)?;
             reader.read(slice)?;
-            Ok(&slice[..])
+            Ok(slice as &[u8])
         })
     }
 

@@ -67,7 +67,7 @@ impl MPInt {
     pub fn from_positive_bytes(bytes: &[u8]) -> Result<Self> {
         let mut inner = Vec::with_capacity(bytes.len());
 
-        match bytes.get(0).cloned() {
+        match bytes.first().cloned() {
             Some(0) => return Err(Error::FormatEncoding),
             Some(n) if n >= 0x80 => inner.push(0),
             _ => (),
