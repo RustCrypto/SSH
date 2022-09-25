@@ -244,7 +244,7 @@ dependencies = [
  "generic-array",
  "group",
  "rand_core 0.6.4",
- "sec1",
+ "sec1 0.2.1",
  "subtle",
  "zeroize",
 ]
@@ -417,7 +417,7 @@ checksum = "19736d80675fbe9fe33426268150b951a3fb8f5cfca2a23a17c85ef3adb24e3b"
 dependencies = [
  "ecdsa",
  "elliptic-curve",
- "sec1",
+ "sec1 0.2.1",
  "sha2 0.9.9",
 ]
 
@@ -591,6 +591,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "sec1"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3be24c1842290c45df0a7bf069e0c268a747ad05a192f2fd7dcfdbc1cba40928"
+
+[[package]]
 name = "serde"
 version = "1.0.145"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -667,7 +673,7 @@ dependencies = [
  "rand_chacha",
  "rand_core 0.6.4",
  "rsa",
- "sec1",
+ "sec1 0.3.0",
  "serde",
  "sha2 0.10.6",
  "signature",
