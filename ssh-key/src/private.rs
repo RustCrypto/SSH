@@ -168,7 +168,7 @@ use subtle::{Choice, ConstantTimeEq};
 const CONVERSION_ERROR_MSG: &str = "SSH private key conversion error";
 
 /// Default key size to use for RSA keys in bits.
-#[cfg(feature = "rsa")]
+#[cfg(all(feature = "rand_core", feature = "rsa"))]
 const DEFAULT_RSA_KEY_SIZE: usize = 4096;
 
 /// Maximum supported block size.

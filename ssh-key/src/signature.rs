@@ -21,8 +21,7 @@ use crate::{
 #[cfg(feature = "rsa")]
 use {
     crate::{private::RsaKeypair, public::RsaPublicKey, HashAlg},
-    rsa::PublicKey as _,
-    sha2::{Digest, Sha256, Sha512},
+    sha2::{Sha256, Sha512},
 };
 
 const DSA_SIGNATURE_SIZE: usize = 40;
@@ -399,19 +398,15 @@ impl Verifier<Signature> for EcdsaPublicKey {
 #[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl Signer<Signature> for RsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let padding = rsa::padding::PaddingScheme::PKCS1v15Sign {
-            hash: Some(rsa::hash::Hash::SHA2_512),
-        };
-        let digest = sha2::Sha512::digest(message);
-        let data = rsa::RsaPrivateKey::try_from(self)?
-            .sign(padding, digest.as_ref())
+        let data = rsa::pkcs1v15::SigningKey::<Sha512>::try_from(self)?
+            .try_sign(message)
             .map_err(|_| signature::Error::new())?;
 
         Ok(Signature {
             algorithm: Algorithm::Rsa {
                 hash: Some(HashAlg::Sha512),
             },
-            data,
+            data: data.to_vec(),
         })
     }
 }
@@ -420,28 +415,18 @@ impl Signer<Signature> for RsaKeypair {
 #[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl Verifier<Signature> for RsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
-        let key = rsa::RsaPublicKey::try_from(self)?;
-
         match signature.algorithm {
-            Algorithm::Rsa {
-                hash: Some(HashAlg::Sha256),
-            } => {
-                let digest = Sha256::digest(message);
-                let padding = rsa::padding::PaddingScheme::PKCS1v15Sign {
-                    hash: Some(rsa::hash::Hash::SHA2_256),
-                };
-                key.verify(padding, digest.as_ref(), signature.as_bytes())
-                    .map_err(|_| signature::Error::new())
-            }
-            Algorithm::Rsa {
-                hash: Some(HashAlg::Sha512),
-            } => {
-                let padding = rsa::padding::PaddingScheme::PKCS1v15Sign {
-                    hash: Some(rsa::hash::Hash::SHA2_512),
-                };
-                let digest = Sha512::digest(message);
-                key.verify(padding, digest.as_ref(), signature.as_bytes())
-                    .map_err(|_| signature::Error::new())
+            Algorithm::Rsa { hash: Some(hash) } => {
+                let signature = rsa::pkcs1v15::Signature::from(signature.data.clone());
+
+                match hash {
+                    HashAlg::Sha256 => rsa::pkcs1v15::VerifyingKey::<Sha256>::try_from(self)?
+                        .verify(message, &signature)
+                        .map_err(|_| signature::Error::new()),
+                    HashAlg::Sha512 => rsa::pkcs1v15::VerifyingKey::<Sha512>::try_from(self)?
+                        .verify(message, &signature)
+                        .map_err(|_| signature::Error::new()),
+                }
             }
             _ => Err(signature::Error::new()),
         }
