@@ -8,7 +8,8 @@ use crate::{
 #[cfg(feature = "rsa")]
 use {
     crate::{private::RsaKeypair, Error},
-    rsa::PublicKeyParts,
+    rsa::{pkcs1v15, PublicKeyParts},
+    sha2::{digest::const_oid::AssociatedOid, Digest},
 };
 
 /// RSA public key.
@@ -99,5 +100,18 @@ impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
             e: key.e().try_into()?,
             n: key.n().try_into()?,
         })
+    }
+}
+
+#[cfg(feature = "rsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
+impl<D> TryFrom<&RsaPublicKey> for pkcs1v15::VerifyingKey<D>
+where
+    D: Digest + AssociatedOid,
+{
+    type Error = Error;
+
+    fn try_from(key: &RsaPublicKey) -> Result<pkcs1v15::VerifyingKey<D>> {
+        Ok(pkcs1v15::VerifyingKey::new_with_prefix(key.try_into()?))
     }
 }

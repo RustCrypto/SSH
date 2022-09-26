@@ -11,7 +11,8 @@ use zeroize::Zeroize;
 use {
     crate::Error,
     rand_core::{CryptoRng, RngCore},
-    rsa::PublicKeyParts,
+    rsa::{pkcs1v15, PublicKeyParts},
+    sha2::{digest::const_oid::AssociatedOid, Digest},
 };
 
 #[cfg(feature = "subtle")]
@@ -194,7 +195,7 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
                 rsa::BigUint::try_from(&key.private.p)?,
                 rsa::BigUint::try_from(&key.private.p)?,
             ],
-        );
+        )?;
 
         if ret.size().saturating_mul(8) >= RsaKeypair::MIN_KEY_SIZE {
             Ok(ret)
@@ -239,6 +240,19 @@ impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
         };
 
         Ok(RsaKeypair { public, private })
+    }
+}
+
+#[cfg(feature = "rsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
+impl<D> TryFrom<&RsaKeypair> for pkcs1v15::SigningKey<D>
+where
+    D: Digest + AssociatedOid,
+{
+    type Error = Error;
+
+    fn try_from(keypair: &RsaKeypair) -> Result<pkcs1v15::SigningKey<D>> {
+        Ok(pkcs1v15::SigningKey::new_with_prefix(keypair.try_into()?))
     }
 }
 
