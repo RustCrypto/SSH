@@ -19,7 +19,7 @@ dual licensed as above, without any additional terms or conditions.
 
 [//]: # "badges"
 [chat-image]: https://img.shields.io/badge/zulip-join_chat-blue.svg
-[chat-link]: https://rustcrypto.zulipchat.com/#narrow/stream/300570-formats
+[chat-link]: https://rustcrypto.zulipchat.com/#narrow/stream/346919-SSH
 [deps-image]: https://deps.rs/repo/github/RustCrypto/SSH/status.svg
 [deps-link]: https://deps.rs/repo/github/RustCrypto/SSH
 
