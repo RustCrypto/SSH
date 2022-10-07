@@ -43,14 +43,15 @@ tempfile = "3"
 zeroize_derive = "1.3" # hack to make minimal-versions lint happy (pulled in by `ed25519-dalek`)
 
 [features]
-default = ["ecdsa", "fingerprint", "rand_core", "std"]
-alloc = ["signature", "zeroize/alloc", "base64ct/alloc"]
-ecdsa = ["sec1"]
-ed25519 = ["ed25519-dalek", "rand_core"]
-encryption = ["aes", "alloc", "bcrypt-pbkdf", "ctr", "rand_core"]
-fingerprint = ["sha2"]
+default = ["ecdsa", "fingerprint", "std", "rand_core"]
+alloc = ["base64ct/alloc", "signature", "zeroize/alloc"]
+std = ["alloc", "base64ct/std", "ed25519-dalek?/std", "p256?/std", "rsa?/std", "sec1?/std", "signature?/std"]
+
+ecdsa = ["dep:sec1"]
+ed25519 = ["dep:ed25519-dalek", "rand_core"]
+encryption = [ "alloc", "dep:aes", "dep:bcrypt-pbkdf", "dep:ctr", "rand_core"]
+fingerprint = ["dep:sha2"]
 getrandom = ["rand_core/getrandom"]
-std = ["alloc", "base64ct/std"]
 
 [package.metadata.docs.rs]
 all-features = true
