@@ -14,7 +14,7 @@ use {
 
 /// RSA public key.
 ///
-/// Described in [RFC4253 § 6.6](https://datatracker.ietf.org/doc/html/rfc4253#section-6.6):
+/// Described in [RFC4253 § 6.6](https://datatracker.ietf.org/doc/html/rfc4253#section-6.6).
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct RsaPublicKey {
