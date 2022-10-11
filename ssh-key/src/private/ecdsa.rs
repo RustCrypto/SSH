@@ -120,6 +120,16 @@ impl From<p256::SecretKey> for EcdsaPrivateKey<32> {
     }
 }
 
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl From<p384::SecretKey> for EcdsaPrivateKey<48> {
+    fn from(sk: p384::SecretKey) -> EcdsaPrivateKey<48> {
+        EcdsaPrivateKey {
+            bytes: sk.to_be_bytes().into(),
+        }
+    }
+}
+
 #[cfg(feature = "subtle")]
 #[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
 impl<const SIZE: usize> ConstantTimeEq for EcdsaPrivateKey<SIZE> {
@@ -184,6 +194,15 @@ impl EcdsaKeypair {
                 let private = p256::SecretKey::random(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP256 {
+                    private: private.into(),
+                    public: public.into(),
+                })
+            }
+            #[cfg(feature = "p384")]
+            EcdsaCurve::NistP384 => {
+                let private = p384::SecretKey::random(rng);
+                let public = private.public_key();
+                Ok(EcdsaKeypair::NistP384 {
                     private: private.into(),
                     public: public.into(),
                 })
