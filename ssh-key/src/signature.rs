@@ -11,7 +11,7 @@ use signature::{Signer, Verifier};
 #[cfg(feature = "ed25519")]
 use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 
-#[cfg(feature = "p256")]
+#[cfg(any(feature = "p256", feature = "p384"))]
 use crate::{
     private::{EcdsaKeypair, EcdsaPrivateKey},
     public::EcdsaPublicKey,
@@ -210,7 +210,7 @@ impl Signer<Signature> for private::KeypairData {
     #[allow(unused_variables)]
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         match self {
-            #[cfg(feature = "p256")]
+            #[cfg(any(feature = "p256", feature = "p384"))]
             Self::Ecdsa(keypair) => keypair.try_sign(message),
             #[cfg(feature = "ed25519")]
             Self::Ed25519(keypair) => keypair.try_sign(message),
@@ -231,7 +231,7 @@ impl Verifier<Signature> for public::KeyData {
     #[allow(unused_variables)]
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match self {
-            #[cfg(feature = "p256")]
+            #[cfg(any(feature = "p256", feature = "p384"))]
             Self::Ecdsa(pk) => pk.verify(message, signature),
             #[cfg(feature = "ed25519")]
             Self::Ed25519(pk) => pk.verify(message, signature),
@@ -297,20 +297,58 @@ impl TryFrom<p256::ecdsa::Signature> for Signature {
     }
 }
 
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl TryFrom<p384::ecdsa::Signature> for Signature {
+    type Error = Error;
+
+    fn try_from(signature: p384::ecdsa::Signature) -> Result<Signature> {
+        Signature::try_from(&signature)
+    }
+}
+
 #[cfg(feature = "p256")]
 #[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<&p256::ecdsa::Signature> for Signature {
     type Error = Error;
 
     fn try_from(signature: &p256::ecdsa::Signature) -> Result<Signature> {
-        let (r, s) = signature.as_ref().split_at(32);
-        let mut data = Vec::with_capacity(74); // 32 * 2 + 4 * 2 + 1 * 2
+        const FIELD_SIZE: usize = 32;
+        let (r, s) = signature.as_ref().split_at(FIELD_SIZE);
+
+        #[allow(clippy::integer_arithmetic)]
+        let mut data = Vec::with_capacity(FIELD_SIZE * 2 + 4 * 2 + 2);
+
         MPInt::from_positive_bytes(r)?.encode(&mut data)?;
         MPInt::from_positive_bytes(s)?.encode(&mut data)?;
 
         Ok(Signature {
             algorithm: Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP256,
+            },
+            data,
+        })
+    }
+}
+
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl TryFrom<&p384::ecdsa::Signature> for Signature {
+    type Error = Error;
+
+    fn try_from(signature: &p384::ecdsa::Signature) -> Result<Signature> {
+        const FIELD_SIZE: usize = 48;
+        let (r, s) = signature.as_ref().split_at(FIELD_SIZE);
+
+        #[allow(clippy::integer_arithmetic)]
+        let mut data = Vec::with_capacity(FIELD_SIZE * 2 + 4 * 2 + 2);
+
+        MPInt::from_positive_bytes(r)?.encode(&mut data)?;
+        MPInt::from_positive_bytes(s)?.encode(&mut data)?;
+
+        Ok(Signature {
+            algorithm: Algorithm::Ecdsa {
+                curve: EcdsaCurve::NistP384,
             },
             data,
         })
@@ -327,12 +365,24 @@ impl TryFrom<Signature> for p256::ecdsa::Signature {
     }
 }
 
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl TryFrom<Signature> for p384::ecdsa::Signature {
+    type Error = Error;
+
+    fn try_from(signature: Signature) -> Result<p384::ecdsa::Signature> {
+        p384::ecdsa::Signature::try_from(&signature)
+    }
+}
+
 #[cfg(feature = "p256")]
 #[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<&Signature> for p256::ecdsa::Signature {
     type Error = Error;
 
     fn try_from(signature: &Signature) -> Result<p256::ecdsa::Signature> {
+        const FIELD_SIZE: usize = 32;
+
         match signature.algorithm {
             Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP256,
@@ -342,7 +392,7 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
                 let s = MPInt::decode(reader)?;
 
                 match (r.as_positive_bytes(), s.as_positive_bytes()) {
-                    (Some(r), Some(s)) if r.len() == 32 && s.len() == 32 => {
+                    (Some(r), Some(s)) if r.len() == FIELD_SIZE && s.len() == FIELD_SIZE => {
                         Ok(p256::ecdsa::Signature::from_scalars(
                             *p256::FieldBytes::from_slice(r),
                             *p256::FieldBytes::from_slice(s),
@@ -356,12 +406,46 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
     }
 }
 
-#[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl TryFrom<&Signature> for p384::ecdsa::Signature {
+    type Error = Error;
+
+    fn try_from(signature: &Signature) -> Result<p384::ecdsa::Signature> {
+        const FIELD_SIZE: usize = 48;
+
+        match signature.algorithm {
+            Algorithm::Ecdsa {
+                curve: EcdsaCurve::NistP256,
+            } => {
+                let reader = &mut signature.as_bytes();
+                let r = MPInt::decode(reader)?;
+                let s = MPInt::decode(reader)?;
+
+                match (r.as_positive_bytes(), s.as_positive_bytes()) {
+                    (Some(r), Some(s)) if r.len() == FIELD_SIZE && s.len() == FIELD_SIZE => {
+                        Ok(p384::ecdsa::Signature::from_scalars(
+                            *p384::FieldBytes::from_slice(r),
+                            *p384::FieldBytes::from_slice(s),
+                        )?)
+                    }
+                    _ => Err(Error::Crypto),
+                }
+            }
+            _ => Err(Error::Algorithm),
+        }
+    }
+}
+
+#[cfg(any(feature = "p256", feature = "p384"))]
+#[cfg_attr(docsrs, doc(cfg(feature = "p256", feature = "p384")))]
 impl Signer<Signature> for EcdsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         match self {
+            #[cfg(feature = "p256")]
             Self::NistP256 { private, .. } => private.try_sign(message),
+            #[cfg(feature = "p384")]
+            Self::NistP384 { private, .. } => private.try_sign(message),
             _ => Err(signature::Error::new()),
         }
     }
@@ -377,18 +461,37 @@ impl Signer<Signature> for EcdsaPrivateKey<32> {
     }
 }
 
-#[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl Signer<Signature> for EcdsaPrivateKey<48> {
+    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+        Ok(p384::ecdsa::SigningKey::from_bytes(self.as_ref())?
+            .try_sign(message)?
+            .try_into()?)
+    }
+}
+
+#[cfg(any(feature = "p256", feature = "p384"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "p256", feature = "p384"))))]
 impl Verifier<Signature> for EcdsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
-            Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP256,
-            } => {
-                let verifying_key = p256::ecdsa::VerifyingKey::try_from(self)?;
-                let signature = p256::ecdsa::Signature::try_from(signature)?;
-                verifying_key.verify(message, &signature)
-            }
+            Algorithm::Ecdsa { curve } => match curve {
+                #[cfg(feature = "p256")]
+                EcdsaCurve::NistP256 => {
+                    let verifying_key = p256::ecdsa::VerifyingKey::try_from(self)?;
+                    let signature = p256::ecdsa::Signature::try_from(signature)?;
+                    verifying_key.verify(message, &signature)
+                }
+                #[cfg(feature = "p384")]
+                EcdsaCurve::NistP384 => {
+                    let verifying_key = p384::ecdsa::VerifyingKey::try_from(self)?;
+                    let signature = p384::ecdsa::Signature::try_from(signature)?;
+                    verifying_key.verify(message, &signature)
+                }
+
+                _ => Err(signature::Error::new()),
+            },
             _ => Err(signature::Error::new()),
         }
     }

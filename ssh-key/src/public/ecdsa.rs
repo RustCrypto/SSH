@@ -165,6 +165,16 @@ impl TryFrom<EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
     }
 }
 
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl TryFrom<EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
+    type Error = Error;
+
+    fn try_from(key: EcdsaPublicKey) -> Result<p384::ecdsa::VerifyingKey> {
+        p384::ecdsa::VerifyingKey::try_from(&key)
+    }
+}
+
 #[cfg(feature = "p256")]
 #[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
@@ -174,6 +184,21 @@ impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
         match public_key {
             EcdsaPublicKey::NistP256(key) => {
                 p256::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
+            }
+            _ => Err(Error::Algorithm),
+        }
+    }
+}
+
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl TryFrom<&EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
+    type Error = Error;
+
+    fn try_from(public_key: &EcdsaPublicKey) -> Result<p384::ecdsa::VerifyingKey> {
+        match public_key {
+            EcdsaPublicKey::NistP384(key) => {
+                p384::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
             }
             _ => Err(Error::Algorithm),
         }
@@ -193,5 +218,21 @@ impl From<p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
 impl From<&p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
     fn from(key: &p256::ecdsa::VerifyingKey) -> EcdsaPublicKey {
         EcdsaPublicKey::NistP256(key.to_encoded_point(false))
+    }
+}
+
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl From<p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
+    fn from(key: p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
+        EcdsaPublicKey::from(&key)
+    }
+}
+
+#[cfg(feature = "p384")]
+#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
+impl From<&p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
+    fn from(key: &p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
+        EcdsaPublicKey::NistP384(key.to_encoded_point(false))
     }
 }
