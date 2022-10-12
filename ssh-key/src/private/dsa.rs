@@ -7,6 +7,9 @@ use crate::{
 use core::fmt;
 use zeroize::Zeroize;
 
+#[cfg(feature = "dsa")]
+use crate::Error;
+
 #[cfg(feature = "subtle")]
 use subtle::{Choice, ConstantTimeEq};
 
@@ -68,6 +71,48 @@ impl Encode for DsaPrivateKey {
 impl fmt::Debug for DsaPrivateKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DsaPrivateKey").finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<DsaPrivateKey> for dsa::BigUint {
+    type Error = Error;
+
+    fn try_from(key: DsaPrivateKey) -> Result<dsa::BigUint> {
+        dsa::BigUint::try_from(&key.inner)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<&DsaPrivateKey> for dsa::BigUint {
+    type Error = Error;
+
+    fn try_from(key: &DsaPrivateKey) -> Result<dsa::BigUint> {
+        dsa::BigUint::try_from(&key.inner)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<dsa::SigningKey> for DsaPrivateKey {
+    type Error = Error;
+
+    fn try_from(key: dsa::SigningKey) -> Result<DsaPrivateKey> {
+        DsaPrivateKey::try_from(&key)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<&dsa::SigningKey> for DsaPrivateKey {
+    type Error = Error;
+
+    fn try_from(key: &dsa::SigningKey) -> Result<DsaPrivateKey> {
+        Ok(DsaPrivateKey {
+            inner: key.x().try_into()?,
+        })
     }
 }
 
@@ -138,6 +183,52 @@ impl fmt::Debug for DsaKeypair {
         f.debug_struct("DsaKeypair")
             .field("public", &self.public)
             .finish_non_exhaustive()
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<DsaKeypair> for dsa::SigningKey {
+    type Error = Error;
+
+    fn try_from(key: DsaKeypair) -> Result<dsa::SigningKey> {
+        dsa::SigningKey::try_from(&key)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<&DsaKeypair> for dsa::SigningKey {
+    type Error = Error;
+
+    fn try_from(key: &DsaKeypair) -> Result<dsa::SigningKey> {
+        Ok(dsa::SigningKey::from_components(
+            dsa::VerifyingKey::try_from(&key.public)?,
+            dsa::BigUint::try_from(&key.private)?,
+        )?)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<dsa::SigningKey> for DsaKeypair {
+    type Error = Error;
+
+    fn try_from(key: dsa::SigningKey) -> Result<DsaKeypair> {
+        DsaKeypair::try_from(&key)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<&dsa::SigningKey> for DsaKeypair {
+    type Error = Error;
+
+    fn try_from(key: &dsa::SigningKey) -> Result<DsaKeypair> {
+        Ok(DsaKeypair {
+            private: key.try_into()?,
+            public: key.verifying_key().try_into()?,
+        })
     }
 }
 

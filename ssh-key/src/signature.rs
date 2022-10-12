@@ -11,6 +11,14 @@ use signature::{Signer, Verifier};
 #[cfg(feature = "ed25519")]
 use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 
+#[cfg(feature = "dsa")]
+use {
+    crate::{private::DsaKeypair, public::DsaPublicKey},
+    rand_core::OsRng,
+    sha1::{Digest, Sha1},
+    signature::{DigestVerifier, RandomizedDigestSigner, Signature as _},
+};
+
 #[cfg(any(feature = "p256", feature = "p384"))]
 use crate::{
     private::{EcdsaKeypair, EcdsaPrivateKey},
@@ -237,6 +245,38 @@ impl Verifier<Signature> for public::KeyData {
             Self::Ed25519(pk) => pk.verify(message, signature),
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
+            _ => Err(signature::Error::new()),
+        }
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl Signer<Signature> for DsaKeypair {
+    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+        let data = dsa::SigningKey::try_from(self)?
+            .try_sign_digest_with_rng(OsRng, Sha1::new_with_prefix(message))
+            .map_err(|_| signature::Error::new())?;
+
+        Ok(Signature {
+            algorithm: Algorithm::Dsa,
+            data: data.as_ref().to_vec(),
+        })
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl Verifier<Signature> for DsaPublicKey {
+    fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
+        match signature.algorithm {
+            Algorithm::Dsa => {
+                let signature = dsa::Signature::from_bytes(&signature.data)?;
+
+                dsa::VerifyingKey::try_from(self)?
+                    .verify_digest(Sha1::new_with_prefix(message), &signature)
+                    .map_err(|_| signature::Error::new())
+            }
             _ => Err(signature::Error::new()),
         }
     }

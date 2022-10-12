@@ -26,6 +26,8 @@ zeroize = { version = "1", default-features = false }
 aes = { version = "0.8", optional = true, default-features = false }
 ctr = { version = "0.9", optional = true, default-features = false }
 bcrypt-pbkdf = { version = "0.9", optional = true, default-features = false }
+bigint = { package = "num-bigint-dig", version = "0.8", optional = true }
+dsa = { version = "0.4.1", optional = true, default-features = false }
 ed25519-dalek = { version = "1.0.1", optional = true, default-features = false, features = ["u64_backend"] }
 p256 = { version = "0.11", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.11", optional = true, default-features = false, features = ["ecdsa"] }
@@ -33,6 +35,7 @@ rand_core = { version = "0.6", optional = true, default-features = false }
 rsa = { version = "0.7", optional = true }
 sec1 = { version = "0.3", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1", optional = true }
+sha1 = { version = "0.10", optional = true, default-features = false }
 sha2 = { version = "0.10.6", optional = true, default-features = false, features = ["oid"] }
 signature = { version = "1.6.4", optional = true, default-features = false }
 subtle = { version = "2", optional = true, default-features = false }
@@ -58,11 +61,13 @@ std = [
     "signature?/std"
 ]
 
+dsa = ["dep:bigint", "dep:dsa", "dep:sha1", "getrandom", "signature/rand-preview"]
 ecdsa = ["dep:sec1"]
 ed25519 = ["dep:ed25519-dalek", "rand_core"]
 encryption = [ "alloc", "dep:aes", "dep:bcrypt-pbkdf", "dep:ctr", "rand_core"]
 fingerprint = ["dep:sha2"]
 getrandom = ["rand_core/getrandom"]
+rsa = ["dep:bigint", "dep:rsa"]
 
 [package.metadata.docs.rs]
 all-features = true

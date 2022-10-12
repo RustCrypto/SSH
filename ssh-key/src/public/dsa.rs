@@ -5,6 +5,9 @@ use crate::{
     Result,
 };
 
+#[cfg(feature = "dsa")]
+use crate::Error;
+
 /// Digital Signature Algorithm (DSA) public key.
 ///
 /// Described in [FIPS 186-4 § 4.1](https://csrc.nist.gov/publications/detail/fips/186/4/final).
@@ -51,5 +54,57 @@ impl Encode for DsaPublicKey {
         self.q.encode(writer)?;
         self.g.encode(writer)?;
         self.y.encode(writer)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<DsaPublicKey> for dsa::VerifyingKey {
+    type Error = Error;
+
+    fn try_from(key: DsaPublicKey) -> Result<dsa::VerifyingKey> {
+        dsa::VerifyingKey::try_from(&key)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
+    type Error = Error;
+
+    fn try_from(key: &DsaPublicKey) -> Result<dsa::VerifyingKey> {
+        let components = dsa::Components::from_components(
+            dsa::BigUint::try_from(&key.p)?,
+            dsa::BigUint::try_from(&key.q)?,
+            dsa::BigUint::try_from(&key.g)?,
+        )?;
+
+        dsa::VerifyingKey::from_components(components, dsa::BigUint::try_from(&key.y)?)
+            .map_err(|_| Error::Crypto)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<dsa::VerifyingKey> for DsaPublicKey {
+    type Error = Error;
+
+    fn try_from(key: dsa::VerifyingKey) -> Result<DsaPublicKey> {
+        DsaPublicKey::try_from(&key)
+    }
+}
+
+#[cfg(feature = "dsa")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
+impl TryFrom<&dsa::VerifyingKey> for DsaPublicKey {
+    type Error = Error;
+
+    fn try_from(key: &dsa::VerifyingKey) -> Result<DsaPublicKey> {
+        Ok(DsaPublicKey {
+            p: key.components().p().try_into()?,
+            q: key.components().q().try_into()?,
+            g: key.components().g().try_into()?,
+            y: key.y().try_into()?,
+        })
     }
 }

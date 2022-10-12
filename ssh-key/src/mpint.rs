@@ -8,7 +8,7 @@ use alloc::vec::Vec;
 use core::fmt;
 use zeroize::Zeroize;
 
-#[cfg(feature = "rsa")]
+#[cfg(any(feature = "dsa", feature = "rsa"))]
 use zeroize::Zeroizing;
 
 #[cfg(feature = "subtle")]
@@ -180,46 +180,46 @@ impl fmt::UpperHex for MPInt {
     }
 }
 
-#[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
-impl TryFrom<rsa::BigUint> for MPInt {
+#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
+impl TryFrom<bigint::BigUint> for MPInt {
     type Error = Error;
 
-    fn try_from(uint: rsa::BigUint) -> Result<MPInt> {
+    fn try_from(uint: bigint::BigUint) -> Result<MPInt> {
         MPInt::try_from(&uint)
     }
 }
 
-#[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
-impl TryFrom<&rsa::BigUint> for MPInt {
+#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
+impl TryFrom<&bigint::BigUint> for MPInt {
     type Error = Error;
 
-    fn try_from(uint: &rsa::BigUint) -> Result<MPInt> {
+    fn try_from(uint: &bigint::BigUint) -> Result<MPInt> {
         let bytes = Zeroizing::new(uint.to_bytes_be());
         MPInt::from_positive_bytes(bytes.as_slice())
     }
 }
 
-#[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
-impl TryFrom<MPInt> for rsa::BigUint {
+#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
+impl TryFrom<MPInt> for bigint::BigUint {
     type Error = Error;
 
-    fn try_from(mpint: MPInt) -> Result<rsa::BigUint> {
-        rsa::BigUint::try_from(&mpint)
+    fn try_from(mpint: MPInt) -> Result<bigint::BigUint> {
+        bigint::BigUint::try_from(&mpint)
     }
 }
 
-#[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
-impl TryFrom<&MPInt> for rsa::BigUint {
+#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
+impl TryFrom<&MPInt> for bigint::BigUint {
     type Error = Error;
 
-    fn try_from(mpint: &MPInt) -> Result<rsa::BigUint> {
+    fn try_from(mpint: &MPInt) -> Result<bigint::BigUint> {
         mpint
             .as_positive_bytes()
-            .map(rsa::BigUint::from_bytes_be)
+            .map(bigint::BigUint::from_bytes_be)
             .ok_or(Error::Crypto)
     }
 }
