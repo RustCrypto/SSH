@@ -13,6 +13,9 @@ use crate::Error;
 #[cfg(feature = "subtle")]
 use subtle::{Choice, ConstantTimeEq};
 
+#[cfg(all(feature = "dsa", feature = "rand_core"))]
+use rand_core::{CryptoRng, RngCore};
+
 /// Digital Signature Algorithm (DSA) private key.
 ///
 /// Uniformly random integer `x`, such that `0 < x < q`, i.e. `x` is in the
@@ -145,6 +148,21 @@ pub struct DsaKeypair {
 
     /// Private key.
     pub private: DsaPrivateKey,
+}
+
+impl DsaKeypair {
+    /// Key size.
+    #[cfg(all(feature = "dsa", feature = "rand_core"))]
+    #[allow(deprecated)]
+    pub(crate) const KEY_SIZE: dsa::KeySize = dsa::KeySize::DSA_1024_160;
+
+    /// Generate a random DSA private key.
+    #[cfg(all(feature = "dsa", feature = "rand_core"))]
+    #[cfg_attr(docsrs, doc(cfg(all(feature = "dsa", feature = "rand_core"))))]
+    pub fn random(mut rng: impl CryptoRng + RngCore) -> Result<Self> {
+        let components = dsa::Components::generate(&mut rng, Self::KEY_SIZE);
+        dsa::SigningKey::generate(&mut rng, components).try_into()
+    }
 }
 
 impl Decode for DsaKeypair {
