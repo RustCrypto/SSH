@@ -190,6 +190,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "dsa"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22060e690a47585cff262a5a352241bb7536590cd5f7e9c2a223839ea14e9cf5"
+dependencies = [
+ "digest 0.10.5",
+ "num-bigint-dig",
+ "num-traits",
+ "opaque-debug",
+ "pkcs8",
+ "rand 0.8.5",
+ "rfc6979",
+ "signature",
+ "zeroize",
+]
+
+[[package]]
 name = "ecdsa"
 version = "0.14.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -372,6 +389,7 @@ dependencies = [
  "num-iter",
  "num-traits",
  "rand 0.8.5",
+ "serde",
  "smallvec",
  "zeroize",
 ]
@@ -517,6 +535,7 @@ version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
 dependencies = [
+ "libc",
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
 ]
@@ -639,6 +658,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "728eb6351430bccb993660dfffc5a72f91ccc1295abaa8ce19b27ebe4f75568b"
 
 [[package]]
+name = "sha1"
+version = "0.10.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f04293dc80c3993519f2d7f6f511707ee7094fe0c6d3406feb330cdb3540eba3"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest 0.10.5",
+]
+
+[[package]]
 name = "sha2"
 version = "0.9.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -702,8 +732,10 @@ dependencies = [
  "base64ct",
  "bcrypt-pbkdf",
  "ctr",
+ "dsa",
  "ed25519-dalek",
  "hex-literal",
+ "num-bigint-dig",
  "p256",
  "p384",
  "pem-rfc7468",
@@ -712,6 +744,7 @@ dependencies = [
  "rsa",
  "sec1",
  "serde",
+ "sha1",
  "sha2 0.10.6",
  "signature",
  "subtle",

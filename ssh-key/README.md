@@ -65,9 +65,9 @@ respective SSH key algorithm.
 | Name                                 | Decode | Encode | Cert | Keygen | Sign | Verify | Feature   | `no_std` |
 |--------------------------------------|--------|--------|------|--------|------|--------|-----------|----------|
 | `ecdsa‑sha2‑nistp256`                | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅️     | `p256`    | heapless |
-| `ecdsa‑sha2‑nistp384`                | ✅     | ✅     | ✅   | ⛔️     | ⛔️   | ⛔️     | ⛔        | heapless |
+| `ecdsa‑sha2‑nistp384`                | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅️     | `p384`    | heapless |
 | `ecdsa‑sha2‑nistp521`                | ✅     | ✅     | ✅   | ⛔️     | ⛔ ️  | ⛔️     | ⛔        | heapless |
-| `ssh‑dsa`                            | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc` ️ |
+| `ssh‑dsa`                            | ✅     | ✅     | ✅   | ✅     | ✅️   | ✅️     | `dsa`     | `alloc` ️ |
 | `ssh‑ed25519`                        | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `ed25519` | heapless |
 | `ssh‑rsa`                            | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `rsa`     | `alloc`  |
 | `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc`  |
