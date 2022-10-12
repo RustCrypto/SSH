@@ -452,6 +452,8 @@ impl PrivateKey {
     pub fn random(mut rng: impl CryptoRng + RngCore, algorithm: Algorithm) -> Result<Self> {
         let checkint = rng.next_u32();
         let key_data = match algorithm {
+            #[cfg(feature = "dsa")]
+            Algorithm::Dsa => KeypairData::from(DsaKeypair::random(rng)?),
             #[cfg(any(feature = "p256", feature = "p384"))]
             Algorithm::Ecdsa { curve } => KeypairData::from(EcdsaKeypair::random(rng, curve)?),
             #[cfg(feature = "ed25519")]
