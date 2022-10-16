@@ -162,8 +162,6 @@ mod writer;
 mod fingerprint;
 #[cfg(feature = "alloc")]
 mod mpint;
-#[cfg(feature = "alloc")]
-mod signature;
 
 pub use crate::{
     algorithm::{Algorithm, EcdsaCurve, HashAlg, KdfAlg},
@@ -178,9 +176,7 @@ pub use base64ct::LineEnding;
 pub use pem_rfc7468 as pem;
 
 #[cfg(feature = "alloc")]
-pub use crate::{
-    certificate::Certificate, known_hosts::KnownHosts, mpint::MPInt, signature::Signature,
-};
+pub use crate::{certificate::Certificate, known_hosts::KnownHosts, mpint::MPInt};
 
 #[cfg(feature = "ecdsa")]
 pub use sec1;
