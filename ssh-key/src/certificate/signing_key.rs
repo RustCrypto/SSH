@@ -1,7 +1,6 @@
 //! Certificate signing key trait.
 
-use super::Signature;
-use crate::public;
+use crate::{public, Signature};
 use signature::Signer;
 
 #[cfg(doc)]

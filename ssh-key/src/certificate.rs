@@ -4,13 +4,12 @@ mod builder;
 mod cert_type;
 mod field;
 mod options_map;
-mod signature;
 mod signing_key;
 mod unix_time;
 
 pub use self::{
     builder::Builder, cert_type::CertType, field::Field, options_map::OptionsMap,
-    signature::Signature, signing_key::SigningKey,
+    signing_key::SigningKey,
 };
 
 use self::unix_time::UnixTime;
@@ -21,7 +20,7 @@ use crate::{
     public::{Encapsulation, KeyData},
     reader::{Base64Reader, Reader},
     writer::{base64_len, Writer},
-    Algorithm, Error, Result,
+    Algorithm, Error, Result, Signature,
 };
 use alloc::{
     borrow::ToOwned,
@@ -33,7 +32,7 @@ use core::str::FromStr;
 #[cfg(feature = "fingerprint")]
 use {
     crate::{Fingerprint, HashAlg},
-    ::signature::Verifier,
+    signature::Verifier,
 };
 
 #[cfg(feature = "serde")]
