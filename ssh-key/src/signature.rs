@@ -14,9 +14,8 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
-    rand_core::OsRng,
     sha1::{Digest, Sha1},
-    signature::{DigestVerifier, RandomizedDigestSigner, Signature as _},
+    signature::{DigestSigner, DigestVerifier, Signature as _},
 };
 
 #[cfg(any(feature = "p256", feature = "p384"))]
@@ -255,7 +254,7 @@ impl Verifier<Signature> for public::KeyData {
 impl Signer<Signature> for DsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let data = dsa::SigningKey::try_from(self)?
-            .try_sign_digest_with_rng(OsRng, Sha1::new_with_prefix(message))
+            .try_sign_digest(Sha1::new_with_prefix(message))
             .map_err(|_| signature::Error::new())?;
 
         Ok(Signature {
