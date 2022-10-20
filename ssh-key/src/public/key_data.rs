@@ -3,7 +3,7 @@
 use super::{Ed25519PublicKey, SkEd25519};
 use crate::{
     checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, Algorithm,
-    Error, Result,
+    Error, Fingerprint, HashAlg, Result,
 };
 
 #[cfg(feature = "alloc")]
@@ -11,9 +11,6 @@ use super::{DsaPublicKey, RsaPublicKey};
 
 #[cfg(feature = "ecdsa")]
 use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
-
-#[cfg(feature = "fingerprint")]
-use crate::{Fingerprint, HashAlg};
 
 /// Public key data.
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -99,8 +96,6 @@ impl KeyData {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
-    #[cfg(feature = "fingerprint")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "fingerprint")))]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         Fingerprint::new(hash_alg, self)
     }

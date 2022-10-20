@@ -20,7 +20,7 @@ use crate::{
     public::{Encapsulation, KeyData},
     reader::{Base64Reader, Reader},
     writer::{base64_len, Writer},
-    Algorithm, Error, Result, Signature,
+    Algorithm, Error, Fingerprint, HashAlg, Result, Signature,
 };
 use alloc::{
     borrow::ToOwned,
@@ -28,12 +28,7 @@ use alloc::{
     vec::Vec,
 };
 use core::str::FromStr;
-
-#[cfg(feature = "fingerprint")]
-use {
-    crate::{Fingerprint, HashAlg},
-    signature::Verifier,
-};
+use signature::Verifier;
 
 #[cfg(feature = "serde")]
 use serde::{de, ser, Deserialize, Serialize};
@@ -372,8 +367,8 @@ impl Certificate {
     ///
     /// See [`Certificate::validate_at`] documentation for important notes on
     /// how to properly validate certificates!
-    #[cfg(all(feature = "fingerprint", feature = "std"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "fingerprint", feature = "std"))))]
+    #[cfg(feature = "std")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn validate<'a, I>(&self, ca_fingerprints: I) -> Result<()>
     where
         I: IntoIterator<Item = &'a Fingerprint>,
@@ -409,8 +404,6 @@ impl Certificate {
     /// ## Returns
     /// - `Ok` if the certificate validated successfully
     /// - `Error::CertificateValidation` if the certificate failed to validate
-    #[cfg(feature = "fingerprint")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "fingerprint")))]
     pub fn validate_at<'a, I>(&self, unix_timestamp: u64, ca_fingerprints: I) -> Result<()>
     where
         I: IntoIterator<Item = &'a Fingerprint>,
@@ -454,7 +447,6 @@ impl Certificate {
     ///
     /// It is public only for testing purposes, and deliberately hidden from
     /// the documentation for that reason.
-    #[cfg(feature = "fingerprint")]
     #[doc(hidden)]
     pub fn verify_signature(&self) -> Result<()> {
         let mut tbs_certificate = Vec::new();

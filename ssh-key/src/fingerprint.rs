@@ -37,7 +37,6 @@ use {
 ///
 /// When the `serde` feature of this crate is enabled, this type receives impls
 /// of [`Deserialize`][`serde::Deserialize`] and [`Serialize`][`serde::Serialize`].
-#[cfg_attr(docsrs, doc(cfg(feature = "fingerprint")))]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Fingerprint {

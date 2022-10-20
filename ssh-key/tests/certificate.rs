@@ -23,16 +23,16 @@ const ECDSA_P256_CERT_EXAMPLE: &str = include_str!("examples/id_ecdsa_p256-cert.
 const ED25519_CERT_EXAMPLE: &str = include_str!("examples/id_ed25519-cert.pub");
 
 /// Ed25519 OpenSSH Certificate with deliberately invalid signature
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 const ED25519_CERT_BADSIG_EXAMPLE: &str = include_str!("examples/id_ed25519-cert-badsig.pub");
 
 /// Ed25519 OpenSSH Certificate with P-256 certificate authority
-#[cfg(all(feature = "p256", feature = "fingerprint"))]
+#[cfg(feature = "p256")]
 const ED25519_CERT_WITH_P256_CA_EXAMPLE: &str =
     include_str!("examples/id_ed25519-cert-with-p256-ca.pub");
 
 /// Ed25519 OpenSSH Certificate with RSA certificate authority
-#[cfg(all(feature = "p256", feature = "fingerprint"))]
+#[cfg(feature = "p256")]
 const ED25519_CERT_WITH_RSA_CA_EXAMPLE: &str =
     include_str!("examples/id_ed25519-cert-with-rsa-ca.pub");
 
@@ -47,19 +47,19 @@ const SK_ECDSA_P256_CERT_EXAMPLE: &str = include_str!("examples/id_sk_ecdsa_p256
 const SK_ED25519_CERT_EXAMPLE: &str = include_str!("examples/id_sk_ed25519-cert.pub");
 
 /// Example certificate authority fingerprint (matches `id_ed25519.pub` example)
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 const CA_FINGERPRINT: &str = "SHA256:UCUiLr7Pjs9wFFJMDByLgc3NrtdU344OgUM45wZPcIQ";
 
 /// Valid certificate timestamp.
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 const VALID_TIMESTAMP: u64 = 1750000000;
 
 /// Timestamp which is before the validity window.
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 const PAST_TIMESTAMP: u64 = 1500000000;
 
 /// Expired certificate timestamp.
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 const EXPIRED_TIMESTAMP: u64 = 2500000000;
 
 #[test]
@@ -236,7 +236,7 @@ fn encode_rsa_4096_openssh() {
     );
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn verify_ed25519_certificate_signature() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
@@ -244,14 +244,14 @@ fn verify_ed25519_certificate_signature() {
     assert!(cert.verify_signature().is_ok());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn reject_ed25519_certificate_with_invalid_signature() {
     let cert = Certificate::from_str(ED25519_CERT_BADSIG_EXAMPLE).unwrap();
     assert!(cert.verify_signature().is_err());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn validate_certificate() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
@@ -259,7 +259,7 @@ fn validate_certificate() {
     assert!(cert.validate_at(VALID_TIMESTAMP, &[ca]).is_ok());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint", feature = "std"))]
+#[cfg(all(feature = "ed25519", feature = "std"))]
 #[test]
 fn validate_certificate_against_system_clock() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
@@ -267,7 +267,7 @@ fn validate_certificate_against_system_clock() {
     assert!(cert.validate(&[ca]).is_ok());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn reject_certificate_with_invalid_signature() {
     let cert = Certificate::from_str(ED25519_CERT_BADSIG_EXAMPLE).unwrap();
@@ -275,7 +275,7 @@ fn reject_certificate_with_invalid_signature() {
     assert!(cert.validate_at(VALID_TIMESTAMP, &[ca]).is_err());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn reject_certificate_with_untrusted_ca() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
@@ -287,7 +287,7 @@ fn reject_certificate_with_untrusted_ca() {
     assert!(cert.validate_at(VALID_TIMESTAMP, &[ca]).is_err());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn reject_expired_certificate() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
@@ -295,7 +295,7 @@ fn reject_expired_certificate() {
     assert!(cert.validate_at(EXPIRED_TIMESTAMP, &[ca]).is_err());
 }
 
-#[cfg(all(feature = "ed25519", feature = "fingerprint"))]
+#[cfg(feature = "ed25519")]
 #[test]
 fn reject_certificate_with_future_valid_after() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
@@ -303,7 +303,7 @@ fn reject_certificate_with_future_valid_after() {
     assert!(cert.validate_at(PAST_TIMESTAMP, &[ca]).is_err())
 }
 
-#[cfg(all(feature = "p256", feature = "fingerprint"))]
+#[cfg(feature = "p256")]
 #[test]
 fn verify_p256_certificate_signature() {
     let cert = Certificate::from_str(ED25519_CERT_WITH_P256_CA_EXAMPLE).unwrap();
@@ -316,7 +316,7 @@ fn verify_p256_certificate_signature() {
     assert!(cert.verify_signature().is_ok());
 }
 
-#[cfg(all(feature = "rsa", feature = "fingerprint"))]
+#[cfg(feature = "rsa")]
 #[test]
 fn verify_rsa_certificate_signature() {
     let cert = Certificate::from_str(ED25519_CERT_WITH_RSA_CA_EXAMPLE).unwrap();

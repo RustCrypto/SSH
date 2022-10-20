@@ -154,12 +154,11 @@ mod cipher;
 mod decode;
 mod encode;
 mod error;
+mod fingerprint;
 mod kdf;
 mod reader;
 mod writer;
 
-#[cfg(feature = "fingerprint")]
-mod fingerprint;
 #[cfg(feature = "alloc")]
 mod mpint;
 #[cfg(feature = "alloc")]
@@ -170,12 +169,14 @@ pub use crate::{
     authorized_keys::AuthorizedKeys,
     cipher::Cipher,
     error::{Error, Result},
+    fingerprint::Fingerprint,
     kdf::Kdf,
     private::PrivateKey,
     public::PublicKey,
 };
 pub use base64ct::LineEnding;
 pub use pem_rfc7468 as pem;
+pub use sha2;
 
 #[cfg(feature = "alloc")]
 pub use crate::{
@@ -184,9 +185,6 @@ pub use crate::{
 
 #[cfg(feature = "ecdsa")]
 pub use sec1;
-
-#[cfg(feature = "fingerprint")]
-pub use crate::fingerprint::Fingerprint;
 
 #[cfg(feature = "rand_core")]
 pub use rand_core;
