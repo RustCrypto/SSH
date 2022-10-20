@@ -61,7 +61,7 @@ std = [
     "signature?/std"
 ]
 
-dsa = ["dep:bigint", "dep:dsa", "dep:sha1", "getrandom", "signature/rand-preview"]
+dsa = ["dep:bigint", "dep:dsa", "dep:sha1", "signature/rand-preview"]
 ecdsa = ["dep:sec1"]
 ed25519 = ["dep:ed25519-dalek", "rand_core"]
 encryption = [ "alloc", "dep:aes", "dep:bcrypt-pbkdf", "dep:ctr", "rand_core"]
