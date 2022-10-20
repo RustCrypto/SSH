@@ -27,7 +27,7 @@ use crate::{
     decode::Decode,
     encode::Encode,
     reader::{Base64Reader, Reader},
-    Algorithm, Error, Result,
+    Algorithm, Error, Fingerprint, HashAlg, Result,
 };
 use core::str::FromStr;
 
@@ -40,9 +40,6 @@ use {
         vec::Vec,
     },
 };
-
-#[cfg(feature = "fingerprint")]
-use crate::{Fingerprint, HashAlg};
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
 use serde::{de, ser, Deserialize, Serialize};
@@ -211,8 +208,6 @@ impl PublicKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
-    #[cfg(feature = "fingerprint")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "fingerprint")))]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.key_data.fingerprint(hash_alg)
     }

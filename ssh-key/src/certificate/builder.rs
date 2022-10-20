@@ -309,7 +309,7 @@ impl Builder {
         cert.encode_tbs(&mut tbs_cert)?;
         cert.signature = signing_key.try_sign(&tbs_cert)?;
 
-        #[cfg(all(debug_assertions, feature = "fingerprint"))]
+        #[cfg(debug_assertions)]
         cert.validate_at(
             cert.valid_after.into(),
             &[cert.signature_key.fingerprint(Default::default())],

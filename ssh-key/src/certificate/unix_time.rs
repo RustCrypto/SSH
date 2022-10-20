@@ -58,7 +58,7 @@ impl UnixTime {
     }
 
     /// Get the current time as a Unix timestamp.
-    #[cfg(all(feature = "std", feature = "fingerprint"))]
+    #[cfg(all(feature = "std"))]
     pub fn now() -> Result<Self> {
         SystemTime::now().try_into()
     }

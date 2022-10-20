@@ -1,10 +1,6 @@
 //! Certificate builder tests.
 
-#![cfg(all(
-    feature = "alloc",
-    feature = "fingerprint",
-    any(feature = "ed25519", feature = "p256")
-))]
+#![cfg(all(feature = "alloc", any(feature = "ed25519", feature = "p256")))]
 
 use hex_literal::hex;
 use rand_chacha::{rand_core::SeedableRng, ChaCha8Rng};

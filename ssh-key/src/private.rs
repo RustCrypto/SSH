@@ -139,7 +139,7 @@ use crate::{
     public,
     reader::Reader,
     writer::Writer,
-    Algorithm, Cipher, Error, Kdf, PublicKey, Result,
+    Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result,
 };
 use core::str;
 
@@ -148,9 +148,6 @@ use {
     alloc::{string::String, vec::Vec},
     zeroize::Zeroizing,
 };
-
-#[cfg(feature = "fingerprint")]
-use crate::{Fingerprint, HashAlg};
 
 #[cfg(feature = "rand_core")]
 use rand_core::{CryptoRng, RngCore};
@@ -412,8 +409,6 @@ impl PrivateKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
-    #[cfg(feature = "fingerprint")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "fingerprint")))]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.public_key.fingerprint(hash_alg)
     }

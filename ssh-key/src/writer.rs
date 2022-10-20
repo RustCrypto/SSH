@@ -2,12 +2,10 @@
 
 use crate::Result;
 use pem_rfc7468 as pem;
+use sha2::{Digest, Sha256, Sha512};
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
-
-#[cfg(feature = "fingerprint")]
-use sha2::{Digest, Sha256, Sha512};
 
 /// Get the estimated length of data when encoded as Base64.
 ///
@@ -50,7 +48,6 @@ impl Writer for Vec<u8> {
     }
 }
 
-#[cfg(feature = "fingerprint")]
 impl Writer for Sha256 {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         self.update(bytes);
@@ -58,7 +55,6 @@ impl Writer for Sha256 {
     }
 }
 
-#[cfg(feature = "fingerprint")]
 impl Writer for Sha512 {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         self.update(bytes);
