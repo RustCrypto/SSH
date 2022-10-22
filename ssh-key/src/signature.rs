@@ -34,10 +34,32 @@ use {
 const DSA_SIGNATURE_SIZE: usize = 40;
 const ED25519_SIGNATURE_SIZE: usize = 64;
 
-/// Digital signature (e.g. DSA, ECDSA, Ed25519).
+/// Trait for signing keys which produce a [`Signature`].
 ///
-/// These are used as part of the OpenSSH certificate format to represent
-/// signatures by certificate authorities (CAs).
+/// This trait is automatically impl'd for any types which impl the
+/// [`Signer`] trait for the SSH [`Signature`] type and also support a [`From`]
+/// conversion for [`public::KeyData`].
+pub trait SigningKey: Signer<Signature> {
+    /// Get the [`public::KeyData`] for this signing key.
+    fn public_key(&self) -> public::KeyData;
+}
+
+impl<T> SigningKey for T
+where
+    T: Signer<Signature>,
+    public::KeyData: for<'a> From<&'a T>,
+{
+    fn public_key(&self) -> public::KeyData {
+        self.into()
+    }
+}
+
+/// Low-level digital signature (e.g. DSA, ECDSA, Ed25519).
+///
+/// These are low-level signatures used as part of the OpenSSH certificate
+/// format to represent signatures by certificate authorities (CAs), as well
+/// as the higher-level [`SshSig`][`crate::SshSig`] format, which provides
+/// general-purpose signing functionality using SSH keys.
 ///
 /// From OpenSSH's [PROTOCOL.certkeys] specification:
 ///
@@ -102,6 +124,16 @@ impl Signature {
         Ok(Self { algorithm, data })
     }
 
+    /// Get the [`Algorithm`] associated with this signature.
+    pub fn algorithm(&self) -> Algorithm {
+        self.algorithm
+    }
+
+    /// Get the raw signature as bytes.
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.data
+    }
+
     /// Placeholder signature used by the certificate builder.
     ///
     /// This is guaranteed generate an error if anything attempts to encode it.
@@ -115,18 +147,6 @@ impl Signature {
     /// Check if this signature is the placeholder signature.
     pub(crate) fn is_placeholder(&self) -> bool {
         self.algorithm == Algorithm::default() && self.data.is_empty()
-    }
-}
-
-impl Signature {
-    /// Get the [`Algorithm`] associated with this signature.
-    pub fn algorithm(&self) -> Algorithm {
-        self.algorithm
-    }
-
-    /// Get the raw signature as bytes.
-    pub fn as_bytes(&self) -> &[u8] {
-        &self.data
     }
 }
 
@@ -217,6 +237,8 @@ impl Signer<Signature> for private::KeypairData {
     #[allow(unused_variables)]
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         match self {
+            #[cfg(feature = "dsa")]
+            Self::Dsa(keypair) => keypair.try_sign(message),
             #[cfg(any(feature = "p256", feature = "p384"))]
             Self::Ecdsa(keypair) => keypair.try_sign(message),
             #[cfg(feature = "ed25519")]
@@ -238,6 +260,8 @@ impl Verifier<Signature> for public::KeyData {
     #[allow(unused_variables)]
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match self {
+            #[cfg(feature = "dsa")]
+            Self::Dsa(pk) => pk.verify(message, signature),
             #[cfg(any(feature = "p256", feature = "p384"))]
             Self::Ecdsa(pk) => pk.verify(message, signature),
             #[cfg(feature = "ed25519")]
@@ -477,7 +501,7 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
 }
 
 #[cfg(any(feature = "p256", feature = "p384"))]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256", feature = "p384")))]
+#[cfg_attr(docsrs, doc(cfg(any(feature = "p256", feature = "p384"))))]
 impl Signer<Signature> for EcdsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         match self {

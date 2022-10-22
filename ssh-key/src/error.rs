@@ -55,13 +55,16 @@ pub enum Error {
     /// Invalid length.
     Length,
 
+    /// Namespace invalid.
+    Namespace,
+
     /// Overflow errors.
     Overflow,
 
     /// PEM encoding errors.
     Pem(pem::Error),
 
-    /// Public key does not match private key.
+    /// Public key is incorrect.
     PublicKey,
 
     /// Invalid timestamp (e.g. in a certificate)
@@ -71,6 +74,12 @@ pub enum Error {
     TrailingData {
         /// Number of bytes of remaining data at end of message.
         remaining: usize,
+    },
+
+    /// Unsupported version.
+    Version {
+        /// Version number.
+        number: u32,
     },
 }
 
@@ -94,6 +103,7 @@ impl fmt::Display for Error {
             #[cfg(feature = "std")]
             Error::Io(err) => write!(f, "I/O error: {}", std::io::Error::from(*err)),
             Error::Length => write!(f, "length invalid"),
+            Error::Namespace => write!(f, "namespace invalid"),
             Error::Overflow => write!(f, "internal overflow error"),
             Error::Pem(err) => write!(f, "{}", err),
             Error::PublicKey => write!(f, "public key is incorrect"),
@@ -103,6 +113,7 @@ impl fmt::Display for Error {
                 "unexpected trailing data at end of message ({} bytes)",
                 remaining
             ),
+            Error::Version { number: version } => write!(f, "version unsupported: {}", version),
         }
     }
 }

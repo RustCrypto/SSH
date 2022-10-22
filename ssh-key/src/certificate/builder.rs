@@ -1,7 +1,7 @@
 //! OpenSSH certificate builder.
 
-use super::{unix_time::UnixTime, CertType, Certificate, Field, OptionsMap, SigningKey};
-use crate::{public, Result, Signature};
+use super::{unix_time::UnixTime, CertType, Certificate, Field, OptionsMap};
+use crate::{public, Result, Signature, SigningKey};
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "rand_core")]

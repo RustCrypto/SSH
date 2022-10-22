@@ -4,13 +4,9 @@ mod builder;
 mod cert_type;
 mod field;
 mod options_map;
-mod signing_key;
 mod unix_time;
 
-pub use self::{
-    builder::Builder, cert_type::CertType, field::Field, options_map::OptionsMap,
-    signing_key::SigningKey,
-};
+pub use self::{builder::Builder, cert_type::CertType, field::Field, options_map::OptionsMap};
 
 use self::unix_time::UnixTime;
 use crate::{

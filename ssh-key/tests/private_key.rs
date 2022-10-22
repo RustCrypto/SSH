@@ -19,9 +19,6 @@ use {
 #[cfg(feature = "alloc")]
 const OPENSSH_DSA_EXAMPLE: &str = include_str!("examples/id_dsa_1024");
 
-/// Ed25519 OpenSSH-formatted private key
-const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
-
 /// ECDSA/P-256 OpenSSH-formatted public key
 #[cfg(feature = "ecdsa")]
 const OPENSSH_ECDSA_P256_EXAMPLE: &str = include_str!("examples/id_ecdsa_p256");
@@ -33,6 +30,9 @@ const OPENSSH_ECDSA_P384_EXAMPLE: &str = include_str!("examples/id_ecdsa_p384");
 /// ECDSA/P-521 OpenSSH-formatted public key
 #[cfg(feature = "ecdsa")]
 const OPENSSH_ECDSA_P521_EXAMPLE: &str = include_str!("examples/id_ecdsa_p521");
+
+/// Ed25519 OpenSSH-formatted private key
+const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
 
 /// RSA (3072-bit) OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
