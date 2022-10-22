@@ -119,10 +119,13 @@ pub use self::ed25519::{Ed25519Keypair, Ed25519PrivateKey};
 pub use self::keypair::KeypairData;
 
 #[cfg(feature = "alloc")]
-pub use self::{
-    dsa::{DsaKeypair, DsaPrivateKey},
-    rsa::{RsaKeypair, RsaPrivateKey},
-    sk::SkEd25519,
+pub use crate::{
+    private::{
+        dsa::{DsaKeypair, DsaPrivateKey},
+        rsa::{RsaKeypair, RsaPrivateKey},
+        sk::SkEd25519,
+    },
+    SshSig,
 };
 
 #[cfg(feature = "ecdsa")]
@@ -139,7 +142,7 @@ use crate::{
     public,
     reader::Reader,
     writer::Writer,
-    Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result,
+    Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result, PEM_LINE_WIDTH,
 };
 use core::str;
 
@@ -175,9 +178,6 @@ const MAX_BLOCK_SIZE: usize = 16;
 
 /// Padding bytes to use.
 const PADDING_BYTES: [u8; MAX_BLOCK_SIZE - 1] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-
-/// Line width used by the PEM encoding of OpenSSH private keys.
-const PEM_LINE_WIDTH: usize = 70;
 
 /// Unix file permissions for SSH private keys.
 #[cfg(all(unix, feature = "std"))]
@@ -281,6 +281,24 @@ impl PrivateKey {
         let mut private_key_bytes = Vec::with_capacity(self.encoded_len()?);
         self.encode(&mut private_key_bytes)?;
         Ok(Zeroizing::new(private_key_bytes))
+    }
+
+    /// Sign the given message using this private key, returning an [`SshSig`].
+    ///
+    /// These signatures can be produced using `ssh-keygen -Y sign`. They're
+    /// encoded as PEM and begin with the following:
+    ///
+    /// ```text
+    /// -----BEGIN SSH SIGNATURE-----
+    /// ```
+    ///
+    /// See [PROTOCOL.sshsig] for more information.
+    ///
+    /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    pub fn sign(&self, namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<SshSig> {
+        SshSig::sign(self, namespace, hash_alg, msg)
     }
 
     /// Read private key from an OpenSSH-formatted PEM file.

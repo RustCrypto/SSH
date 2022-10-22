@@ -163,6 +163,8 @@ mod writer;
 mod mpint;
 #[cfg(feature = "alloc")]
 mod signature;
+#[cfg(feature = "alloc")]
+mod sshsig;
 
 pub use crate::{
     algorithm::{Algorithm, EcdsaCurve, HashAlg, KdfAlg},
@@ -180,7 +182,11 @@ pub use sha2;
 
 #[cfg(feature = "alloc")]
 pub use crate::{
-    certificate::Certificate, known_hosts::KnownHosts, mpint::MPInt, signature::Signature,
+    certificate::Certificate,
+    known_hosts::KnownHosts,
+    mpint::MPInt,
+    signature::{Signature, SigningKey},
+    sshsig::SshSig,
 };
 
 #[cfg(feature = "ecdsa")]
@@ -188,3 +194,6 @@ pub use sec1;
 
 #[cfg(feature = "rand_core")]
 pub use rand_core;
+
+/// Line width used by the PEM encoding of OpenSSH documents.
+const PEM_LINE_WIDTH: usize = 70;

@@ -119,10 +119,16 @@ impl AsRef<[u8]> for Fingerprint {
 
 impl Display for Fingerprint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Fingerprints use a special upper-case hash algorithm encoding.
+        let algorithm = match self.algorithm() {
+            HashAlg::Sha256 => "SHA256",
+            HashAlg::Sha512 => "SHA512",
+        };
+
         // Buffer size is the largest digest size of of any supported hash function
         let mut buf = [0u8; Self::SHA512_BASE64_SIZE];
         let base64 = Base64Unpadded::encode(self.as_bytes(), &mut buf).map_err(|_| fmt::Error)?;
-        write!(f, "{}:{}", self.algorithm(), base64)
+        write!(f, "{}:{}", algorithm, base64)
     }
 }
 
@@ -130,13 +136,20 @@ impl FromStr for Fingerprint {
     type Err = Error;
 
     fn from_str(id: &str) -> Result<Self> {
-        let (algorithm, base64) = id.split_once(':').ok_or(Error::Algorithm)?;
+        let (alg_str, base64) = id.split_once(':').ok_or(Error::Algorithm)?;
+
+        // Fingerprints use a special upper-case hash algorithm encoding.
+        let algorithm = match alg_str {
+            "SHA256" => HashAlg::Sha256,
+            "SHA512" => HashAlg::Sha512,
+            _ => return Err(Error::Algorithm),
+        };
 
         // Buffer size is the largest digest size of of any supported hash function
         let mut buf = [0u8; HashAlg::Sha512.digest_size()];
         let decoded_bytes = Base64Unpadded::decode(base64, &mut buf)?;
 
-        match algorithm.parse()? {
+        match algorithm {
             HashAlg::Sha256 => Ok(Self::Sha256(decoded_bytes.try_into()?)),
             HashAlg::Sha512 => Ok(Self::Sha512(decoded_bytes.try_into()?)),
         }

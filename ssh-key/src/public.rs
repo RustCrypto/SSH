@@ -33,7 +33,7 @@ use core::str::FromStr;
 
 #[cfg(feature = "alloc")]
 use {
-    crate::{checked::CheckedSum, writer::base64_len},
+    crate::{checked::CheckedSum, writer::base64_len, SshSig},
     alloc::{
         borrow::ToOwned,
         string::{String, ToString},
@@ -164,6 +164,33 @@ impl PublicKey {
         let mut public_key_bytes = Vec::new();
         self.key_data.encode(&mut public_key_bytes)?;
         Ok(public_key_bytes)
+    }
+
+    /// Verify the [`SshSig`] signature over the given message using this
+    /// public key.
+    ///
+    /// These signatures can be produced using `ssh-keygen -Y sign`. They're
+    /// encoded as PEM and begin with the following:
+    ///
+    /// ```text
+    /// -----BEGIN SSH SIGNATURE-----
+    /// ```
+    ///
+    /// See [PROTOCOL.sshsig] for more information.
+    ///
+    /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
+        if self.key_data() != signature.public_key() {
+            return Err(Error::PublicKey);
+        }
+
+        if namespace != signature.namespace() {
+            return Err(Error::Namespace);
+        }
+
+        signature.verify(msg)
     }
 
     /// Read public key from an OpenSSH-formatted file.
