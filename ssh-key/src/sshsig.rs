@@ -1,13 +1,13 @@
 //! `sshsig` implementation.
 
 use crate::{public, Algorithm, Error, HashAlg, Result, Signature, SigningKey};
-use alloc::{borrow::ToOwned, string::String, string::ToString, vec::Vec};
+use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
     pem::{LineEnding, PemLabel},
     CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
 };
-use signature::{Signer, Verifier};
+use signature::Verifier;
 
 type Version = u32;
 
@@ -44,6 +44,32 @@ impl SshSig {
     /// with any message signed during SSH user or host authentication.
     const MAGIC_PREAMBLE: &'static [u8] = b"SSHSIG";
 
+    /// Create a new signature with the given public key, namespace, hash
+    /// algorithm, and signature.
+    pub fn new(
+        public_key: public::KeyData,
+        namespace: impl Into<String>,
+        hash_alg: HashAlg,
+        signature: Signature,
+    ) -> Result<Self> {
+        let version = Self::VERSION;
+        let namespace = namespace.into();
+        let reserved = Vec::new();
+
+        if namespace.is_empty() {
+            return Err(Error::Namespace);
+        }
+
+        Ok(Self {
+            version,
+            public_key,
+            namespace,
+            reserved,
+            hash_alg,
+            signature,
+        })
+    }
+
     /// Decode signature from PEM which begins with the following:
     ///
     /// ```text
@@ -73,27 +99,32 @@ impl SshSig {
             return Err(Error::Namespace);
         }
 
-        let public_key = signing_key.public_key();
-        let namespace = namespace.to_owned();
-        let reserved = Vec::new();
-        let hash = hash_alg.digest(msg);
+        let signed_data = Self::signed_data(namespace, hash_alg, msg)?;
+        let signature = signing_key.try_sign(&signed_data)?;
+        Self::new(signing_key.public_key(), namespace, hash_alg, signature)
+    }
 
-        let signature = SignedData {
-            namespace: namespace.as_str(),
-            reserved: reserved.as_slice(),
-            hash_alg,
-            hash: hash.as_slice(),
+    /// Get the raw message over which the signature for a given message
+    /// needs to be computed.
+    ///
+    /// This is a low-level function intended for uses cases which can't be
+    /// expressed using [`SshSig::sign`], such as if the [`SigningKey`] trait
+    /// can't be used for some reason.
+    ///
+    /// Once a [`Signature`] has been computed over the returned byte vector,
+    /// [`SshSig::new`] can be used to construct the final signature.
+    pub fn signed_data(namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<Vec<u8>> {
+        if namespace.is_empty() {
+            return Err(Error::Namespace);
         }
-        .sign(signing_key)?;
 
-        Ok(Self {
-            version: Self::VERSION,
-            public_key,
+        SignedData {
             namespace,
-            reserved,
+            reserved: &[],
             hash_alg,
-            signature,
-        })
+            hash: hash_alg.digest(msg).as_slice(),
+        }
+        .to_bytes()
     }
 
     /// Verify the given message against this signature.
@@ -270,13 +301,6 @@ struct SignedData<'a> {
 }
 
 impl<'a> SignedData<'a> {
-    fn sign<S>(&self, signer: &S) -> Result<Signature>
-    where
-        S: Signer<Signature>,
-    {
-        Ok(signer.try_sign(&self.to_bytes()?)?)
-    }
-
     fn to_bytes(self) -> Result<Vec<u8>> {
         let mut signed_bytes = Vec::with_capacity(self.encoded_len()?);
         self.encode(&mut signed_bytes)?;

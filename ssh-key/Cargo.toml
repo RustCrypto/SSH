@@ -3,16 +3,15 @@ name = "ssh-key"
 version = "0.5.0-pre.0"
 description = """
 Pure Rust implementation of SSH key file format decoders/encoders as described
-in RFC4251 and RFC4253 as well as the OpenSSH key formats, certificates
-(including certificate validation and certificate authority support), and
-the `authorized_keys` and `known_hosts` file formats. Supports a `no_std`
-profile for embedded targets.
+in RFC4251/RFC4253 and OpenSSH key formats, as well as "sshsig" signatures and
+certificates (including certificate validation and certificate authority support),
+with further support for the `authorized_keys` and `known_hosts` file formats.
 """
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/RustCrypto/SSH/tree/master/ssh-key"
 categories = ["authentication", "cryptography", "encoding", "no-std", "parser-implementations"]
-keywords = ["crypto", "certificate", "key", "openssh", "ssh"]
+keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
 readme = "README.md"
 edition = "2021"
 rust-version = "1.60"
