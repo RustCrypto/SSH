@@ -29,12 +29,12 @@ pub trait Reader: Sized {
         self.remaining_len() == 0
     }
 
-    /// Decode length-prefixed nested data.
+    /// Decode length-prefixed data.
     ///
     /// Decodes a `uint32` which identifies the length of some encapsulated
-    /// data, then calls the given nested reader function with the length of
-    /// the remaining data.
-    fn read_nested<'r, T, E, F>(&'r mut self, f: F) -> core::result::Result<T, E>
+    /// data, then calls the given reader function with the length of the
+    /// remaining data.
+    fn read_prefixed<'r, T, E, F>(&'r mut self, f: F) -> core::result::Result<T, E>
     where
         E: From<Error>,
         F: FnOnce(&mut NestedReader<'r, Self>) -> core::result::Result<T, E>,
@@ -61,7 +61,7 @@ pub trait Reader: Sized {
     ///
     /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
     fn read_byten<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
-        self.read_nested(|reader| {
+        self.read_prefixed(|reader| {
             let slice = out.get_mut(..reader.remaining_len()).ok_or(Error::Length)?;
             reader.read(slice)?;
             Ok(slice as &[u8])
@@ -109,7 +109,7 @@ pub trait Reader: Sized {
     /// Upon success, returns the number of bytes drained sans the length of
     /// the `u32` length prefix (4-bytes).
     fn drain_prefixed(&mut self) -> Result<usize> {
-        self.read_nested(|reader| {
+        self.read_prefixed(|reader| {
             let len = reader.remaining_len();
             reader.drain(len)?;
             Ok(len)
@@ -170,12 +170,12 @@ impl Reader for pem::Decoder<'_> {
     }
 }
 
-/// Reader type used by [`Reader::read_nested`].
+/// Reader type used by [`Reader::read_prefixed`].
 pub struct NestedReader<'r, R: Reader> {
     /// Inner reader type.
     inner: &'r mut R,
 
-    /// Remaining length in the nested reader.
+    /// Remaining length in the prefixed reader.
     remaining_len: usize,
 }
 

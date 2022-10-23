@@ -41,7 +41,7 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        reader.read_nested(|reader| {
+        reader.read_prefixed(|reader| {
             if reader.remaining_len() == SIZE.checked_add(1).ok_or(encoding::Error::Length)? {
                 // Strip leading zero
                 // TODO(tarcieri): make sure leading zero was necessary

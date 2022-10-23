@@ -463,7 +463,7 @@ impl Certificate {
         self.critical_options.encode(writer)?;
         self.extensions.encode(writer)?;
         self.reserved.encode(writer)?;
-        self.signature_key.encode_nested(writer)
+        self.signature_key.encode_prefixed(writer)
     }
 }
 
@@ -485,8 +485,8 @@ impl Decode for Certificate {
             critical_options: OptionsMap::decode(reader)?,
             extensions: OptionsMap::decode(reader)?,
             reserved: Vec::decode(reader)?,
-            signature_key: reader.read_nested(KeyData::decode)?,
-            signature: reader.read_nested(Signature::decode)?,
+            signature_key: reader.read_prefixed(KeyData::decode)?,
+            signature: reader.read_prefixed(Signature::decode)?,
             comment: String::new(),
         })
     }
@@ -509,17 +509,15 @@ impl Encode for Certificate {
             self.critical_options.encoded_len()?,
             self.extensions.encoded_len()?,
             self.reserved.encoded_len()?,
-            4, // signature key length prefix (uint32)
-            self.signature_key.encoded_len()?,
-            4, // signature length prefix (uint32)
-            self.signature.encoded_len()?,
+            self.signature_key.encoded_len_prefixed()?,
+            self.signature.encoded_len_prefixed()?,
         ]
         .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.encode_tbs(writer)?;
-        self.signature.encode_nested(writer)
+        self.signature.encode_prefixed(writer)
     }
 }
 

@@ -642,7 +642,7 @@ impl Decode for PrivateKey {
             return Err(encoding::Error::Length.into());
         }
 
-        let public_key = reader.read_nested(public::KeyData::decode)?;
+        let public_key = reader.read_prefixed(public::KeyData::decode)?;
 
         // Handle encrypted private key
         #[cfg(not(feature = "alloc"))]
@@ -676,7 +676,7 @@ impl Decode for PrivateKey {
             return Err(Error::Crypto);
         }
 
-        reader.read_nested(|reader| {
+        reader.read_prefixed(|reader| {
             Self::decode_privatekey_comment_pair(reader, public_key, cipher.block_size())
         })
     }
@@ -687,9 +687,9 @@ impl Encode for PrivateKey {
 
     fn encoded_len(&self) -> Result<usize> {
         let private_key_len = if self.is_encrypted() {
-            self.key_data.encoded_len()?
+            self.key_data.encoded_len_prefixed()?
         } else {
-            self.encoded_privatekey_comment_pair_len(Cipher::None)?
+            [4, self.encoded_privatekey_comment_pair_len(Cipher::None)?].checked_sum()?
         };
 
         Ok([
@@ -697,9 +697,7 @@ impl Encode for PrivateKey {
             self.cipher.encoded_len()?,
             self.kdf.encoded_len()?,
             4, // number of keys (uint32)
-            4, // public key length prefix (uint32)
-            self.public_key.key_data().encoded_len()?,
-            4, // private key length prefix (uint32)
+            self.public_key.key_data().encoded_len_prefixed()?,
             private_key_len,
         ]
         .checked_sum()?)
@@ -714,11 +712,11 @@ impl Encode for PrivateKey {
         1usize.encode(writer)?;
 
         // Encode public key
-        self.public_key.key_data().encode_nested(writer)?;
+        self.public_key.key_data().encode_prefixed(writer)?;
 
         // Encode private key
         if self.is_encrypted() {
-            self.key_data.encode_nested(writer)?;
+            self.key_data.encode_prefixed(writer)?;
         } else {
             self.encoded_privatekey_comment_pair_len(Cipher::None)?
                 .encode(writer)?;

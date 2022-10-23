@@ -208,7 +208,7 @@ impl Decode for SshSig {
             return Err(Error::Version { number: version });
         }
 
-        let public_key = reader.read_nested(public::KeyData::decode)?;
+        let public_key = reader.read_prefixed(public::KeyData::decode)?;
         let namespace = String::decode(reader)?;
 
         if namespace.is_empty() {
@@ -217,7 +217,7 @@ impl Decode for SshSig {
 
         let reserved = Vec::decode(reader)?;
         let hash_alg = HashAlg::decode(reader)?;
-        let signature = reader.read_nested(Signature::decode)?;
+        let signature = reader.read_prefixed(Signature::decode)?;
 
         Ok(Self {
             version,
@@ -237,13 +237,11 @@ impl Encode for SshSig {
         Ok([
             Self::MAGIC_PREAMBLE.len(),
             self.version.encoded_len()?,
-            4, // public key length prefix (uint32)
-            self.public_key.encoded_len()?,
+            self.public_key.encoded_len_prefixed()?,
             self.namespace.encoded_len()?,
             self.reserved.encoded_len()?,
             self.hash_alg.encoded_len()?,
-            4, // signature length prefix (uint32)
-            self.signature.encoded_len()?,
+            self.signature.encoded_len_prefixed()?,
         ]
         .checked_sum()?)
     }
@@ -251,11 +249,11 @@ impl Encode for SshSig {
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         writer.write(Self::MAGIC_PREAMBLE)?;
         self.version.encode(writer)?;
-        self.public_key.encode_nested(writer)?;
+        self.public_key.encode_prefixed(writer)?;
         self.namespace.encode(writer)?;
         self.reserved.encode(writer)?;
         self.hash_alg.encode(writer)?;
-        self.signature.encode_nested(writer)?;
+        self.signature.encode_prefixed(writer)?;
         Ok(())
     }
 }

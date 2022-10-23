@@ -170,8 +170,7 @@ impl Encode for Signature {
     fn encoded_len(&self) -> Result<usize> {
         Ok([
             self.algorithm().encoded_len()?,
-            4, // signature data length prefix (uint32)
-            self.as_bytes().len(),
+            self.as_bytes().encoded_len()?,
         ]
         .checked_sum()?)
     }
