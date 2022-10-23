@@ -140,12 +140,13 @@ use crate::{public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicK
 use core::str;
 use encoding::{
     pem::{self, LineEnding, PemLabel},
-    CheckedSum, Decode, Encode, Reader, Writer, PEM_LINE_WIDTH,
+    CheckedSum, Decode, DecodePem, Encode, Reader, Writer, PEM_LINE_WIDTH,
 };
 
 #[cfg(feature = "alloc")]
 use {
     alloc::{string::String, vec::Vec},
+    encoding::EncodePem,
     zeroize::Zeroizing,
 };
 
@@ -225,11 +226,8 @@ impl PrivateKey {
     /// ```text
     /// -----BEGIN OPENSSH PRIVATE KEY-----
     /// ```
-    pub fn from_openssh(input: impl AsRef<[u8]>) -> Result<Self> {
-        let mut reader = pem::Decoder::new_wrapped(input.as_ref(), PEM_LINE_WIDTH)?;
-        Self::validate_pem_label(reader.type_label())?;
-        let private_key = Self::decode(&mut reader)?;
-        Ok(reader.finish(private_key)?)
+    pub fn from_openssh(pem: impl AsRef<[u8]>) -> Result<Self> {
+        Self::decode_pem(pem)
     }
 
     /// Parse a raw binary SSH private key.
@@ -258,17 +256,7 @@ impl PrivateKey {
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn to_openssh(&self, line_ending: LineEnding) -> Result<Zeroizing<String>> {
-        let encoded_len = pem::encapsulated_len_wrapped(
-            Self::PEM_LABEL,
-            PEM_LINE_WIDTH,
-            line_ending,
-            self.encoded_len()?,
-        )?;
-
-        let mut buf = vec![0u8; encoded_len];
-        let actual_len = self.encode_openssh(line_ending, &mut buf)?.len();
-        buf.truncate(actual_len);
-        Ok(Zeroizing::new(String::from_utf8(buf)?))
+        self.encode_pem(line_ending).map(Zeroizing::new)
     }
 
     /// Serialize SSH private key as raw bytes.
