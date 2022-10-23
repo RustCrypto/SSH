@@ -149,15 +149,10 @@ pub mod public;
 pub mod certificate;
 
 mod algorithm;
-mod checked;
 mod cipher;
-mod decode;
-mod encode;
 mod error;
 mod fingerprint;
 mod kdf;
-mod reader;
-mod writer;
 
 #[cfg(feature = "alloc")]
 mod mpint;
@@ -176,8 +171,7 @@ pub use crate::{
     private::PrivateKey,
     public::PublicKey,
 };
-pub use base64ct::LineEnding;
-pub use pem_rfc7468 as pem;
+pub use encoding::LineEnding;
 pub use sha2;
 
 #[cfg(feature = "alloc")]
@@ -194,6 +188,3 @@ pub use sec1;
 
 #[cfg(feature = "rand_core")]
 pub use rand_core;
-
-/// Line width used by the PEM encoding of OpenSSH documents.
-const PEM_LINE_WIDTH: usize = 70;

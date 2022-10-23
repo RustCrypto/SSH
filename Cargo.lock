@@ -725,11 +725,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssh-encoding"
+version = "0.0.0"
+dependencies = [
+ "base64ct",
+ "pem-rfc7468",
+ "sha2 0.10.6",
+]
+
+[[package]]
 name = "ssh-key"
 version = "0.5.0-pre.0"
 dependencies = [
  "aes",
- "base64ct",
  "bcrypt-pbkdf",
  "ctr",
  "dsa",
@@ -738,7 +746,6 @@ dependencies = [
  "num-bigint-dig",
  "p256",
  "p384",
- "pem-rfc7468",
  "rand_chacha 0.3.1",
  "rand_core 0.6.4",
  "rsa",
@@ -747,6 +754,7 @@ dependencies = [
  "sha1",
  "sha2 0.10.6",
  "signature",
+ "ssh-encoding",
  "subtle",
  "tempfile",
  "zeroize",

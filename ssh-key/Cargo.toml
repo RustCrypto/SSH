@@ -18,8 +18,7 @@ edition = "2021"
 rust-version = "1.60"
 
 [dependencies]
-base64ct = "1.4"
-pem-rfc7468 = "0.6"
+encoding = { package = "ssh-encoding", version = "0", features = ["base64", "pem", "sha2"], path = "../ssh-encoding" }
 sha2 = { version = "0.10.6", default-features = false }
 zeroize = { version = "1", default-features = false }
 
@@ -48,14 +47,17 @@ zeroize_derive = "1.3" # hack to make minimal-versions lint happy (pulled in by 
 
 [features]
 default = ["ecdsa", "rand_core", "std"]
-alloc = ["base64ct/alloc", "signature/hazmat-preview", "zeroize/alloc"]
+alloc = [
+    "encoding/alloc",
+    "signature/hazmat-preview",
+    "zeroize/alloc"
+]
 std = [
     "alloc",
-    "base64ct/std",
     "ed25519-dalek?/std",
+    "encoding/std",
     "p256?/std",
     "p384?/std",
-    "pem-rfc7468/std",
     "rsa?/std",
     "sec1?/std",
     "signature?/std"

@@ -3,27 +3,33 @@
 //!
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 
-use crate::{checked::CheckedSum, writer::Writer, Result};
+use crate::{checked::CheckedSum, writer::Writer, Error, Result};
 
 #[cfg(feature = "alloc")]
-use {
-    crate::Error,
-    alloc::{string::String, vec::Vec},
-};
+use alloc::{string::String, vec::Vec};
 
 /// Encoding trait.
 ///
 /// This trait describes how to encode a given type.
-pub(crate) trait Encode {
-    /// Get the length of this type encoded in bytes, prior to Base64 encoding.
-    fn encoded_len(&self) -> Result<usize>;
+pub trait Encode {
+    /// Type returned in the event of an encoding error.
+    type Error: From<Error>;
 
-    /// Encode this value using the provided [`Encoder`].
-    fn encode(&self, writer: &mut impl Writer) -> Result<()>;
+    /// Get the length of this type encoded in bytes, prior to Base64 encoding.
+    fn encoded_len(&self) -> core::result::Result<usize, Self::Error>;
+
+    /// Encode this value using the provided [`Writer`].
+    fn encode(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error>;
+
+    /// Return the length of this type after encoding when prepended with a
+    /// `uint32` length prefix.
+    fn encoded_len_nested(&self) -> core::result::Result<usize, Self::Error> {
+        Ok([4, self.encoded_len()?].checked_sum()?)
+    }
 
     /// Encode this value, first prepending a `uint32` length prefix
     /// set to [`Encode::encoded_len`].
-    fn encode_nested(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode_nested(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
     }
@@ -31,6 +37,8 @@ pub(crate) trait Encode {
 
 /// Encode a single `byte` to the writer.
 impl Encode for u8 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         Ok(1)
     }
@@ -48,6 +56,8 @@ impl Encode for u8 {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Encode for u32 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         Ok(4)
     }
@@ -64,6 +74,8 @@ impl Encode for u32 {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Encode for u64 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         Ok(8)
     }
@@ -80,6 +92,8 @@ impl Encode for u64 {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Encode for usize {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         Ok(4)
     }
@@ -93,10 +107,12 @@ impl Encode for usize {
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
-/// > byte[n], where n is the number of bytes in the array.
+/// > `byte[n]`, where n is the number of bytes in the array.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Encode for [u8] {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         [4, self.len()].checked_sum()
     }
@@ -111,10 +127,12 @@ impl Encode for [u8] {
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
-/// > byte[n], where n is the number of bytes in the array.
+/// > `byte[n]`, where n is the number of bytes in the array.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl<const N: usize> Encode for [u8; N] {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         self.as_slice().encoded_len()
     }
@@ -142,6 +160,8 @@ impl<const N: usize> Encode for [u8; N] {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Encode for &str {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         self.as_bytes().encoded_len()
     }
@@ -154,6 +174,8 @@ impl Encode for &str {
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Encode for Vec<u8> {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         self.as_slice().encoded_len()
     }
@@ -166,6 +188,8 @@ impl Encode for Vec<u8> {
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Encode for String {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         self.as_str().encoded_len()
     }
@@ -178,6 +202,8 @@ impl Encode for String {
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Encode for Vec<String> {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         self.iter().try_fold(4usize, |acc, string| {
             acc.checked_add(string.encoded_len()?).ok_or(Error::Length)

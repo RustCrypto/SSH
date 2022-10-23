@@ -1,10 +1,8 @@
 //! Public key data.
 
 use super::{Ed25519PublicKey, SkEd25519};
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, Algorithm,
-    Error, Fingerprint, HashAlg, Result,
-};
+use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use super::{DsaPublicKey, RsaPublicKey};
@@ -224,6 +222,8 @@ impl KeyData {
 }
 
 impl Decode for KeyData {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
         Self::decode_as(reader, algorithm)
@@ -231,12 +231,14 @@ impl Decode for KeyData {
 }
 
 impl Encode for KeyData {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.algorithm().encoded_len()?,
             self.encoded_key_data_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

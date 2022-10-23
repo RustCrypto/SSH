@@ -23,22 +23,19 @@ pub use self::{ecdsa::EcdsaPublicKey, sk::SkEcdsaSha2NistP256};
 
 pub(crate) use self::openssh::Encapsulation;
 
-use crate::{
-    decode::Decode,
-    encode::Encode,
-    reader::{Base64Reader, Reader},
-    Algorithm, Error, Fingerprint, HashAlg, Result,
-};
+use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
 use core::str::FromStr;
+use encoding::{Base64Reader, Decode, Encode, Reader};
 
 #[cfg(feature = "alloc")]
 use {
-    crate::{checked::CheckedSum, writer::base64_len, SshSig},
+    crate::SshSig,
     alloc::{
         borrow::ToOwned,
         string::{String, ToString},
         vec::Vec,
     },
+    encoding::{base64_len_approx, CheckedSum},
 };
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
@@ -121,14 +118,14 @@ impl PublicKey {
             comment: encapsulation.comment.to_owned(),
         };
 
-        reader.finish(public_key)
+        Ok(reader.finish(public_key)?)
     }
 
     /// Parse a raw binary SSH public key.
     pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
         let reader = &mut bytes;
         let key_data = KeyData::decode(reader)?;
-        reader.finish(key_data.into())
+        Ok(reader.finish(key_data.into())?)
     }
 
     /// Encode OpenSSH-formatted public key.
@@ -146,7 +143,7 @@ impl PublicKey {
         let encoded_len = [
             2, // interstitial spaces
             self.algorithm().as_str().len(),
-            base64_len(self.key_data.encoded_len()?),
+            base64_len_approx(self.key_data.encoded_len()?),
             self.comment.len(),
         ]
         .checked_sum()?;

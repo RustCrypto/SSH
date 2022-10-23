@@ -1,13 +1,11 @@
 //! Rivest–Shamir–Adleman (RSA) public keys.
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, MPInt,
-    Result,
-};
+use crate::{Error, MPInt, Result};
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
 use {
-    crate::{private::RsaKeypair, Error},
+    crate::private::RsaKeypair,
     rsa::{pkcs1v15, PublicKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
@@ -32,6 +30,8 @@ impl RsaPublicKey {
 }
 
 impl Decode for RsaPublicKey {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let e = MPInt::decode(reader)?;
         let n = MPInt::decode(reader)?;
@@ -40,8 +40,10 @@ impl Decode for RsaPublicKey {
 }
 
 impl Encode for RsaPublicKey {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [self.e.encoded_len()?, self.n.encoded_len()?].checked_sum()
+        Ok([self.e.encoded_len()?, self.n.encoded_len()?].checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

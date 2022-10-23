@@ -1,10 +1,8 @@
 //! Private key pairs.
 
 use super::ed25519::Ed25519Keypair;
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, public, reader::Reader, writer::Writer,
-    Algorithm, Error, Result,
-};
+use crate::{public, Algorithm, Error, Result};
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use {
@@ -240,6 +238,8 @@ impl KeypairData {
 }
 
 impl Decode for KeypairData {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         match Algorithm::decode(reader)? {
             #[cfg(feature = "alloc")]
@@ -265,6 +265,8 @@ impl Decode for KeypairData {
 }
 
 impl Encode for KeypairData {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         let key_len = match self {
             #[cfg(feature = "alloc")]
@@ -282,7 +284,7 @@ impl Encode for KeypairData {
             Self::SkEd25519(sk) => sk.encoded_len()?,
         };
 
-        [self.algorithm()?.encoded_len()?, key_len].checked_sum()
+        Ok([self.algorithm()?.encoded_len()?, key_len].checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
@@ -292,19 +294,21 @@ impl Encode for KeypairData {
 
         match self {
             #[cfg(feature = "alloc")]
-            Self::Dsa(key) => key.encode(writer),
+            Self::Dsa(key) => key.encode(writer)?,
             #[cfg(feature = "ecdsa")]
-            Self::Ecdsa(key) => key.encode(writer),
-            Self::Ed25519(key) => key.encode(writer),
+            Self::Ecdsa(key) => key.encode(writer)?,
+            Self::Ed25519(key) => key.encode(writer)?,
             #[cfg(feature = "alloc")]
-            Self::Encrypted(ciphertext) => writer.write(ciphertext),
+            Self::Encrypted(ciphertext) => writer.write(ciphertext)?,
             #[cfg(feature = "alloc")]
-            Self::Rsa(key) => key.encode(writer),
+            Self::Rsa(key) => key.encode(writer)?,
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-            Self::SkEcdsaSha2NistP256(sk) => sk.encode(writer),
+            Self::SkEcdsaSha2NistP256(sk) => sk.encode(writer)?,
             #[cfg(feature = "alloc")]
-            Self::SkEd25519(sk) => sk.encode(writer),
+            Self::SkEd25519(sk) => sk.encode(writer)?,
         }
+
+        Ok(())
     }
 }
 

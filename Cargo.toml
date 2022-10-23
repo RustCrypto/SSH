@@ -1,6 +1,9 @@
 [workspace]
-members = ["ssh-key"]
 resolver = "2"
+members = [
+    "ssh-encoding",
+    "ssh-key"
+]
 
 [profile.dev]
 opt-level = 2

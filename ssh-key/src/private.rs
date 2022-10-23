@@ -115,8 +115,10 @@ mod rsa;
 #[cfg(feature = "alloc")]
 mod sk;
 
-pub use self::ed25519::{Ed25519Keypair, Ed25519PrivateKey};
-pub use self::keypair::KeypairData;
+pub use self::{
+    ed25519::{Ed25519Keypair, Ed25519PrivateKey},
+    keypair::KeypairData,
+};
 
 #[cfg(feature = "alloc")]
 pub use crate::{
@@ -134,17 +136,12 @@ pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
 pub use self::sk::SkEcdsaSha2NistP256;
 
-use crate::{
-    checked::CheckedSum,
-    decode::Decode,
-    encode::Encode,
-    pem::{self, LineEnding, PemLabel},
-    public,
-    reader::Reader,
-    writer::Writer,
-    Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result, PEM_LINE_WIDTH,
-};
+use crate::{public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result};
 use core::str;
+use encoding::{
+    pem::{self, LineEnding, PemLabel},
+    CheckedSum, Decode, Encode, Reader, Writer, PEM_LINE_WIDTH,
+};
 
 #[cfg(feature = "alloc")]
 use {
@@ -232,14 +229,14 @@ impl PrivateKey {
         let mut reader = pem::Decoder::new_wrapped(input.as_ref(), PEM_LINE_WIDTH)?;
         Self::validate_pem_label(reader.type_label())?;
         let private_key = Self::decode(&mut reader)?;
-        reader.finish(private_key)
+        Ok(reader.finish(private_key)?)
     }
 
     /// Parse a raw binary SSH private key.
     pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
         let reader = &mut bytes;
         let private_key = Self::decode(reader)?;
-        reader.finish(private_key)
+        Ok(reader.finish(private_key)?)
     }
 
     /// Encode OpenSSH-formatted (PEM) private key.
@@ -530,7 +527,7 @@ impl PrivateKey {
 
         // Ensure input data is padding-aligned
         if reader.remaining_len().checked_rem(block_size) != Some(0) {
-            return Err(Error::Length);
+            return Err(encoding::Error::Length.into());
         }
 
         let checkint1 = u32::decode(reader)?;
@@ -553,7 +550,7 @@ impl PrivateKey {
         let padding_len = reader.remaining_len();
 
         if padding_len >= block_size {
-            return Err(Error::Length);
+            return Err(encoding::Error::Length.into());
         }
 
         if padding_len != 0 {
@@ -603,7 +600,7 @@ impl PrivateKey {
     /// and padded using the padding size for the given cipher.
     fn encoded_privatekey_comment_pair_len(&self, cipher: Cipher) -> Result<usize> {
         let len = self.unpadded_privatekey_comment_pair_len()?;
-        [len, cipher.padding_len(len)].checked_sum()
+        Ok([len, cipher.padding_len(len)].checked_sum()?)
     }
 
     /// Get the length of this private key when encoded with the given comment.
@@ -616,16 +613,18 @@ impl PrivateKey {
             return Err(Error::Encrypted);
         }
 
-        [
+        Ok([
             8, // 2 x uint32 checkints,
             self.key_data.encoded_len()?,
             self.comment().encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 }
 
 impl Decode for PrivateKey {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let mut auth_magic = [0u8; Self::AUTH_MAGIC.len()];
         reader.read(&mut auth_magic)?;
@@ -640,7 +639,7 @@ impl Decode for PrivateKey {
 
         // TODO(tarcieri): support more than one key?
         if nkeys != 1 {
-            return Err(Error::Length);
+            return Err(encoding::Error::Length.into());
         }
 
         let public_key = reader.read_nested(public::KeyData::decode)?;
@@ -660,7 +659,7 @@ impl Decode for PrivateKey {
             }
 
             if !reader.is_finished() {
-                return Err(Error::Length);
+                return Err(encoding::Error::Length.into());
             }
 
             return Ok(Self {
@@ -684,6 +683,8 @@ impl Decode for PrivateKey {
 }
 
 impl Encode for PrivateKey {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         let private_key_len = if self.is_encrypted() {
             self.key_data.encoded_len()?
@@ -691,7 +692,7 @@ impl Encode for PrivateKey {
             self.encoded_privatekey_comment_pair_len(Cipher::None)?
         };
 
-        [
+        Ok([
             Self::AUTH_MAGIC.len(),
             self.cipher.encoded_len()?,
             self.kdf.encoded_len()?,
@@ -701,7 +702,7 @@ impl Encode for PrivateKey {
             4, // private key length prefix (uint32)
             private_key_len,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

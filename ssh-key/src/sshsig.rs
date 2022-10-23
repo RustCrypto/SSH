@@ -1,18 +1,12 @@
 //! `sshsig` implementation.
 
-use crate::{
-    checked::CheckedSum,
-    decode::Decode,
-    encode::Encode,
-    pem::{self, PemLabel},
-    public,
-    reader::Reader,
-    writer::Writer,
-    Algorithm, Error, HashAlg, Result, Signature, SigningKey, PEM_LINE_WIDTH,
-};
+use crate::{public, Algorithm, Error, HashAlg, Result, Signature, SigningKey};
 use alloc::{borrow::ToOwned, string::String, string::ToString, vec::Vec};
-use base64ct::LineEnding;
 use core::str::FromStr;
+use encoding::{
+    pem::{self, LineEnding, PemLabel},
+    CheckedSum, Decode, Encode, Reader, Writer, PEM_LINE_WIDTH,
+};
 use signature::{Signer, Verifier};
 
 type Version = u32;
@@ -59,7 +53,7 @@ impl SshSig {
         let mut reader = pem::Decoder::new_wrapped(pem.as_ref(), PEM_LINE_WIDTH)?;
         Self::validate_pem_label(reader.type_label())?;
         let signature = Self::decode(&mut reader)?;
-        reader.finish(signature)
+        Ok(reader.finish(signature)?)
     }
 
     /// Encode signature as PEM which begins with the following:
@@ -198,6 +192,8 @@ impl SshSig {
 }
 
 impl Decode for SshSig {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let mut magic_preamble = [0u8; Self::MAGIC_PREAMBLE.len()];
         reader.read(&mut magic_preamble)?;
@@ -235,8 +231,10 @@ impl Decode for SshSig {
 }
 
 impl Encode for SshSig {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             Self::MAGIC_PREAMBLE.len(),
             self.version.encoded_len()?,
             4, // public key length prefix (uint32)
@@ -247,7 +245,7 @@ impl Encode for SshSig {
             4, // signature length prefix (uint32)
             self.signature.encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
@@ -306,15 +304,17 @@ impl<'a> SignedData<'a> {
 }
 
 impl<'a> Encode for SignedData<'a> {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             SshSig::MAGIC_PREAMBLE.len(),
             self.namespace.encoded_len()?,
             self.reserved.encoded_len()?,
             self.hash_alg.encoded_len()?,
             self.hash.encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

@@ -14,13 +14,18 @@ const MAX_SIZE: usize = 0xFFFFF;
 /// Decoder trait.
 ///
 /// This trait describes how to decode a given type.
-pub(crate) trait Decode: Sized {
-    /// Attempt to decode a value of this type using the provided [`Decoder`].
-    fn decode(reader: &mut impl Reader) -> Result<Self>;
+pub trait Decode: Sized {
+    /// Type returned in the event of a decoding error.
+    type Error: From<Error>;
+
+    /// Attempt to decode a value of this type using the provided [`Reader`].
+    fn decode(reader: &mut impl Reader) -> core::result::Result<Self, Self::Error>;
 }
 
 /// Decode a single `byte` from the input data.
 impl Decode for u8 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let mut buf = [0];
         reader.read(&mut buf)?;
@@ -36,6 +41,8 @@ impl Decode for u8 {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Decode for u32 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let mut bytes = [0u8; 4];
         reader.read(&mut bytes)?;
@@ -50,6 +57,8 @@ impl Decode for u32 {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Decode for u64 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let mut bytes = [0u8; 8];
         reader.read(&mut bytes)?;
@@ -65,6 +74,8 @@ impl Decode for u64 {
 /// Enforces a library-internal limit of 1048575, as the main use case for
 /// `usize` is length prefixes.
 impl Decode for usize {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let n = usize::try_from(u32::decode(reader)?)?;
 
@@ -80,10 +91,12 @@ impl Decode for usize {
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
-/// > byte[n], where n is the number of bytes in the array.
+/// > `byte[n]`, where n is the number of bytes in the array.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl<const N: usize> Decode for [u8; N] {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         reader.read_nested(|reader| {
             let mut result = [(); N].map(|_| 0);
@@ -97,12 +110,14 @@ impl<const N: usize> Decode for [u8; N] {
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
-/// > byte[n], where n is the number of bytes in the array.
+/// > `byte[n]`, where n is the number of bytes in the array.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Decode for Vec<u8> {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         reader.read_nested(|reader| {
             let mut result = vec![0u8; reader.remaining_len()];
@@ -115,6 +130,8 @@ impl Decode for Vec<u8> {
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Decode for String {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         String::from_utf8(Vec::decode(reader)?).map_err(|_| Error::CharacterEncoding)
     }
@@ -123,6 +140,8 @@ impl Decode for String {
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Decode for Vec<String> {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         reader.read_nested(|reader| {
             let mut entries = Self::new();

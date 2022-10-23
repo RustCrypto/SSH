@@ -3,7 +3,7 @@
 use crate::{Error, Result};
 
 /// Extension trait for providing checked [`Iterator::sum`]-like functionality.
-pub(crate) trait CheckedSum<A>: Sized {
+pub trait CheckedSum<A>: Sized {
     /// Iterate over the values of this type, computing a checked sum.
     ///
     /// Returns [`Error::Length`] on overflow.

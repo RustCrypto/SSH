@@ -12,8 +12,9 @@
 //! ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILM+rvN+ot98qgEN796jTiQfZfG1KaT0PtFDJ/XFSqti user@example.com
 //! ```
 
-use crate::{writer::Base64Writer, Error, Result};
+use crate::Result;
 use core::str;
+use encoding::{Base64Writer, Error};
 
 /// OpenSSH public key encapsulation parser.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,10 +38,12 @@ impl<'a> Encapsulation<'a> {
         let comment = str::from_utf8(bytes)
             .map_err(|_| Error::CharacterEncoding)?
             .trim_end();
+
         if algorithm_id.is_empty() || base64_data.is_empty() {
             // TODO(tarcieri): better errors for these cases?
-            return Err(Error::Length);
+            return Err(Error::Length.into());
         }
+
         Ok(Self {
             algorithm_id,
             base64_data,
@@ -64,13 +67,16 @@ impl<'a> Encapsulation<'a> {
 
         let mut writer = Base64Writer::new(&mut out[offset..])?;
         f(&mut writer)?;
+
         let base64_len = writer.finish()?.len();
 
         offset = offset.checked_add(base64_len).ok_or(Error::Length)?;
+
         if !comment.is_empty() {
             encode_str(out, &mut offset, " ")?;
             encode_str(out, &mut offset, comment)?;
         }
+
         Ok(str::from_utf8(&out[..offset])?)
     }
 }
@@ -91,15 +97,15 @@ fn decode_segment<'a>(bytes: &mut &'a [u8]) -> Result<&'a [u8]> {
             [b' ', rest @ ..] => {
                 // Encountered space; we're done
                 *bytes = rest;
-                return start.get(..len).ok_or(Error::Length);
+                return start.get(..len).ok_or_else(|| Error::Length.into());
             }
             [_, ..] => {
                 // Invalid character
-                return Err(Error::CharacterEncoding);
+                return Err(Error::CharacterEncoding.into());
             }
             [] => {
                 // End of input, could be truncated or could be no comment
-                return start.get(..len).ok_or(Error::Length);
+                return start.get(..len).ok_or_else(|| Error::Length.into());
             }
         }
     }
@@ -107,7 +113,7 @@ fn decode_segment<'a>(bytes: &mut &'a [u8]) -> Result<&'a [u8]> {
 
 /// Parse a segment of the public key as a `&str`.
 fn decode_segment_str<'a>(bytes: &mut &'a [u8]) -> Result<&'a str> {
-    str::from_utf8(decode_segment(bytes)?).map_err(|_| Error::CharacterEncoding)
+    str::from_utf8(decode_segment(bytes)?).map_err(|_| Error::CharacterEncoding.into())
 }
 
 /// Encode a segment of the public key.
@@ -115,11 +121,12 @@ fn encode_str(out: &mut [u8], offset: &mut usize, s: &str) -> Result<()> {
     let bytes = s.as_bytes();
 
     if out.len() < offset.checked_add(bytes.len()).ok_or(Error::Length)? {
-        return Err(Error::Length);
+        return Err(Error::Length.into());
     }
 
     out[*offset..][..bytes.len()].copy_from_slice(bytes);
     *offset = offset.checked_add(bytes.len()).ok_or(Error::Length)?;
+
     Ok(())
 }
 
