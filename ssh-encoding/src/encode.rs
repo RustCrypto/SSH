@@ -23,13 +23,13 @@ pub trait Encode {
 
     /// Return the length of this type after encoding when prepended with a
     /// `uint32` length prefix.
-    fn encoded_len_nested(&self) -> core::result::Result<usize, Self::Error> {
+    fn encoded_len_prefixed(&self) -> core::result::Result<usize, Self::Error> {
         Ok([4, self.encoded_len()?].checked_sum()?)
     }
 
     /// Encode this value, first prepending a `uint32` length prefix
     /// set to [`Encode::encoded_len`].
-    fn encode_nested(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error> {
+    fn encode_prefixed(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
     }

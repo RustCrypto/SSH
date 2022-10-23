@@ -219,7 +219,7 @@ impl Decode for Ed25519Keypair {
         // a serialization of `private_key[32] || public_key[32]` immediately
         // following the public key.
         let mut bytes = Zeroizing::new([0u8; Self::BYTE_SIZE]);
-        reader.read_nested(|reader| reader.read(&mut *bytes))?;
+        reader.read_prefixed(|reader| reader.read(&mut *bytes))?;
 
         let keypair = Self::from_bytes(&*bytes)?;
 

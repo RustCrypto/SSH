@@ -37,7 +37,7 @@ impl Decode for OptionsMap {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        reader.read_nested(|reader| {
+        reader.read_prefixed(|reader| {
             let mut entries = Vec::<(String, String)>::new();
 
             while !reader.is_finished() {

@@ -27,7 +27,7 @@ impl Decode for Ed25519PublicKey {
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let mut bytes = [0u8; Self::BYTE_SIZE];
-        reader.read_nested(|reader| reader.read(&mut bytes))?;
+        reader.read_prefixed(|reader| reader.read(&mut bytes))?;
         Ok(Self(bytes))
     }
 }

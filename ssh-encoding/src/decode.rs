@@ -98,7 +98,7 @@ impl<const N: usize> Decode for [u8; N] {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        reader.read_nested(|reader| {
+        reader.read_prefixed(|reader| {
             let mut result = [(); N].map(|_| 0);
             reader.read(&mut result)?;
             Ok(result)
@@ -119,7 +119,7 @@ impl Decode for Vec<u8> {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        reader.read_nested(|reader| {
+        reader.read_prefixed(|reader| {
             let mut result = vec![0u8; reader.remaining_len()];
             reader.read(&mut result)?;
             Ok(result)
@@ -143,7 +143,7 @@ impl Decode for Vec<String> {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        reader.read_nested(|reader| {
+        reader.read_prefixed(|reader| {
             let mut entries = Self::new();
 
             while !reader.is_finished() {

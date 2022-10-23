@@ -147,7 +147,7 @@ impl Decode for Kdf {
                 return Err(Error::Algorithm);
 
                 #[cfg(feature = "alloc")]
-                reader.read_nested(|reader| {
+                reader.read_prefixed(|reader| {
                     Ok(Self::Bcrypt {
                         salt: Vec::decode(reader)?,
                         rounds: u32::decode(reader)?,
@@ -162,18 +162,13 @@ impl Encode for Kdf {
     type Error = Error;
 
     fn encoded_len(&self) -> Result<usize> {
-        let kdfopts_len = match self {
-            Self::None => 0,
+        let kdfopts_prefixed_len = match self {
+            Self::None => 4,
             #[cfg(feature = "alloc")]
-            Self::Bcrypt { salt, .. } => [8, salt.len()].checked_sum()?,
+            Self::Bcrypt { salt, .. } => [12, salt.len()].checked_sum()?,
         };
 
-        Ok([
-            self.algorithm().encoded_len()?,
-            4, // kdfopts length prefix (uint32)
-            kdfopts_len,
-        ]
-        .checked_sum()?)
+        Ok([self.algorithm().encoded_len()?, kdfopts_prefixed_len].checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
