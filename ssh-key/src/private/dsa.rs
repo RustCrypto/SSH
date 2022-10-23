@@ -1,14 +1,9 @@
 //! Digital Signature Algorithm (DSA) private keys.
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, public::DsaPublicKey, reader::Reader,
-    writer::Writer, MPInt, Result,
-};
+use crate::{public::DsaPublicKey, Error, MPInt, Result};
 use core::fmt;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use zeroize::Zeroize;
-
-#[cfg(feature = "dsa")]
-use crate::Error;
 
 #[cfg(feature = "subtle")]
 use subtle::{Choice, ConstantTimeEq};
@@ -48,6 +43,8 @@ impl AsRef<[u8]> for DsaPrivateKey {
 }
 
 impl Decode for DsaPrivateKey {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         Ok(Self {
             inner: MPInt::decode(reader)?,
@@ -62,6 +59,8 @@ impl Drop for DsaPrivateKey {
 }
 
 impl Encode for DsaPrivateKey {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
         self.inner.encoded_len()
     }
@@ -166,6 +165,8 @@ impl DsaKeypair {
 }
 
 impl Decode for DsaKeypair {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let public = DsaPublicKey::decode(reader)?;
         let private = DsaPrivateKey::decode(reader)?;
@@ -174,8 +175,10 @@ impl Decode for DsaKeypair {
 }
 
 impl Encode for DsaKeypair {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [self.public.encoded_len()?, self.private.encoded_len()?].checked_sum()
+        Ok([self.public.encoded_len()?, self.private.encoded_len()?].checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

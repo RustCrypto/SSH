@@ -1,12 +1,7 @@
 //! Digital Signature Algorithm (DSA) public keys.
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, MPInt,
-    Result,
-};
-
-#[cfg(feature = "dsa")]
-use crate::Error;
+use crate::{Error, MPInt, Result};
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Digital Signature Algorithm (DSA) public key.
 ///
@@ -29,6 +24,8 @@ pub struct DsaPublicKey {
 }
 
 impl Decode for DsaPublicKey {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let p = MPInt::decode(reader)?;
         let q = MPInt::decode(reader)?;
@@ -39,14 +36,16 @@ impl Decode for DsaPublicKey {
 }
 
 impl Encode for DsaPublicKey {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.p.encoded_len()?,
             self.q.encoded_len()?,
             self.g.encoded_len()?,
             self.y.encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

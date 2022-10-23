@@ -1,9 +1,8 @@
 //! Parser for `KnownHostsFile`-formatted data.
 
-use base64ct::{Base64, Encoding};
-
 use crate::{Error, PublicKey, Result};
 use core::str;
+use encoding::base64::{Base64, Encoding};
 
 use {
     alloc::string::{String, ToString},

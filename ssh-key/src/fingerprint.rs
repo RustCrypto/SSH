@@ -1,10 +1,13 @@
 //! SSH public key fingerprints.
 
-use crate::{encode::Encode, public, Error, HashAlg, Result};
-use base64ct::{Base64Unpadded, Encoding};
+use crate::{public, Error, HashAlg, Result};
 use core::{
     fmt::{self, Display},
     str::{self, FromStr},
+};
+use encoding::{
+    base64::{Base64Unpadded, Encoding},
+    Encode,
 };
 use sha2::{Digest, Sha256, Sha512};
 

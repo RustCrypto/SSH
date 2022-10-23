@@ -3,18 +3,14 @@
 //! [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
 
 use super::Ed25519PublicKey;
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, Result,
-};
+use crate::{Error, Result};
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use alloc::{borrow::ToOwned, string::String};
 
 #[cfg(feature = "ecdsa")]
-use {
-    super::ecdsa::EcdsaNistP256PublicKey,
-    crate::{EcdsaCurve, Error},
-};
+use crate::{public::ecdsa::EcdsaNistP256PublicKey, EcdsaCurve};
 
 /// Default FIDO/U2F Security Key application string.
 const DEFAULT_APPLICATION_STRING: &str = "ssh:";
@@ -55,6 +51,8 @@ impl SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl Decode for SkEcdsaSha2NistP256 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         if EcdsaCurve::decode(reader)? != EcdsaCurve::NistP256 {
             return Err(Error::Crypto);
@@ -78,19 +76,22 @@ impl Decode for SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl Encode for SkEcdsaSha2NistP256 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             EcdsaCurve::NistP256.encoded_len()?,
             self.ec_point.as_bytes().encoded_len()?,
             self.application().encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         EcdsaCurve::NistP256.encode(writer)?;
         self.ec_point.as_bytes().encode(writer)?;
-        self.application().encode(writer)
+        self.application().encode(writer)?;
+        Ok(())
     }
 }
 
@@ -144,6 +145,8 @@ impl SkEd25519 {
 }
 
 impl Decode for SkEd25519 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let public_key = Ed25519PublicKey::decode(reader)?;
 
@@ -161,17 +164,20 @@ impl Decode for SkEd25519 {
 }
 
 impl Encode for SkEd25519 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.public_key.encoded_len()?,
             self.application().encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.public_key.encode(writer)?;
-        self.application().encode(writer)
+        self.application().encode(writer)?;
+        Ok(())
     }
 }
 

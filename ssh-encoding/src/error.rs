@@ -1,0 +1,102 @@
+//! Error types
+
+use core::fmt;
+
+/// Result type with `ssh-encoding` crate's [`Error`] as the error type.
+pub type Result<T> = core::result::Result<T, Error>;
+
+/// Error type.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
+pub enum Error {
+    #[cfg(feature = "base64")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+    /// Base64-related errors.
+    Base64(base64::Error),
+
+    /// Character encoding-related errors.
+    CharacterEncoding,
+
+    /// Invalid length.
+    Length,
+
+    /// Overflow errors.
+    Overflow,
+
+    /// PEM encoding errors.
+    #[cfg(feature = "pem")]
+    Pem(pem::Error),
+
+    /// Unexpected trailing data at end of message.
+    TrailingData {
+        /// Number of bytes of remaining data at end of message.
+        remaining: usize,
+    },
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            #[cfg(feature = "base64")]
+            Error::Base64(err) => write!(f, "Base64 encoding error: {}", err),
+            Error::CharacterEncoding => write!(f, "character encoding invalid"),
+            Error::Length => write!(f, "length invalid"),
+            Error::Overflow => write!(f, "internal overflow error"),
+            #[cfg(feature = "pem")]
+            Error::Pem(err) => write!(f, "{}", err),
+            Error::TrailingData { remaining } => write!(
+                f,
+                "unexpected trailing data at end of message ({} bytes)",
+                remaining
+            ),
+        }
+    }
+}
+
+impl From<core::num::TryFromIntError> for Error {
+    fn from(_: core::num::TryFromIntError) -> Error {
+        Error::Overflow
+    }
+}
+
+impl From<core::str::Utf8Error> for Error {
+    fn from(_: core::str::Utf8Error) -> Error {
+        Error::CharacterEncoding
+    }
+}
+
+#[cfg(feature = "alloc")]
+#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+impl From<alloc::string::FromUtf8Error> for Error {
+    fn from(_: alloc::string::FromUtf8Error) -> Error {
+        Error::CharacterEncoding
+    }
+}
+
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+impl From<base64::Error> for Error {
+    fn from(err: base64::Error) -> Error {
+        Error::Base64(err)
+    }
+}
+
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+impl From<base64::InvalidLengthError> for Error {
+    fn from(_: base64::InvalidLengthError) -> Error {
+        Error::Length
+    }
+}
+
+#[cfg(feature = "pem")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
+impl From<pem::Error> for Error {
+    fn from(err: pem::Error) -> Error {
+        Error::Pem(err)
+    }
+}
+
+#[cfg(feature = "std")]
+#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
+impl std::error::Error for Error {}

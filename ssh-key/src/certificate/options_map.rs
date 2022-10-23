@@ -1,16 +1,41 @@
 //! OpenSSH certificate options used by critical options and extensions.
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, Error,
-    Result,
+use crate::{Error, Result};
+use alloc::{collections::BTreeMap, string::String, vec::Vec};
+use core::{
+    cmp::Ordering,
+    ops::{Deref, DerefMut},
 };
-use alloc::{string::String, vec::Vec};
-use core::cmp::Ordering;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Key/value map type used for certificate's critical options and extensions.
-pub type OptionsMap = alloc::collections::BTreeMap<String, String>;
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+pub struct OptionsMap(pub BTreeMap<String, String>);
+
+impl OptionsMap {
+    /// Create a new [`OptionsMap`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Deref for OptionsMap {
+    type Target = BTreeMap<String, String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for OptionsMap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
 
 impl Decode for OptionsMap {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         reader.read_nested(|reader| {
             let mut entries = Vec::<(String, String)>::new();
@@ -37,23 +62,48 @@ impl Decode for OptionsMap {
 }
 
 impl Encode for OptionsMap {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        self.iter().try_fold(4, |acc, (name, data)| {
-            [acc, 4, name.len(), 4, data.len()].checked_sum()
-        })
+        self.iter()
+            .try_fold(4, |acc, (name, data)| {
+                [acc, 4, name.len(), 4, data.len()].checked_sum()
+            })
+            .map_err(Into::into)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.encoded_len()?
             .checked_sub(4)
-            .ok_or(Error::Length)?
+            .ok_or(encoding::Error::Length)?
             .encode(writer)?;
 
-        for (name, data) in self {
+        for (name, data) in self.iter() {
             name.encode(writer)?;
             data.encode(writer)?;
         }
 
         Ok(())
+    }
+}
+
+impl From<BTreeMap<String, String>> for OptionsMap {
+    fn from(map: BTreeMap<String, String>) -> OptionsMap {
+        OptionsMap(map)
+    }
+}
+
+impl From<OptionsMap> for BTreeMap<String, String> {
+    fn from(map: OptionsMap) -> BTreeMap<String, String> {
+        map.0
+    }
+}
+
+impl FromIterator<(String, String)> for OptionsMap {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = (String, String)>,
+    {
+        BTreeMap::from_iter(iter).into()
     }
 }

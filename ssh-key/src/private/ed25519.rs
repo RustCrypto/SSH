@@ -2,11 +2,9 @@
 //!
 //! Edwards Digital Signature Algorithm (EdDSA) over Curve25519.
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, public::Ed25519PublicKey, reader::Reader,
-    writer::Writer, Error, Result,
-};
+use crate::{public::Ed25519PublicKey, Error, Result};
 use core::fmt;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use zeroize::{Zeroize, Zeroizing};
 
 #[cfg(feature = "rand_core")]
@@ -211,6 +209,8 @@ impl Ed25519Keypair {
 }
 
 impl Decode for Ed25519Keypair {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         // Decode private key
         let public = Ed25519PublicKey::decode(reader)?;
@@ -233,13 +233,16 @@ impl Decode for Ed25519Keypair {
 }
 
 impl Encode for Ed25519Keypair {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [4, self.public.encoded_len()?, Self::BYTE_SIZE].checked_sum()
+        Ok([4, self.public.encoded_len()?, Self::BYTE_SIZE].checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.public.encode(writer)?;
-        Zeroizing::new(self.to_bytes()).as_ref().encode(writer)
+        Zeroizing::new(self.to_bytes()).as_ref().encode(writer)?;
+        Ok(())
     }
 }
 

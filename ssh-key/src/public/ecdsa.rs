@@ -1,10 +1,8 @@
 //! Elliptic Curve Digital Signature Algorithm (ECDSA) public keys.
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, Algorithm,
-    EcdsaCurve, Error, Result,
-};
+use crate::{Algorithm, EcdsaCurve, Error, Result};
 use core::fmt;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use sec1::consts::{U32, U48, U66};
 
 /// ECDSA/NIST P-256 public key.
@@ -61,10 +59,10 @@ impl EcdsaPublicKey {
                     32 => Ok(Self::NistP256(EcdsaNistP256PublicKey::from_bytes(bytes)?)),
                     48 => Ok(Self::NistP384(EcdsaNistP384PublicKey::from_bytes(bytes)?)),
                     66 => Ok(Self::NistP521(EcdsaNistP521PublicKey::from_bytes(bytes)?)),
-                    _ => Err(Error::Length),
+                    _ => Err(encoding::Error::Length.into()),
                 }
             }
-            _ => Err(Error::Length),
+            _ => Err(encoding::Error::Length.into()),
         }
     }
 
@@ -101,6 +99,8 @@ impl AsRef<[u8]> for EcdsaPublicKey {
 }
 
 impl Decode for EcdsaPublicKey {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let curve = EcdsaCurve::decode(reader)?;
 
@@ -116,18 +116,21 @@ impl Decode for EcdsaPublicKey {
 }
 
 impl Encode for EcdsaPublicKey {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.curve().encoded_len()?,
             4, // uint32 length prefix
             self.as_ref().len(),
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.curve().encode(writer)?;
-        self.as_ref().encode(writer)
+        self.as_ref().encode(writer)?;
+        Ok(())
     }
 }
 

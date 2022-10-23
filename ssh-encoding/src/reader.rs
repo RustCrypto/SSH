@@ -2,14 +2,15 @@
 
 use crate::{decode::Decode, Error, Result};
 use core::str;
-use pem_rfc7468 as pem;
 
 /// Constant-time Base64 reader implementation.
-pub(crate) type Base64Reader<'i> = base64ct::Decoder<'i, base64ct::Base64>;
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+pub type Base64Reader<'i> = base64::Decoder<'i, base64::Base64>;
 
 /// Reader trait which decodes the binary SSH protocol serialization from
 /// various inputs.
-pub(crate) trait Reader: Sized {
+pub trait Reader: Sized {
     /// Read as much data as is needed to exactly fill `out`.
     ///
     /// This is the base decoding method on which the rest of the trait is
@@ -33,9 +34,10 @@ pub(crate) trait Reader: Sized {
     /// Decodes a `uint32` which identifies the length of some encapsulated
     /// data, then calls the given nested reader function with the length of
     /// the remaining data.
-    fn read_nested<'r, T, F>(&'r mut self, f: F) -> Result<T>
+    fn read_nested<'r, T, E, F>(&'r mut self, f: F) -> core::result::Result<T, E>
     where
-        F: FnOnce(&mut NestedReader<'r, Self>) -> Result<T>,
+        E: From<Error>,
+        F: FnOnce(&mut NestedReader<'r, Self>) -> core::result::Result<T, E>,
     {
         let len = usize::decode(self)?;
 
@@ -49,12 +51,12 @@ pub(crate) trait Reader: Sized {
     ///
     /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
     /// > data is sometimes represented as an array of bytes, written
-    /// > byte[n], where n is the number of bytes in the array.
+    /// > `byte[n]`, where n is the number of bytes in the array.
     ///
     /// Storage for the byte array must be provided as mutable byte slice in
     /// order to accommodate `no_std` use cases.
     ///
-    /// The [`Decode`] impl on [`Vec<u8>`] can be used to allocate a buffer for
+    /// The [`Decode`] impl on `Vec<u8>` can be used to allocate a buffer for
     /// the result.
     ///
     /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
@@ -85,7 +87,7 @@ pub(crate) trait Reader: Sized {
     /// Storage for the string data must be provided as mutable byte slice in
     /// order to accommodate `no_std` use cases.
     ///
-    /// The [`Decode`] impl on [`String`] can be used to allocate a buffer for
+    /// The [`Decode`] impl on `String` can be used to allocate a buffer for
     /// the result.
     ///
     /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
@@ -127,26 +129,6 @@ pub(crate) trait Reader: Sized {
     }
 }
 
-impl Reader for Base64Reader<'_> {
-    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
-        Ok(self.decode(out)?)
-    }
-
-    fn remaining_len(&self) -> usize {
-        self.remaining_len()
-    }
-}
-
-impl Reader for pem::Decoder<'_> {
-    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
-        Ok(self.decode(out)?)
-    }
-
-    fn remaining_len(&self) -> usize {
-        self.remaining_len()
-    }
-}
-
 impl Reader for &[u8] {
     fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
         if self.len() >= out.len() {
@@ -164,8 +146,32 @@ impl Reader for &[u8] {
     }
 }
 
+#[cfg(feature = "base64")]
+#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
+impl Reader for Base64Reader<'_> {
+    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
+        Ok(self.decode(out)?)
+    }
+
+    fn remaining_len(&self) -> usize {
+        self.remaining_len()
+    }
+}
+
+#[cfg(feature = "pem")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
+impl Reader for pem::Decoder<'_> {
+    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
+        Ok(self.decode(out)?)
+    }
+
+    fn remaining_len(&self) -> usize {
+        self.remaining_len()
+    }
+}
+
 /// Reader type used by [`Reader::read_nested`].
-pub(crate) struct NestedReader<'r, R: Reader> {
+pub struct NestedReader<'r, R: Reader> {
     /// Inner reader type.
     inner: &'r mut R,
 

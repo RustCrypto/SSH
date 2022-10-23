@@ -1,11 +1,9 @@
 //! Signatures (e.g. CA signatures over SSH certificates)
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, private, public, reader::Reader,
-    writer::Writer, Algorithm, Error, MPInt, PrivateKey, PublicKey, Result,
-};
+use crate::{private, public, Algorithm, Error, MPInt, PrivateKey, PublicKey, Result};
 use alloc::vec::Vec;
 use core::fmt;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use signature::{Signer, Verifier};
 
 #[cfg(feature = "ed25519")]
@@ -92,7 +90,7 @@ impl Signature {
     /// format the raw signature data for a given algorithm.
     ///
     /// # Returns
-    /// - [`Error::Length`] if the signature is not the correct length.
+    /// - [`Error::Encoding`] if the signature is not the correct length.
     pub fn new(algorithm: Algorithm, data: impl Into<Vec<u8>>) -> Result<Self> {
         let data = data.into();
 
@@ -108,17 +106,17 @@ impl Signature {
                     if component.as_positive_bytes().ok_or(Error::Crypto)?.len()
                         != curve.field_size()
                     {
-                        return Err(Error::Length);
+                        return Err(encoding::Error::Length.into());
                     }
                 }
 
                 if !reader.is_finished() {
-                    return Err(Error::Length);
+                    return Err(encoding::Error::Length.into());
                 }
             }
             Algorithm::Ed25519 if data.len() == ED25519_SIGNATURE_SIZE => (),
             Algorithm::Rsa { hash: Some(_) } => (),
-            _ => return Err(Error::Length),
+            _ => return Err(encoding::Error::Length.into()),
         }
 
         Ok(Self { algorithm, data })
@@ -157,6 +155,8 @@ impl AsRef<[u8]> for Signature {
 }
 
 impl Decode for Signature {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
         let data = Vec::decode(reader)?;
@@ -165,22 +165,25 @@ impl Decode for Signature {
 }
 
 impl Encode for Signature {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.algorithm().encoded_len()?,
             4, // signature data length prefix (uint32)
             self.as_bytes().len(),
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         if self.is_placeholder() {
-            return Err(Error::Length);
+            return Err(encoding::Error::Length.into());
         }
 
         self.algorithm().encode(writer)?;
-        self.as_bytes().encode(writer)
+        self.as_bytes().encode(writer)?;
+        Ok(())
     }
 }
 
@@ -602,8 +605,9 @@ impl Verifier<Signature> for RsaPublicKey {
 #[cfg(test)]
 mod tests {
     use super::Signature;
-    use crate::{encode::Encode, Algorithm, EcdsaCurve, Error, HashAlg};
+    use crate::{Algorithm, EcdsaCurve, HashAlg};
     use alloc::vec::Vec;
+    use encoding::Encode;
     use hex_literal::hex;
 
     #[cfg(feature = "ed25519")]
@@ -700,6 +704,9 @@ mod tests {
         assert!(placeholder.is_placeholder());
 
         let mut writer = Vec::new();
-        assert_eq!(placeholder.encode(&mut writer), Err(Error::Length));
+        assert_eq!(
+            placeholder.encode(&mut writer),
+            Err(encoding::Error::Length.into())
+        );
     }
 }

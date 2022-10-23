@@ -2,8 +2,9 @@
 //!
 //! These are used for encrypting private keys.
 
-use crate::{algorithm::AlgString, Error, Result};
+use crate::{Error, Result};
 use core::{fmt, str};
+use encoding::Label;
 
 #[cfg(feature = "encryption")]
 use aes::{
@@ -126,7 +127,9 @@ impl AsRef<str> for Cipher {
     }
 }
 
-impl AlgString for Cipher {}
+impl Label for Cipher {
+    type Error = Error;
+}
 
 impl Default for Cipher {
     fn default() -> Cipher {

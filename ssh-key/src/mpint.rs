@@ -1,11 +1,9 @@
 //! Multiple precision integer
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, reader::Reader, writer::Writer, Error,
-    Result,
-};
+use crate::{Error, Result};
 use alloc::vec::Vec;
 use core::fmt;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use zeroize::Zeroize;
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
@@ -107,18 +105,23 @@ impl AsRef<[u8]> for MPInt {
 }
 
 impl Decode for MPInt {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         Vec::decode(reader)?.try_into()
     }
 }
 
 impl Encode for MPInt {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [4, self.as_bytes().len()].checked_sum()
+        Ok([4, self.as_bytes().len()].checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
-        self.as_bytes().encode(writer)
+        self.as_bytes().encode(writer)?;
+        Ok(())
     }
 }
 

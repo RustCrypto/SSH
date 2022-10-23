@@ -293,10 +293,10 @@ impl<'a> ConfigOptsIter<'a> {
                 | b'}'
                 | b'|'
                 | b'~' => (),
-                _ => return Err(Error::CharacterEncoding),
+                _ => return Err(encoding::Error::CharacterEncoding.into()),
             }
 
-            index = index.checked_add(1).ok_or(Error::Length)?;
+            index = index.checked_add(1).ok_or(encoding::Error::Length)?;
         }
 
         let remaining = self.0;
@@ -317,7 +317,6 @@ impl<'a> Iterator for ConfigOptsIter<'a> {
 #[cfg(all(test, feature = "alloc"))]
 mod tests {
     use super::ConfigOptsIter;
-    use crate::Error;
 
     #[test]
     fn options_empty() {
@@ -362,10 +361,16 @@ mod tests {
     #[test]
     fn options_invalid_character() {
         let mut opts = ConfigOptsIter("❌");
-        assert_eq!(opts.try_next(), Err(Error::CharacterEncoding));
+        assert_eq!(
+            opts.try_next(),
+            Err(encoding::Error::CharacterEncoding.into())
+        );
 
         let mut opts = ConfigOptsIter("x,❌");
         assert_eq!(opts.try_next(), Ok(Some("x")));
-        assert_eq!(opts.try_next(), Err(Error::CharacterEncoding));
+        assert_eq!(
+            opts.try_next(),
+            Err(encoding::Error::CharacterEncoding.into())
+        );
     }
 }

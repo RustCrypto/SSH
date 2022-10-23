@@ -10,12 +10,7 @@ pub use self::{builder::Builder, cert_type::CertType, field::Field, options_map:
 
 use self::unix_time::UnixTime;
 use crate::{
-    checked::CheckedSum,
-    decode::Decode,
-    encode::Encode,
     public::{Encapsulation, KeyData},
-    reader::{Base64Reader, Reader},
-    writer::{base64_len, Writer},
     Algorithm, Error, Fingerprint, HashAlg, Result, Signature,
 };
 use alloc::{
@@ -24,6 +19,7 @@ use alloc::{
     vec::Vec,
 };
 use core::str::FromStr;
+use encoding::{base64_len_approx, Base64Reader, CheckedSum, Decode, Encode, Reader, Writer};
 use signature::Verifier;
 
 #[cfg(feature = "serde")]
@@ -185,14 +181,14 @@ impl Certificate {
         }
 
         cert.comment = encapsulation.comment.to_owned();
-        reader.finish(cert)
+        Ok(reader.finish(cert)?)
     }
 
     /// Parse a raw binary OpenSSH certificate.
     pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
         let reader = &mut bytes;
         let cert = Certificate::decode(reader)?;
-        reader.finish(cert)
+        Ok(reader.finish(cert)?)
     }
 
     /// Encode OpenSSH certificate to a [`String`].
@@ -200,7 +196,7 @@ impl Certificate {
         let encoded_len = [
             2, // interstitial spaces
             self.algorithm().as_certificate_str().len(),
-            base64_len(self.encoded_len()?),
+            base64_len_approx(self.encoded_len()?),
             self.comment.len(),
         ]
         .checked_sum()?;
@@ -472,6 +468,8 @@ impl Certificate {
 }
 
 impl Decode for Certificate {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let algorithm = Algorithm::new_certificate(&String::decode(reader)?)?;
 
@@ -495,8 +493,10 @@ impl Decode for Certificate {
 }
 
 impl Encode for Certificate {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.algorithm().as_certificate_str().encoded_len()?,
             self.nonce.encoded_len()?,
             self.public_key.encoded_key_data_len()?,
@@ -514,7 +514,7 @@ impl Encode for Certificate {
             4, // signature length prefix (uint32)
             self.signature.encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {

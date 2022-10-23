@@ -2,11 +2,9 @@
 //!
 //! [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
 
-use crate::{
-    checked::CheckedSum, decode::Decode, encode::Encode, public, reader::Reader, writer::Writer,
-    Result,
-};
+use crate::{public, Error, Result};
 use alloc::vec::Vec;
+use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Security Key (FIDO/U2F) ECDSA/NIST P-256 private key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
@@ -47,6 +45,8 @@ impl SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl Decode for SkEcdsaSha2NistP256 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         Ok(Self {
             public: public::SkEcdsaSha2NistP256::decode(reader)?,
@@ -59,21 +59,24 @@ impl Decode for SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl Encode for SkEcdsaSha2NistP256 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.public.encoded_len()?,
             self.flags.encoded_len()?,
             self.key_handle.encoded_len()?,
             self.reserved.encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.public.encode(writer)?;
         self.flags.encode(writer)?;
         self.key_handle.encode(writer)?;
-        self.reserved.encode(writer)
+        self.reserved.encode(writer)?;
+        Ok(())
     }
 }
 
@@ -114,6 +117,8 @@ impl SkEd25519 {
 }
 
 impl Decode for SkEd25519 {
+    type Error = Error;
+
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         Ok(Self {
             public: public::SkEd25519::decode(reader)?,
@@ -125,20 +130,23 @@ impl Decode for SkEd25519 {
 }
 
 impl Encode for SkEd25519 {
+    type Error = Error;
+
     fn encoded_len(&self) -> Result<usize> {
-        [
+        Ok([
             self.public.encoded_len()?,
             self.flags.encoded_len()?,
             self.key_handle.encoded_len()?,
             self.reserved.encoded_len()?,
         ]
-        .checked_sum()
+        .checked_sum()?)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.public.encode(writer)?;
         self.flags.encode(writer)?;
         self.key_handle.encode(writer)?;
-        self.reserved.encode(writer)
+        self.reserved.encode(writer)?;
+        Ok(())
     }
 }
