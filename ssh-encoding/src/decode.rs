@@ -8,10 +8,13 @@ use crate::{reader::Reader, Error, Result};
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
+#[cfg(feature = "pem")]
+use {crate::PEM_LINE_WIDTH, pem::PemLabel};
+
 /// Maximum size of a `usize` this library will accept.
 const MAX_SIZE: usize = 0xFFFFF;
 
-/// Decoder trait.
+/// Decoding trait.
 ///
 /// This trait describes how to decode a given type.
 pub trait Decode: Sized {
@@ -20,6 +23,31 @@ pub trait Decode: Sized {
 
     /// Attempt to decode a value of this type using the provided [`Reader`].
     fn decode(reader: &mut impl Reader) -> core::result::Result<Self, Self::Error>;
+}
+
+/// Decoding trait for PEM documents.
+///
+/// This is an extension trait which is auto-impl'd for types which impl the
+/// [`Decode`], [`PemLabel`], and [`Sized`] traits.
+#[cfg(feature = "pem")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
+pub trait DecodePem: Decode + PemLabel + Sized {
+    /// Decode the provided PEM-encoded string, interpreting the Base64-encoded
+    /// body of the document using the [`Decode`] trait.
+    fn decode_pem(pem: impl AsRef<[u8]>) -> core::result::Result<Self, Self::Error>;
+}
+
+#[cfg(feature = "pem")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
+impl<T: Decode + PemLabel + Sized> DecodePem for T {
+    fn decode_pem(pem: impl AsRef<[u8]>) -> core::result::Result<Self, Self::Error> {
+        let mut reader =
+            pem::Decoder::new_wrapped(pem.as_ref(), PEM_LINE_WIDTH).map_err(Error::from)?;
+
+        Self::validate_pem_label(reader.type_label()).map_err(Error::from)?;
+        let ret = Self::decode(&mut reader)?;
+        Ok(reader.finish(ret)?)
+    }
 }
 
 /// Decode a single `byte` from the input data.

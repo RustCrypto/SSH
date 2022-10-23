@@ -51,7 +51,13 @@ pub use {
 };
 
 #[cfg(feature = "pem")]
-pub use pem::{self, LineEnding};
+pub use {
+    crate::decode::DecodePem,
+    pem::{self, LineEnding},
+};
+
+#[cfg(all(feature = "alloc", feature = "pem"))]
+pub use crate::encode::EncodePem;
 
 /// Line width used by the PEM encoding of OpenSSH documents.
 pub const PEM_LINE_WIDTH: usize = 70;

@@ -8,6 +8,12 @@ use crate::{checked::CheckedSum, writer::Writer, Error, Result};
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
+#[cfg(all(feature = "alloc", feature = "pem"))]
+use {
+    crate::PEM_LINE_WIDTH,
+    pem::{LineEnding, PemLabel},
+};
+
 /// Encoding trait.
 ///
 /// This trait describes how to encode a given type.
@@ -32,6 +38,42 @@ pub trait Encode {
     fn encode_prefixed(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
+    }
+}
+
+/// Encoding trait for PEM documents.
+///
+/// This is an extension trait which is auto-impl'd for types which impl the
+/// [`Encode`] and [`PemLabel`] traits.
+#[cfg(all(feature = "alloc", feature = "pem"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "pem"))))]
+pub trait EncodePem: Encode + PemLabel {
+    /// Encode this type using the [`Encode`] trait, writing the resulting PEM
+    /// document to a returned [`String`].
+    fn encode_pem(&self, line_ending: LineEnding) -> core::result::Result<String, Self::Error>;
+}
+
+#[cfg(all(feature = "alloc", feature = "pem"))]
+#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "pem"))))]
+impl<T: Encode + PemLabel> EncodePem for T {
+    fn encode_pem(&self, line_ending: LineEnding) -> core::result::Result<String, Self::Error> {
+        let encoded_len = pem::encapsulated_len_wrapped(
+            Self::PEM_LABEL,
+            PEM_LINE_WIDTH,
+            line_ending,
+            self.encoded_len()?,
+        )
+        .map_err(Error::from)?;
+
+        let mut buf = vec![0u8; encoded_len];
+        let mut writer =
+            pem::Encoder::new_wrapped(Self::PEM_LABEL, PEM_LINE_WIDTH, line_ending, &mut buf)
+                .map_err(Error::from)?;
+
+        self.encode(&mut writer)?;
+        let actual_len = writer.finish().map_err(Error::from)?;
+        buf.truncate(actual_len);
+        Ok(String::from_utf8(buf).map_err(Error::from)?)
     }
 }
 

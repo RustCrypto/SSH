@@ -4,8 +4,8 @@ use crate::{public, Algorithm, Error, HashAlg, Result, Signature, SigningKey};
 use alloc::{borrow::ToOwned, string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
-    pem::{self, LineEnding, PemLabel},
-    CheckedSum, Decode, Encode, Reader, Writer, PEM_LINE_WIDTH,
+    pem::{LineEnding, PemLabel},
+    CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
 };
 use signature::{Signer, Verifier};
 
@@ -50,10 +50,7 @@ impl SshSig {
     /// -----BEGIN SSH SIGNATURE-----
     /// ```
     pub fn from_pem(pem: impl AsRef<[u8]>) -> Result<Self> {
-        let mut reader = pem::Decoder::new_wrapped(pem.as_ref(), PEM_LINE_WIDTH)?;
-        Self::validate_pem_label(reader.type_label())?;
-        let signature = Self::decode(&mut reader)?;
-        Ok(reader.finish(signature)?)
+        Self::decode_pem(pem)
     }
 
     /// Encode signature as PEM which begins with the following:
@@ -62,21 +59,7 @@ impl SshSig {
     /// -----BEGIN SSH SIGNATURE-----
     /// ```
     pub fn to_pem(&self, line_ending: LineEnding) -> Result<String> {
-        let encoded_len = pem::encapsulated_len_wrapped(
-            Self::PEM_LABEL,
-            PEM_LINE_WIDTH,
-            line_ending,
-            self.encoded_len()?,
-        )?;
-
-        let mut buf = vec![0u8; encoded_len];
-        let mut writer =
-            pem::Encoder::new_wrapped(Self::PEM_LABEL, PEM_LINE_WIDTH, line_ending, &mut buf)?;
-
-        self.encode(&mut writer)?;
-        let actual_len = writer.finish()?;
-        buf.truncate(actual_len);
-        Ok(String::from_utf8(buf)?)
+        self.encode_pem(line_ending)
     }
 
     /// Sign the given message with the provided signing key.
