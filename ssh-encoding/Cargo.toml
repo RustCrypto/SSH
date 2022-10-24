@@ -1,6 +1,6 @@
 [package]
 name = "ssh-encoding"
-version = "0.0.0"
+version = "0.1.0"
 description = """
 Pure Rust implementation of SSH data type decoders/encoders as described
 in RFC4251

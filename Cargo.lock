@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "base64ct",
  "hex-literal",
@@ -759,7 +759,6 @@ dependencies = [
  "subtle",
  "tempfile",
  "zeroize",
- "zeroize_derive",
 ]
 
 [[package]]
