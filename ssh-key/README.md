@@ -15,11 +15,11 @@ Pure Rust implementation of SSH key file format decoders/encoders as described
 in [RFC4251] and [RFC4253] as well as OpenSSH's [PROTOCOL.key] format
 specification.
 
-Additionally provides support for OpenSSH certificates as specified in
-[PROTOCOL.certkeys] including certificate validation and certificate authority
-(CA) support, as well as FIDO/U2F keys as specified in [PROTOCOL.u2f] (and
-certificates thereof), and also the `authorized_keys` and `known_hosts`
-file formats.
+Additionally provides support for SSH signatures as described in
+[PROTOCOL.sshsig], OpenSSH certificates as specified in [PROTOCOL.certkeys]
+including certificate validation and certificate authority (CA) support,
+FIDO/U2F keys as specified in [PROTOCOL.u2f] (and certificates thereof), and
+also the `authorized_keys` and `known_hosts` file formats.
 
 Supports a minimal profile which works on heapless `no_std` targets. See
 "Supported algorithms" table below for which key formats work on heapless
@@ -120,4 +120,5 @@ dual licensed as above, without any additional terms or conditions.
 [RFC4716]: https://datatracker.ietf.org/doc/html/rfc4716
 [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
 [PROTOCOL.key]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
+[PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
 [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
