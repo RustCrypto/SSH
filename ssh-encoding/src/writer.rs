@@ -8,19 +8,6 @@ use alloc::vec::Vec;
 #[cfg(feature = "sha2")]
 use sha2::{Digest, Sha256, Sha512};
 
-/// Get the estimated length of data when encoded as Base64.
-///
-/// This is an upper bound where the actual length might be slightly shorter,
-/// and can be used to estimate the capacity of an output buffer. However, the
-/// final result may need to be sliced and should use the actual encoded length
-/// rather than this estimate.
-#[cfg(feature = "base64")]
-#[allow(clippy::integer_arithmetic)]
-pub fn base64_len_approx(input_len: usize) -> usize {
-    // TODO(tarcieri): checked arithmetic
-    (((input_len * 4) / 3) + 3) & !3
-}
-
 /// Constant-time Base64 writer implementation.
 #[cfg(feature = "base64")]
 #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
