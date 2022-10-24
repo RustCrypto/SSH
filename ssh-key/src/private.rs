@@ -139,14 +139,13 @@ pub use self::sk::SkEcdsaSha2NistP256;
 use crate::{public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result};
 use core::str;
 use encoding::{
-    pem::{self, LineEnding, PemLabel},
-    CheckedSum, Decode, DecodePem, Encode, Reader, Writer, PEM_LINE_WIDTH,
+    pem::{LineEnding, PemLabel},
+    CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
 };
 
 #[cfg(feature = "alloc")]
 use {
     alloc::{string::String, vec::Vec},
-    encoding::EncodePem,
     zeroize::Zeroizing,
 };
 
@@ -243,12 +242,7 @@ impl PrivateKey {
         line_ending: LineEnding,
         out: &'o mut [u8],
     ) -> Result<&'o str> {
-        let mut writer =
-            pem::Encoder::new_wrapped(Self::PEM_LABEL, PEM_LINE_WIDTH, line_ending, out)?;
-
-        self.encode(&mut writer)?;
-        let encoded_len = writer.finish()?;
-        Ok(str::from_utf8(&out[..encoded_len])?)
+        self.encode_pem(line_ending, out)
     }
 
     /// Encode an OpenSSH-formatted PEM private key, allocating a
@@ -256,7 +250,7 @@ impl PrivateKey {
     #[cfg(feature = "alloc")]
     #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn to_openssh(&self, line_ending: LineEnding) -> Result<Zeroizing<String>> {
-        self.encode_pem(line_ending).map(Zeroizing::new)
+        self.encode_pem_string(line_ending).map(Zeroizing::new)
     }
 
     /// Serialize SSH private key as raw bytes.

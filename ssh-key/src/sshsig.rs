@@ -85,7 +85,7 @@ impl SshSig {
     /// -----BEGIN SSH SIGNATURE-----
     /// ```
     pub fn to_pem(&self, line_ending: LineEnding) -> Result<String> {
-        self.encode_pem(line_ending)
+        self.encode_pem_string(line_ending)
     }
 
     /// Sign the given message with the provided signing key.
