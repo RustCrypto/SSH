@@ -10,7 +10,7 @@ pub use self::{builder::Builder, cert_type::CertType, field::Field, options_map:
 
 use self::unix_time::UnixTime;
 use crate::{
-    public::{Encapsulation, KeyData},
+    public::{KeyData, SshFormat},
     Algorithm, Error, Fingerprint, HashAlg, Result, Signature,
 };
 use alloc::{
@@ -19,7 +19,7 @@ use alloc::{
     vec::Vec,
 };
 use core::str::FromStr;
-use encoding::{base64_len_approx, Base64Reader, CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{Base64Reader, CheckedSum, Decode, Encode, Reader, Writer};
 use signature::Verifier;
 
 #[cfg(feature = "serde")]
@@ -171,7 +171,7 @@ impl Certificate {
     /// ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC1lZDI1NTE5LWNlc...8REbCaAw== user@example.com
     /// ```
     pub fn from_openssh(certificate_str: &str) -> Result<Self> {
-        let encapsulation = Encapsulation::decode(certificate_str.trim_end().as_bytes())?;
+        let encapsulation = SshFormat::decode(certificate_str.trim_end().as_bytes())?;
         let mut reader = Base64Reader::new(encapsulation.base64_data)?;
         let mut cert = Certificate::decode(&mut reader)?;
 
@@ -193,24 +193,7 @@ impl Certificate {
 
     /// Encode OpenSSH certificate to a [`String`].
     pub fn to_openssh(&self) -> Result<String> {
-        let encoded_len = [
-            2, // interstitial spaces
-            self.algorithm().as_certificate_str().len(),
-            base64_len_approx(self.encoded_len()?),
-            self.comment.len(),
-        ]
-        .checked_sum()?;
-
-        let mut out = vec![0u8; encoded_len];
-        let actual_len = Encapsulation::encode(
-            &mut out,
-            self.algorithm().as_certificate_str(),
-            self.comment(),
-            |writer| self.encode(writer),
-        )?
-        .len();
-        out.truncate(actual_len);
-        Ok(String::from_utf8(out)?)
+        SshFormat::encode_string(self.algorithm().as_certificate_str(), self, self.comment())
     }
 
     /// Serialize OpenSSH certificate as raw bytes.
