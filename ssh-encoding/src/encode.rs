@@ -3,12 +3,13 @@
 //!
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 
-use crate::{checked::CheckedSum, writer::Writer, Error, Result};
+use crate::{checked::CheckedSum, writer::Writer, Error};
+use core::str;
 
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
-#[cfg(all(feature = "alloc", feature = "pem"))]
+#[cfg(feature = "pem")]
 use {
     crate::PEM_LINE_WIDTH,
     pem::{LineEnding, PemLabel},
@@ -22,20 +23,20 @@ pub trait Encode {
     type Error: From<Error>;
 
     /// Get the length of this type encoded in bytes, prior to Base64 encoding.
-    fn encoded_len(&self) -> core::result::Result<usize, Self::Error>;
+    fn encoded_len(&self) -> Result<usize, Self::Error>;
 
     /// Encode this value using the provided [`Writer`].
-    fn encode(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error>;
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Self::Error>;
 
     /// Return the length of this type after encoding when prepended with a
     /// `uint32` length prefix.
-    fn encoded_len_prefixed(&self) -> core::result::Result<usize, Self::Error> {
+    fn encoded_len_prefixed(&self) -> Result<usize, Self::Error> {
         Ok([4, self.encoded_len()?].checked_sum()?)
     }
 
     /// Encode this value, first prepending a `uint32` length prefix
     /// set to [`Encode::encoded_len`].
-    fn encode_prefixed(&self, writer: &mut impl Writer) -> core::result::Result<(), Self::Error> {
+    fn encode_prefixed(&self, writer: &mut impl Writer) -> Result<(), Self::Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
     }
@@ -45,18 +46,43 @@ pub trait Encode {
 ///
 /// This is an extension trait which is auto-impl'd for types which impl the
 /// [`Encode`] and [`PemLabel`] traits.
-#[cfg(all(feature = "alloc", feature = "pem"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "pem"))))]
+#[cfg(feature = "pem")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 pub trait EncodePem: Encode + PemLabel {
     /// Encode this type using the [`Encode`] trait, writing the resulting PEM
+    /// document into the provided `out` buffer.
+    fn encode_pem<'o>(
+        &self,
+        line_ending: LineEnding,
+        out: &'o mut [u8],
+    ) -> Result<&'o str, Self::Error>;
+
+    /// Encode this type using the [`Encode`] trait, writing the resulting PEM
     /// document to a returned [`String`].
-    fn encode_pem(&self, line_ending: LineEnding) -> core::result::Result<String, Self::Error>;
+    #[cfg(feature = "alloc")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
+    fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Self::Error>;
 }
 
-#[cfg(all(feature = "alloc", feature = "pem"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "pem"))))]
+#[cfg(feature = "pem")]
+#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 impl<T: Encode + PemLabel> EncodePem for T {
-    fn encode_pem(&self, line_ending: LineEnding) -> core::result::Result<String, Self::Error> {
+    fn encode_pem<'o>(
+        &self,
+        line_ending: LineEnding,
+        out: &'o mut [u8],
+    ) -> Result<&'o str, Self::Error> {
+        let mut writer =
+            pem::Encoder::new_wrapped(Self::PEM_LABEL, PEM_LINE_WIDTH, line_ending, out)
+                .map_err(Error::from)?;
+
+        self.encode(&mut writer)?;
+        let encoded_len = writer.finish().map_err(Error::from)?;
+        Ok(str::from_utf8(&out[..encoded_len]).map_err(Error::from)?)
+    }
+
+    #[cfg(feature = "alloc")]
+    fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Self::Error> {
         let encoded_len = pem::encapsulated_len_wrapped(
             Self::PEM_LABEL,
             PEM_LINE_WIDTH,
@@ -66,12 +92,7 @@ impl<T: Encode + PemLabel> EncodePem for T {
         .map_err(Error::from)?;
 
         let mut buf = vec![0u8; encoded_len];
-        let mut writer =
-            pem::Encoder::new_wrapped(Self::PEM_LABEL, PEM_LINE_WIDTH, line_ending, &mut buf)
-                .map_err(Error::from)?;
-
-        self.encode(&mut writer)?;
-        let actual_len = writer.finish().map_err(Error::from)?;
+        let actual_len = self.encode_pem(line_ending, &mut buf)?.len();
         buf.truncate(actual_len);
         Ok(String::from_utf8(buf).map_err(Error::from)?)
     }
@@ -81,11 +102,11 @@ impl<T: Encode + PemLabel> EncodePem for T {
 impl Encode for u8 {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         Ok(1)
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         writer.write(&[*self])
     }
 }
@@ -100,11 +121,11 @@ impl Encode for u8 {
 impl Encode for u32 {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         Ok(4)
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         writer.write(&self.to_be_bytes())
     }
 }
@@ -118,11 +139,11 @@ impl Encode for u32 {
 impl Encode for u64 {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         Ok(8)
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         writer.write(&self.to_be_bytes())
     }
 }
@@ -136,11 +157,11 @@ impl Encode for u64 {
 impl Encode for usize {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         Ok(4)
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         u32::try_from(*self)?.encode(writer)
     }
 }
@@ -155,11 +176,11 @@ impl Encode for usize {
 impl Encode for [u8] {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         [4, self.len()].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.len().encode(writer)?;
         writer.write(self)
     }
@@ -175,11 +196,11 @@ impl Encode for [u8] {
 impl<const N: usize> Encode for [u8; N] {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         self.as_slice().encoded_len()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.as_slice().encode(writer)
     }
 }
@@ -204,11 +225,11 @@ impl<const N: usize> Encode for [u8; N] {
 impl Encode for &str {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         self.as_bytes().encoded_len()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.as_bytes().encode(writer)
     }
 }
@@ -218,11 +239,11 @@ impl Encode for &str {
 impl Encode for Vec<u8> {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         self.as_slice().encoded_len()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.as_slice().encode(writer)
     }
 }
@@ -232,11 +253,11 @@ impl Encode for Vec<u8> {
 impl Encode for String {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         self.as_str().encoded_len()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.as_str().encode(writer)
     }
 }
@@ -246,13 +267,13 @@ impl Encode for String {
 impl Encode for Vec<String> {
     type Error = Error;
 
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> Result<usize, Error> {
         self.iter().try_fold(4usize, |acc, string| {
             acc.checked_add(string.encoded_len()?).ok_or(Error::Length)
         })
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.encoded_len()?
             .checked_sub(4)
             .ok_or(Error::Length)?
