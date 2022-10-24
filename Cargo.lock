@@ -729,6 +729,7 @@ name = "ssh-encoding"
 version = "0.0.0"
 dependencies = [
  "base64ct",
+ "hex-literal",
  "pem-rfc7468",
  "sha2 0.10.6",
 ]

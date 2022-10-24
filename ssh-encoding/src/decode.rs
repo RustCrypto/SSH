@@ -110,7 +110,7 @@ impl Decode for usize {
         if n <= MAX_SIZE {
             Ok(n)
         } else {
-            Err(Error::Length)
+            Err(Error::Overflow)
         }
     }
 }
