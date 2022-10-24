@@ -131,10 +131,10 @@ impl PublicKey {
     /// Encode OpenSSH-formatted public key.
     pub fn encode_openssh<'o>(&self, out: &'o mut [u8]) -> Result<&'o str> {
         SshFormat::encode(
-            out,
             self.algorithm().as_str(),
             &self.key_data,
             self.comment(),
+            out,
         )
     }
 

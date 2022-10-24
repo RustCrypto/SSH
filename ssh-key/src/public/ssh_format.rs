@@ -54,10 +54,10 @@ impl<'a> SshFormat<'a> {
 
     /// Encode data with OpenSSH public key encapsulation.
     pub(crate) fn encode<'o, K>(
-        out: &'o mut [u8],
         algorithm_id: &str,
         key: &K,
         comment: &str,
+        out: &'o mut [u8],
     ) -> Result<&'o str>
     where
         K: Encode<Error = Error>,
@@ -97,7 +97,7 @@ impl<'a> SshFormat<'a> {
         .checked_sum()?;
 
         let mut out = vec![0u8; encoded_len];
-        let actual_len = Self::encode(&mut out, algorithm_id, key, comment)?.len();
+        let actual_len = Self::encode(algorithm_id, key, comment, &mut out)?.len();
         out.truncate(actual_len);
         Ok(String::from_utf8(out)?)
     }
