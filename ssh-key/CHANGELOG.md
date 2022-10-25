@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.5.0 (2022-10-25)
+### Added
+- `p384` feature ([#21])
+- `dsa` feature ([#22], [#23])
+- "[sshsig]" support ([#28])
+
+### Changed
+- Bump `p256` to v0.11 ([#10])
+- Bump MSRV to 1.60 ([#16])
+- Bump `rsa` to v0.7 ([#20])
+- Use `ssh-encoding` encoding crate ([#29], [#37])
+
+### Removed
+- `fingerprint` feature removed, now always-on ([#27])
+
+[#10]: https://github.com/RustCrypto/SSH/pull/10
+[#16]: https://github.com/RustCrypto/SSH/pull/16
+[#20]: https://github.com/RustCrypto/SSH/pull/20
+[#21]: https://github.com/RustCrypto/SSH/pull/21
+[#22]: https://github.com/RustCrypto/SSH/pull/22
+[#23]: https://github.com/RustCrypto/SSH/pull/23
+[#27]: https://github.com/RustCrypto/SSH/pull/27
+[#28]: https://github.com/RustCrypto/SSH/pull/28
+[#29]: https://github.com/RustCrypto/SSH/pull/29
+[#37]: https://github.com/RustCrypto/SSH/pull/37
+[sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
+
 ## 0.4.3 (2022-09-25)
 ### Changed
 - Move source code repository to <https://github.com/RustCrypto/SSH> ([#1])
