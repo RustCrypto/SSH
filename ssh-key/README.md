@@ -1,4 +1,4 @@
-# [RustCrypto]: SSH Key and Certificate Formats
+# [RustCrypto]: SSH Keys and Certificates
 
 [![crate][crate-image]][crate-link]
 [![Docs][docs-image]][docs-link]
@@ -36,11 +36,12 @@ respective SSH key algorithm.
   - [x] OpenSSH public keys
   - [x] OpenSSH private keys (i.e. `BEGIN OPENSSH PRIVATE KEY`)
   - [x] OpenSSH certificates
-- [x] OpenSSH certificates
+  - [x] OpenSSH signatures (a.k.a. "sshsig")
+- [x] OpenSSH certificate support
   - [x] Certificate validation
   - [x] Certificate authority (CA) support i.e. cert builder/signer
 - [x] Private key encryption/decryption (`bcrypt-pbkdf` + `aes256-ctr` only)
-- [x] Private key generation support: Ed25519, ECDSA/P-256, and RSA
+- [x] Private key generation support: DSA, Ed25519, ECDSA (P-256+P-384), and RSA
 - [x] FIDO/U2F key support (`sk-*`) as specified in [PROTOCOL.u2f]
 - [x] Fingerprint support
 - [x] `no_std` support including support for "heapless" (no-`alloc`) targets
@@ -51,8 +52,7 @@ respective SSH key algorithm.
 
 #### TODO
 
-- [ ] ECDSA/P-384 support
-- [ ] ECDSA/P-512 support
+- [ ] ECDSA/P-521 support
 - [ ] FIDO/U2F signature support
 - [ ] Legacy (pre-OpenSSH) SSH key format support
   - [ ] PKCS#1
