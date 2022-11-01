@@ -12,7 +12,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
-    sha1::{Digest, Sha1},
+    sha1::Sha1,
     signature::{DigestSigner, DigestVerifier, Signature as _},
 };
 
@@ -26,11 +26,19 @@ use crate::{
 #[cfg(feature = "rsa")]
 use {
     crate::{private::RsaKeypair, public::RsaPublicKey, HashAlg},
-    sha2::{Sha256, Sha512},
+    sha2::Sha512,
 };
+
+#[cfg(any(feature = "ed25519", feature = "rsa"))]
+use sha2::Sha256;
+
+#[cfg(any(feature = "dsa", feature = "ed25519"))]
+use sha2::Digest;
 
 const DSA_SIGNATURE_SIZE: usize = 40;
 const ED25519_SIGNATURE_SIZE: usize = 64;
+const SK_ED25519_SIGNATURE_TRAILER_SIZE: usize = 5; // flags(u8), counter(u32)
+const SK_ED25519_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + SK_ED25519_SIGNATURE_TRAILER_SIZE;
 
 /// Trait for signing keys which produce a [`Signature`].
 ///
@@ -115,6 +123,7 @@ impl Signature {
                 }
             }
             Algorithm::Ed25519 if data.len() == ED25519_SIGNATURE_SIZE => (),
+            Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
             Algorithm::Rsa { hash: Some(_) } => (),
             _ => return Err(encoding::Error::Length.into()),
         }
@@ -159,7 +168,16 @@ impl Decode for Signature {
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
-        let data = Vec::decode(reader)?;
+        let mut data = Vec::decode(reader)?;
+
+        if algorithm == Algorithm::SkEd25519 {
+            let flags = u8::decode(reader)?;
+            let counter = u32::decode(reader)?;
+
+            data.push(flags);
+            data.extend(counter.to_be_bytes());
+        }
+
         Self::new(algorithm, data)
     }
 }
@@ -181,7 +199,19 @@ impl Encode for Signature {
         }
 
         self.algorithm().encode(writer)?;
-        self.as_bytes().encode(writer)?;
+
+        if self.algorithm == Algorithm::SkEd25519 {
+            let signature_length = self
+                .as_bytes()
+                .len()
+                .checked_sub(SK_ED25519_SIGNATURE_TRAILER_SIZE)
+                .ok_or(encoding::Error::Length)?;
+            self.as_bytes()[..signature_length].encode(writer)?;
+            writer.write(&self.as_bytes()[signature_length..])?;
+        } else {
+            self.as_bytes().encode(writer)?;
+        }
+
         Ok(())
     }
 }
@@ -268,6 +298,8 @@ impl Verifier<Signature> for public::KeyData {
             Self::Ecdsa(pk) => pk.verify(message, signature),
             #[cfg(feature = "ed25519")]
             Self::Ed25519(pk) => pk.verify(message, signature),
+            #[cfg(feature = "ed25519")]
+            Self::SkEd25519(pk) => pk.verify(message, signature),
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
             _ => Err(signature::Error::new()),
@@ -324,7 +356,9 @@ impl TryFrom<&Signature> for ed25519_dalek::Signature {
 
     fn try_from(signature: &Signature) -> Result<ed25519_dalek::Signature> {
         match signature.algorithm {
-            Algorithm::Ed25519 => Ok(ed25519_dalek::Signature::try_from(signature.as_bytes())?),
+            Algorithm::Ed25519 | Algorithm::SkEd25519 => {
+                Ok(ed25519_dalek::Signature::try_from(signature.as_bytes())?)
+            }
             _ => Err(Error::Algorithm),
         }
     }
@@ -349,6 +383,30 @@ impl Verifier<Signature> for Ed25519PublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         let signature = ed25519_dalek::Signature::try_from(signature)?;
         ed25519_dalek::PublicKey::try_from(self)?.verify(message, &signature)
+    }
+}
+
+#[cfg(feature = "ed25519")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
+impl Verifier<Signature> for public::SkEd25519 {
+    fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
+        let signature_len = signature
+            .as_bytes()
+            .len()
+            .checked_sub(SK_ED25519_SIGNATURE_TRAILER_SIZE)
+            .ok_or(Error::Encoding(encoding::Error::Length))?;
+        let signature_bytes = &signature.as_bytes()[..signature_len];
+        let flags_and_counter = &signature.as_bytes()[signature_len..];
+
+        #[allow(clippy::integer_arithmetic)]
+        let mut signed_data =
+            Vec::with_capacity((2 * Sha256::output_size()) + SK_ED25519_SIGNATURE_TRAILER_SIZE);
+        signed_data.extend(Sha256::digest(self.application()));
+        signed_data.extend(flags_and_counter);
+        signed_data.extend(Sha256::digest(message));
+
+        let signature = ed25519_dalek::Signature::try_from(signature_bytes)?;
+        ed25519_dalek::PublicKey::try_from(self.public_key())?.verify(&signed_data, &signature)
     }
 }
 
@@ -618,6 +676,7 @@ mod tests {
     const DSA_SIGNATURE: &[u8] = &hex!("000000077373682d6473730000002866725bf3c56100e975e21fff28a60f73717534d285ea3e1beefc2891f7189d00bd4d94627e84c55c");
     const ECDSA_SHA2_P256_SIGNATURE: &[u8] = &hex!("0000001365636473612d736861322d6e6973747032353600000048000000201298ab320720a32139cda8a40c97a13dc54ce032ea3c6f09ea9e87501e48fa1d0000002046e4ac697a6424a9870b9ef04ca1182cd741965f989bd1f1f4a26fd83cf70348");
     const ED25519_SIGNATURE: &[u8] = &hex!("0000000b7373682d65643235353139000000403d6b9906b76875aef1e7b2f1e02078a94f439aebb9a4734da1a851a81e22ce0199bbf820387a8de9c834c9c3cc778d9972dcbe70f68d53cc6bc9e26b02b46d04");
+    const SK_ED25519_SIGNATURE: &[u8] = &hex!("0000001a736b2d7373682d65643235353139406f70656e7373682e636f6d000000402f5670b6f93465d17423878a74084bf331767031ed240c627c8eb79ab8fa1b935a1fd993f52f5a13fec1797f8a434f943a6096246aea8dd5c8aa922cba3d95060100000009");
     const RSA_SHA512_SIGNATURE: &[u8] = &hex!("0000000c7273612d736861322d3531320000018085a4ad1a91a62c00c85de7bb511f38088ff2bce763d76f4786febbe55d47624f9e2cffce58a680183b9ad162c7f0191ea26cab001ac5f5055743eced58e9981789305c208fc98d2657954e38eb28c7e7f3fbe92393a14324ed77aebb772a41aa7a107b38cb9bd1d9ad79b275135d1d7e019bb1d56d74f2450be6db0771f48f6707d3fcf9789592ca2e55595acc16b6e8d0139b56c5d1360b3a1e060f4151a3d7841df2c2a8c94d6f8a1bf633165ee0bcadac5642763df0dd79d3235ae5506595145f199d8abe8f9980411bf70a16e30f273736324d047043317044c36374d6a5ed34cac251e01c6795e4578393f9090bf4ae3e74a0009275a197315fc9c62f1c9aec1ba3b2d37c3b207e5500df19e090e7097ebc038fb9c9e35aea9161479ba6b5190f48e89e1abe51e8ec0e120ef89776e129687ca52d1892c8e88e6ef062a7d96b8a87682ca6a42ff1df0cdf5815c3645aeed7267ca7093043db0565e0f109b796bf117b9d2bb6d6debc0c67a4c9fb3aae3e29b00c7bd70f6c11cf53c295ff");
 
     /// Example test vector for signing.
@@ -645,6 +704,12 @@ mod tests {
     fn decode_ed25519() {
         let signature = Signature::try_from(ED25519_SIGNATURE).unwrap();
         assert_eq!(Algorithm::Ed25519, signature.algorithm());
+    }
+
+    #[test]
+    fn decode_sk_ed25519() {
+        let signature = Signature::try_from(SK_ED25519_SIGNATURE).unwrap();
+        assert_eq!(Algorithm::SkEd25519, signature.algorithm());
     }
 
     #[test]
@@ -683,6 +748,15 @@ mod tests {
         let mut result = Vec::new();
         signature.encode(&mut result).unwrap();
         assert_eq!(ED25519_SIGNATURE, &result);
+    }
+
+    #[test]
+    fn encode_sk_ed25519() {
+        let signature = Signature::try_from(SK_ED25519_SIGNATURE).unwrap();
+
+        let mut result = Vec::new();
+        signature.encode(&mut result).unwrap();
+        assert_eq!(SK_ED25519_SIGNATURE, &result);
     }
 
     #[cfg(feature = "ed25519")]

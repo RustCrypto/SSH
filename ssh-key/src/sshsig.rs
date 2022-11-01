@@ -99,6 +99,15 @@ impl SshSig {
             return Err(Error::Namespace);
         }
 
+        if signing_key.public_key().is_sk_ed25519() {
+            return Err(Error::Algorithm);
+        }
+
+        #[cfg(feature = "ecdsa")]
+        if signing_key.public_key().is_sk_ecdsa_p256() {
+            return Err(Error::Algorithm);
+        }
+
         let signed_data = Self::signed_data(namespace, hash_alg, msg)?;
         let signature = signing_key.try_sign(&signed_data)?;
         Self::new(signing_key.public_key(), namespace, hash_alg, signature)
