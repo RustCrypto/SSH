@@ -46,7 +46,7 @@ jobs:
           profile: minimal
           override: true
       - run: ${{ matrix.deps }}
-      - run: cargo build --target ${{ matrix.target }} --all-features
+      - run: cargo build --target ${{ matrix.target }} --release --all-features
 
   minimal-versions:
     uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
