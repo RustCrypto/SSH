@@ -40,6 +40,19 @@ const ED25519_SIGNATURE_BYTES: [u8; 64] = hex!(
     "db06de2e97fafa33fd60928a4fc5a30630aa18020015094af457dc011154150f"
 );
 
+/// SkEd25519 OpenSSH-formatted public key.
+const SK_ED25519_PUBLIC_KEY: &str = include_str!("examples/id_sk_ed25519_2.pub");
+
+/// `sshsig`-encoded signature.
+const SK_ED25519_SIGNATURE: &str = include_str!("examples/sshsig_sk_ed25519");
+
+/// Bytes of the raw SkEd25519 signature.
+const SK_ED25519_SIGNATURE_BYTES: [u8; 69] = hex!(
+    "2f5670b6f93465d17423878a74084bf331767031ed240c627c8eb79ab8fa1b93"
+    "5a1fd993f52f5a13fec1797f8a434f943a6096246aea8dd5c8aa922cba3d9506"
+    "0100000009"
+);
+
 /// RSA OpenSSH-formatted private key.
 #[cfg(feature = "rsa")]
 const RSA_PRIVATE_KEY: &str = include_str!("examples/id_rsa_3072");
@@ -74,6 +87,27 @@ fn encode_ed25519() {
     let sshsig = ED25519_SIGNATURE.parse::<SshSig>().unwrap();
     let sshsig_pem = sshsig.to_pem(LineEnding::LF).unwrap();
     assert_eq!(&sshsig_pem, ED25519_SIGNATURE);
+}
+
+#[test]
+fn decode_sk_ed25519() {
+    let sshsig = SK_ED25519_SIGNATURE.parse::<SshSig>().unwrap();
+    let public_key = SK_ED25519_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+
+    assert_eq!(sshsig.algorithm(), Algorithm::SkEd25519);
+    assert_eq!(sshsig.version(), 1);
+    assert_eq!(sshsig.public_key(), public_key.key_data());
+    assert_eq!(sshsig.namespace(), NAMESPACE_EXAMPLE);
+    assert_eq!(sshsig.reserved(), &[]);
+    assert_eq!(sshsig.hash_alg(), HashAlg::Sha512);
+    assert_eq!(sshsig.signature_bytes(), SK_ED25519_SIGNATURE_BYTES);
+}
+
+#[test]
+fn encode_sk_ed25519() {
+    let sshsig = SK_ED25519_SIGNATURE.parse::<SshSig>().unwrap();
+    let sshsig_pem = sshsig.to_pem(LineEnding::LF).unwrap();
+    assert_eq!(&sshsig_pem, SK_ED25519_SIGNATURE);
 }
 
 #[test]
@@ -140,6 +174,31 @@ fn sign_rsa() {
 fn verify_ed25519() {
     let verifying_key = ED25519_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     let signature = ED25519_SIGNATURE.parse::<SshSig>().unwrap();
+
+    // valid
+    assert_eq!(
+        verifying_key.verify(NAMESPACE_EXAMPLE, MSG_EXAMPLE, &signature),
+        Ok(())
+    );
+
+    // bad namespace
+    assert_eq!(
+        verifying_key.verify("bogus namespace", MSG_EXAMPLE, &signature),
+        Err(Error::Namespace)
+    );
+
+    // invalid message
+    assert_eq!(
+        verifying_key.verify(NAMESPACE_EXAMPLE, b"bogus!", &signature),
+        Err(Error::Crypto)
+    );
+}
+
+#[test]
+#[cfg(feature = "ed25519")]
+fn verify_sk_ed25519() {
+    let verifying_key = SK_ED25519_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+    let signature = SK_ED25519_SIGNATURE.parse::<SshSig>().unwrap();
 
     // valid
     assert_eq!(
