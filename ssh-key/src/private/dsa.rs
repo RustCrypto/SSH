@@ -3,10 +3,8 @@
 use crate::{public::DsaPublicKey, Error, MPInt, Result};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use zeroize::Zeroize;
-
-#[cfg(feature = "subtle")]
 use subtle::{Choice, ConstantTimeEq};
+use zeroize::Zeroize;
 
 #[cfg(all(feature = "dsa", feature = "rand_core"))]
 use rand_core::{CryptoRng, RngCore};
@@ -42,6 +40,20 @@ impl AsRef<[u8]> for DsaPrivateKey {
     }
 }
 
+impl ConstantTimeEq for DsaPrivateKey {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.inner.ct_eq(&other.inner)
+    }
+}
+
+impl Eq for DsaPrivateKey {}
+
+impl PartialEq for DsaPrivateKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
 impl Decode for DsaPrivateKey {
     type Error = Error;
 
@@ -49,12 +61,6 @@ impl Decode for DsaPrivateKey {
         Ok(Self {
             inner: MPInt::decode(reader)?,
         })
-    }
-}
-
-impl Drop for DsaPrivateKey {
-    fn drop(&mut self) {
-        self.inner.zeroize();
     }
 }
 
@@ -73,6 +79,12 @@ impl Encode for DsaPrivateKey {
 impl fmt::Debug for DsaPrivateKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DsaPrivateKey").finish_non_exhaustive()
+    }
+}
+
+impl Drop for DsaPrivateKey {
+    fn drop(&mut self) {
+        self.inner.zeroize();
     }
 }
 
@@ -118,26 +130,6 @@ impl TryFrom<&dsa::SigningKey> for DsaPrivateKey {
     }
 }
 
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for DsaPrivateKey {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.inner.ct_eq(&other.inner)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for DsaPrivateKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for DsaPrivateKey {}
-
 /// Digital Signature Algorithm (DSA) private/public keypair.
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone)]
@@ -163,6 +155,20 @@ impl DsaKeypair {
         dsa::SigningKey::generate(&mut rng, components).try_into()
     }
 }
+
+impl ConstantTimeEq for DsaKeypair {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
+    }
+}
+
+impl PartialEq for DsaKeypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
+impl Eq for DsaKeypair {}
 
 impl Decode for DsaKeypair {
     type Error = Error;
@@ -252,23 +258,3 @@ impl TryFrom<&dsa::SigningKey> for DsaKeypair {
         })
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for DsaKeypair {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for DsaKeypair {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for DsaKeypair {}

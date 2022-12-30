@@ -6,7 +6,7 @@ use hex_literal::hex;
 use ssh_key::{Algorithm, Cipher, Kdf, KdfAlg, PrivateKey};
 
 /// Unencrypted Ed25519 OpenSSH-formatted private key.
-#[cfg(all(feature = "encryption", feature = "subtle"))]
+#[cfg(all(feature = "encryption"))]
 const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
 
 /// Encrypted Ed25519 OpenSSH-formatted private key.
@@ -15,7 +15,7 @@ const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
 const OPENSSH_ED25519_ENC_EXAMPLE: &str = include_str!("examples/id_ed25519.enc");
 
 /// Bad password; don't actually use outside tests!
-#[cfg(all(feature = "encryption", feature = "subtle"))]
+#[cfg(all(feature = "encryption"))]
 const PASSWORD: &[u8] = b"hunter42";
 
 #[test]
@@ -39,7 +39,7 @@ fn decode_ed25519_enc_openssh() {
     );
 }
 
-#[cfg(all(feature = "encryption", feature = "subtle"))]
+#[cfg(all(feature = "encryption"))]
 #[test]
 fn decrypt_ed25519_enc_openssh() {
     let key_enc = PrivateKey::from_openssh(OPENSSH_ED25519_ENC_EXAMPLE).unwrap();
@@ -59,7 +59,7 @@ fn encode_ed25519_enc_openssh() {
     );
 }
 
-#[cfg(all(feature = "encryption", feature = "getrandom", feature = "subtle"))]
+#[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_ed25519_openssh() {
     use rand_core::OsRng;

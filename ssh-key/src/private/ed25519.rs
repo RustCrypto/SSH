@@ -5,13 +5,11 @@
 use crate::{public::Ed25519PublicKey, Error, Result};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use subtle::{Choice, ConstantTimeEq};
 use zeroize::{Zeroize, Zeroizing};
 
 #[cfg(feature = "rand_core")]
 use rand_core::{CryptoRng, RngCore};
-
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
 
 /// Ed25519 private key.
 // TODO(tarcieri): use `ed25519::PrivateKey`? (doesn't exist yet)
@@ -48,9 +46,17 @@ impl AsRef<[u8; Self::BYTE_SIZE]> for Ed25519PrivateKey {
     }
 }
 
-impl Drop for Ed25519PrivateKey {
-    fn drop(&mut self) {
-        self.0.zeroize();
+impl ConstantTimeEq for Ed25519PrivateKey {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.as_ref().ct_eq(other.as_ref())
+    }
+}
+
+impl Eq for Ed25519PrivateKey {}
+
+impl PartialEq for Ed25519PrivateKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
     }
 }
 
@@ -86,34 +92,40 @@ impl fmt::UpperHex for Ed25519PrivateKey {
     }
 }
 
-#[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<Ed25519PrivateKey> for ed25519_dalek::SecretKey {
-    fn from(key: Ed25519PrivateKey) -> ed25519_dalek::SecretKey {
-        ed25519_dalek::SecretKey::from(&key)
+impl Drop for Ed25519PrivateKey {
+    fn drop(&mut self) {
+        self.0.zeroize();
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<&Ed25519PrivateKey> for ed25519_dalek::SecretKey {
-    fn from(key: &Ed25519PrivateKey) -> ed25519_dalek::SecretKey {
-        ed25519_dalek::SecretKey::from_bytes(key.as_ref()).expect("invalid Ed25519 key")
+impl From<Ed25519PrivateKey> for ed25519_dalek::SigningKey {
+    fn from(key: Ed25519PrivateKey) -> ed25519_dalek::SigningKey {
+        ed25519_dalek::SigningKey::from(&key)
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<ed25519_dalek::SecretKey> for Ed25519PrivateKey {
-    fn from(key: ed25519_dalek::SecretKey) -> Ed25519PrivateKey {
+impl From<&Ed25519PrivateKey> for ed25519_dalek::SigningKey {
+    fn from(key: &Ed25519PrivateKey) -> ed25519_dalek::SigningKey {
+        ed25519_dalek::SigningKey::from_bytes(key.as_ref())
+    }
+}
+
+#[cfg(feature = "ed25519")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
+impl From<ed25519_dalek::SigningKey> for Ed25519PrivateKey {
+    fn from(key: ed25519_dalek::SigningKey) -> Ed25519PrivateKey {
         Ed25519PrivateKey::from(&key)
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<&ed25519_dalek::SecretKey> for Ed25519PrivateKey {
-    fn from(key: &ed25519_dalek::SecretKey) -> Ed25519PrivateKey {
+impl From<&ed25519_dalek::SigningKey> for Ed25519PrivateKey {
+    fn from(key: &ed25519_dalek::SigningKey) -> Ed25519PrivateKey {
         Ed25519PrivateKey(key.to_bytes())
     }
 }
@@ -130,30 +142,11 @@ impl From<Ed25519PrivateKey> for Ed25519PublicKey {
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl From<&Ed25519PrivateKey> for Ed25519PublicKey {
     fn from(private: &Ed25519PrivateKey) -> Ed25519PublicKey {
-        let secret = ed25519_dalek::SecretKey::from(private);
-        ed25519_dalek::PublicKey::from(&secret).into()
+        ed25519_dalek::SigningKey::from(private)
+            .verifying_key()
+            .into()
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for Ed25519PrivateKey {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.as_ref().ct_eq(other.as_ref())
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for Ed25519PrivateKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for Ed25519PrivateKey {}
 
 /// Ed25519 private/public keypair.
 #[derive(Clone)]
@@ -205,6 +198,20 @@ impl Ed25519Keypair {
         result[..(Self::BYTE_SIZE / 2)].copy_from_slice(self.private.as_ref());
         result[(Self::BYTE_SIZE / 2)..].copy_from_slice(self.public.as_ref());
         result
+    }
+}
+
+impl ConstantTimeEq for Ed25519Keypair {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
+    }
+}
+
+impl Eq for Ed25519Keypair {}
+
+impl PartialEq for Ed25519Keypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
     }
 }
 
@@ -278,80 +285,54 @@ impl fmt::Debug for Ed25519Keypair {
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl From<Ed25519PrivateKey> for Ed25519Keypair {
     fn from(private: Ed25519PrivateKey) -> Ed25519Keypair {
-        let secret = ed25519_dalek::SecretKey::from(&private);
-        let public = ed25519_dalek::PublicKey::from(&secret);
-
-        Ed25519Keypair {
-            private,
-            public: public.into(),
-        }
+        let secret = ed25519_dalek::SigningKey::from(&private);
+        let public = secret.verifying_key().into();
+        Ed25519Keypair { private, public }
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl TryFrom<Ed25519Keypair> for ed25519_dalek::Keypair {
+impl TryFrom<Ed25519Keypair> for ed25519_dalek::SigningKey {
     type Error = Error;
 
-    fn try_from(key: Ed25519Keypair) -> Result<ed25519_dalek::Keypair> {
-        Ok(ed25519_dalek::Keypair {
-            secret: key.private.into(),
-            public: key.public.try_into()?,
-        })
+    fn try_from(key: Ed25519Keypair) -> Result<ed25519_dalek::SigningKey> {
+        ed25519_dalek::SigningKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl TryFrom<&Ed25519Keypair> for ed25519_dalek::Keypair {
+impl TryFrom<&Ed25519Keypair> for ed25519_dalek::SigningKey {
     type Error = Error;
 
-    fn try_from(key: &Ed25519Keypair) -> Result<ed25519_dalek::Keypair> {
-        Ok(ed25519_dalek::Keypair {
-            secret: (&key.private).into(),
-            public: key.public.try_into()?,
-        })
-    }
-}
+    fn try_from(key: &Ed25519Keypair) -> Result<ed25519_dalek::SigningKey> {
+        let signing_key = ed25519_dalek::SigningKey::from(&key.private);
+        let verifying_key = ed25519_dalek::VerifyingKey::try_from(&key.public)?;
 
-#[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<ed25519_dalek::Keypair> for Ed25519Keypair {
-    fn from(key: ed25519_dalek::Keypair) -> Ed25519Keypair {
-        Ed25519Keypair {
-            private: key.secret.into(),
-            public: key.public.into(),
+        if signing_key.verifying_key() == verifying_key {
+            Ok(signing_key)
+        } else {
+            Err(Error::PublicKey)
         }
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<&ed25519_dalek::Keypair> for Ed25519Keypair {
-    fn from(key: &ed25519_dalek::Keypair) -> Ed25519Keypair {
+impl From<ed25519_dalek::SigningKey> for Ed25519Keypair {
+    fn from(key: ed25519_dalek::SigningKey) -> Ed25519Keypair {
+        Ed25519Keypair::from(&key)
+    }
+}
+
+#[cfg(feature = "ed25519")]
+#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
+impl From<&ed25519_dalek::SigningKey> for Ed25519Keypair {
+    fn from(key: &ed25519_dalek::SigningKey) -> Ed25519Keypair {
         Ed25519Keypair {
-            private: (&key.secret).into(),
-            public: key.public.into(),
+            private: key.into(),
+            public: key.verifying_key().into(),
         }
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for Ed25519Keypair {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for Ed25519Keypair {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for Ed25519Keypair {}

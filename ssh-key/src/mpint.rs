@@ -4,13 +4,11 @@ use crate::{Error, Result};
 use alloc::vec::Vec;
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
 use zeroize::Zeroizing;
-
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
 
 /// Multiple precision integer, a.k.a. "mpint".
 ///
@@ -42,7 +40,7 @@ use subtle::{Choice, ConstantTimeEq};
 /// | -deadbeef       | `00 00 00 05 ff 21 52 41 11`
 // TODO(tarcieri): support for heapless platforms
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-#[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, PartialOrd, Ord)]
 pub struct MPInt {
     /// Inner big endian-serialized integer value
     inner: Vec<u8>,
@@ -101,6 +99,20 @@ impl MPInt {
 impl AsRef<[u8]> for MPInt {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
+    }
+}
+
+impl ConstantTimeEq for MPInt {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.as_ref().ct_eq(other.as_ref())
+    }
+}
+
+impl Eq for MPInt {}
+
+impl PartialEq for MPInt {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
     }
 }
 
@@ -224,14 +236,6 @@ impl TryFrom<&MPInt> for bigint::BigUint {
             .as_positive_bytes()
             .map(bigint::BigUint::from_bytes_be)
             .ok_or(Error::Crypto)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for MPInt {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.as_ref().ct_eq(other.as_ref())
     }
 }
 

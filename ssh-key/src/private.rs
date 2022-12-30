@@ -142,6 +142,7 @@ use encoding::{
     pem::{LineEnding, PemLabel},
     CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
 };
+use subtle::{Choice, ConstantTimeEq};
 
 #[cfg(feature = "alloc")]
 use {
@@ -157,9 +158,6 @@ use std::{fs, path::Path};
 
 #[cfg(all(unix, feature = "std"))]
 use std::{io::Write, os::unix::fs::OpenOptionsExt};
-
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
 
 /// Error message for infallible conversions (used by `expect`)
 const CONVERSION_ERROR_MSG: &str = "SSH private key conversion error";
@@ -604,6 +602,26 @@ impl PrivateKey {
     }
 }
 
+impl ConstantTimeEq for PrivateKey {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        // Constant-time with respect to private key data
+        self.key_data.ct_eq(&other.key_data)
+            & Choice::from(
+                (self.cipher == other.cipher
+                    && self.kdf == other.kdf
+                    && self.public_key == other.public_key) as u8,
+            )
+    }
+}
+
+impl Eq for PrivateKey {}
+
+impl PartialEq for PrivateKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
 impl Decode for PrivateKey {
     type Error = Error;
 
@@ -820,29 +838,3 @@ impl str::FromStr for PrivateKey {
         Self::from_openssh(s)
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for PrivateKey {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        // Constant-time with respect to private key data
-        self.key_data.ct_eq(&other.key_data)
-            & Choice::from(
-                (self.cipher == other.cipher
-                    && self.kdf == other.kdf
-                    && self.public_key == other.public_key) as u8,
-            )
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for PrivateKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for PrivateKey {}

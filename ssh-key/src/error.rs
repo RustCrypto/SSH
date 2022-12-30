@@ -131,6 +131,18 @@ impl From<encoding::pem::Error> for Error {
     }
 }
 
+impl From<signature::Error> for Error {
+    fn from(_: signature::Error) -> Error {
+        Error::Crypto
+    }
+}
+
+impl From<Error> for signature::Error {
+    fn from(_: Error) -> signature::Error {
+        signature::Error::new()
+    }
+}
+
 #[cfg(feature = "alloc")]
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<alloc::string::FromUtf8Error> for Error {
@@ -152,22 +164,6 @@ impl From<sec1::Error> for Error {
 impl From<rsa::errors::Error> for Error {
     fn from(_: rsa::errors::Error) -> Error {
         Error::Crypto
-    }
-}
-
-#[cfg(feature = "signature")]
-#[cfg_attr(docsrs, doc(cfg(feature = "signature")))]
-impl From<signature::Error> for Error {
-    fn from(_: signature::Error) -> Error {
-        Error::Crypto
-    }
-}
-
-#[cfg(feature = "signature")]
-#[cfg_attr(docsrs, doc(cfg(feature = "signature")))]
-impl From<Error> for signature::Error {
-    fn from(_: Error) -> signature::Error {
-        signature::Error::new()
     }
 }
 

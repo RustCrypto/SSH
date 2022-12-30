@@ -6,10 +6,10 @@ use ssh_key::{Algorithm, Cipher, KdfAlg, PrivateKey};
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
 
-#[cfg(all(feature = "alloc", feature = "subtle"))]
+#[cfg(all(feature = "alloc"))]
 use ssh_key::LineEnding;
 
-#[cfg(all(feature = "std", feature = "subtle"))]
+#[cfg(all(feature = "std"))]
 use {
     ssh_key::PublicKey,
     std::{io, process},
@@ -367,50 +367,50 @@ fn decode_rsa_4096_openssh() {
     assert_eq!("user@example.com", key.comment());
 }
 
-#[cfg(all(feature = "alloc", feature = "subtle"))]
+#[cfg(all(feature = "alloc"))]
 #[test]
 fn encode_dsa_openssh() {
     encoding_test(OPENSSH_DSA_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "ecdsa", feature = "subtle"))]
+#[cfg(all(feature = "alloc", feature = "ecdsa"))]
 #[test]
 fn encode_ecdsa_p256_openssh() {
     encoding_test(OPENSSH_ECDSA_P256_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "ecdsa", feature = "subtle"))]
+#[cfg(all(feature = "alloc", feature = "ecdsa"))]
 #[test]
 fn encode_ecdsa_p384_openssh() {
     encoding_test(OPENSSH_ECDSA_P384_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "ecdsa", feature = "subtle"))]
+#[cfg(all(feature = "alloc", feature = "ecdsa"))]
 #[test]
 fn encode_ecdsa_p521_openssh() {
     encoding_test(OPENSSH_ECDSA_P521_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "subtle"))]
+#[cfg(all(feature = "alloc"))]
 #[test]
 fn encode_ed25519_openssh() {
     encoding_test(OPENSSH_ED25519_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "subtle"))]
+#[cfg(all(feature = "alloc"))]
 #[test]
 fn encode_rsa_3072_openssh() {
     encoding_test(OPENSSH_RSA_3072_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "subtle"))]
+#[cfg(all(feature = "alloc"))]
 #[test]
 fn encode_rsa_4096_openssh() {
     encoding_test(OPENSSH_RSA_4096_EXAMPLE)
 }
 
 /// Common behavior of all encoding tests
-#[cfg(all(feature = "alloc", feature = "subtle"))]
+#[cfg(all(feature = "alloc"))]
 fn encoding_test(private_key: &str) {
     let key = PrivateKey::from_openssh(private_key).unwrap();
 
@@ -424,7 +424,7 @@ fn encoding_test(private_key: &str) {
 }
 
 /// Parse PEM encoded using `PrivateKey::to_openssh` using the `ssh-keygen` utility.
-#[cfg(all(feature = "std", feature = "subtle"))]
+#[cfg(all(feature = "std"))]
 fn encoding_integration_test(private_key: PrivateKey) {
     let dir = tempfile::tempdir().unwrap();
     let mut path = dir.path().to_owned();
