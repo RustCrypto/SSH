@@ -4,13 +4,11 @@ use crate::{public::EcdsaPublicKey, Algorithm, EcdsaCurve, Error, Result};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use sec1::consts::{U32, U48, U66};
+use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(feature = "rand_core")]
 use rand_core::{CryptoRng, RngCore};
-
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private key.
 #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
@@ -84,6 +82,20 @@ impl<const SIZE: usize> AsRef<[u8; SIZE]> for EcdsaPrivateKey<SIZE> {
     }
 }
 
+impl<const SIZE: usize> ConstantTimeEq for EcdsaPrivateKey<SIZE> {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.as_ref().ct_eq(other.as_ref())
+    }
+}
+
+impl<const SIZE: usize> PartialEq for EcdsaPrivateKey<SIZE> {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
+impl<const SIZE: usize> Eq for EcdsaPrivateKey<SIZE> {}
+
 impl<const SIZE: usize> fmt::Debug for EcdsaPrivateKey<SIZE> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Ed25519PrivateKey").finish_non_exhaustive()
@@ -133,26 +145,6 @@ impl From<p384::SecretKey> for EcdsaPrivateKey<48> {
         }
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl<const SIZE: usize> ConstantTimeEq for EcdsaPrivateKey<SIZE> {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.as_ref().ct_eq(other.as_ref())
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl<const SIZE: usize> PartialEq for EcdsaPrivateKey<SIZE> {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl<const SIZE: usize> Eq for EcdsaPrivateKey<SIZE> {}
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private/public keypair.
 #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
@@ -250,6 +242,35 @@ impl EcdsaKeypair {
     }
 }
 
+impl ConstantTimeEq for EcdsaKeypair {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        let public_eq =
+            Choice::from((EcdsaPublicKey::from(self) == EcdsaPublicKey::from(other)) as u8);
+
+        let private_key_a = match self {
+            Self::NistP256 { private, .. } => private.as_slice(),
+            Self::NistP384 { private, .. } => private.as_slice(),
+            Self::NistP521 { private, .. } => private.as_slice(),
+        };
+
+        let private_key_b = match other {
+            Self::NistP256 { private, .. } => private.as_slice(),
+            Self::NistP384 { private, .. } => private.as_slice(),
+            Self::NistP521 { private, .. } => private.as_slice(),
+        };
+
+        public_eq & private_key_a.ct_eq(private_key_b)
+    }
+}
+
+impl Eq for EcdsaKeypair {}
+
+impl PartialEq for EcdsaKeypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
 impl Decode for EcdsaKeypair {
     type Error = Error;
 
@@ -314,38 +335,3 @@ impl From<&EcdsaKeypair> for EcdsaPublicKey {
         }
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for EcdsaKeypair {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        let public_eq =
-            Choice::from((EcdsaPublicKey::from(self) == EcdsaPublicKey::from(other)) as u8);
-
-        let private_key_a = match self {
-            Self::NistP256 { private, .. } => private.as_slice(),
-            Self::NistP384 { private, .. } => private.as_slice(),
-            Self::NistP521 { private, .. } => private.as_slice(),
-        };
-
-        let private_key_b = match other {
-            Self::NistP256 { private, .. } => private.as_slice(),
-            Self::NistP384 { private, .. } => private.as_slice(),
-            Self::NistP521 { private, .. } => private.as_slice(),
-        };
-
-        public_eq & private_key_a.ct_eq(private_key_b)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for EcdsaKeypair {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for EcdsaKeypair {}

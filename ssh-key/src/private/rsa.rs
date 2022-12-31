@@ -3,6 +3,7 @@
 use crate::{public::RsaPublicKey, Error, MPInt, Result};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
@@ -11,9 +12,6 @@ use {
     rsa::{pkcs1v15, PublicKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
-
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
 
 /// RSA private key.
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
@@ -30,6 +28,23 @@ pub struct RsaPrivateKey {
 
     /// Second prime factor of `n`.
     pub q: MPInt,
+}
+
+impl ConstantTimeEq for RsaPrivateKey {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        self.d.ct_eq(&other.d)
+            & self.iqmp.ct_eq(&self.iqmp)
+            & self.p.ct_eq(&other.p)
+            & self.q.ct_eq(&other.q)
+    }
+}
+
+impl Eq for RsaPrivateKey {}
+
+impl PartialEq for RsaPrivateKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
 }
 
 impl Decode for RsaPrivateKey {
@@ -75,29 +90,6 @@ impl Drop for RsaPrivateKey {
     }
 }
 
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for RsaPrivateKey {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        self.d.ct_eq(&other.d)
-            & self.iqmp.ct_eq(&self.iqmp)
-            & self.p.ct_eq(&other.p)
-            & self.q.ct_eq(&other.q)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for RsaPrivateKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for RsaPrivateKey {}
-
 /// RSA private/public keypair.
 #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone)]
@@ -123,6 +115,20 @@ impl RsaKeypair {
         } else {
             Err(Error::Crypto)
         }
+    }
+}
+
+impl ConstantTimeEq for RsaKeypair {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
+    }
+}
+
+impl Eq for RsaKeypair {}
+
+impl PartialEq for RsaKeypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
     }
 }
 
@@ -261,23 +267,3 @@ where
         Ok(pkcs1v15::SigningKey::new_with_prefix(keypair.try_into()?))
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for RsaKeypair {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for RsaKeypair {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for RsaKeypair {}

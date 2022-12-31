@@ -4,7 +4,7 @@ use crate::{private, public, Algorithm, Error, MPInt, PrivateKey, PublicKey, Res
 use alloc::vec::Vec;
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use signature::{Signer, Verifier};
+use signature::{SignatureEncoding, Signer, Verifier};
 
 #[cfg(feature = "ed25519")]
 use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
@@ -13,7 +13,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
     sha1::Sha1,
-    signature::{DigestSigner, DigestVerifier, Signature as _},
+    signature::{DigestSigner, DigestVerifier},
 };
 
 #[cfg(any(feature = "p256", feature = "p384"))]
@@ -216,18 +216,27 @@ impl Encode for Signature {
     }
 }
 
-impl signature::Signature for Signature {
-    fn from_bytes(bytes: &[u8]) -> signature::Result<Self> {
-        Self::try_from(bytes).map_err(|_| signature::Error::new())
-    }
+impl SignatureEncoding for Signature {
+    type Repr = Vec<u8>;
 }
 
 /// Decode [`Signature`] from an [`Algorithm`]-prefixed OpenSSH-encoded bytestring.
 impl TryFrom<&[u8]> for Signature {
+    // TODO(tarcieri): use `ssh_key::Error` instead of `signature::Error`
+    type Error = signature::Error;
+
+    fn try_from(mut bytes: &[u8]) -> signature::Result<Self> {
+        Ok(Self::decode(&mut bytes)?)
+    }
+}
+
+impl TryFrom<Signature> for Vec<u8> {
     type Error = Error;
 
-    fn try_from(mut bytes: &[u8]) -> Result<Self> {
-        Self::decode(&mut bytes)
+    fn try_from(signature: Signature) -> Result<Vec<u8>> {
+        let mut ret = Vec::<u8>::new();
+        signature.encode(&mut ret)?;
+        Ok(ret)
     }
 }
 
@@ -302,6 +311,7 @@ impl Verifier<Signature> for public::KeyData {
             Self::SkEd25519(pk) => pk.verify(message, signature),
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
+            #[allow(unreachable_patterns)]
             _ => Err(signature::Error::new()),
         }
     }
@@ -311,13 +321,13 @@ impl Verifier<Signature> for public::KeyData {
 #[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl Signer<Signature> for DsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let data = dsa::SigningKey::try_from(self)?
+        let signature = dsa::SigningKey::try_from(self)?
             .try_sign_digest(Sha1::new_with_prefix(message))
             .map_err(|_| signature::Error::new())?;
 
         Ok(Signature {
             algorithm: Algorithm::Dsa,
-            data: data.as_ref().to_vec(),
+            data: signature.to_vec(),
         })
     }
 }
@@ -328,7 +338,7 @@ impl Verifier<Signature> for DsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
             Algorithm::Dsa => {
-                let signature = dsa::Signature::from_bytes(&signature.data)?;
+                let signature = dsa::Signature::try_from(signature.data.as_slice())?;
 
                 dsa::VerifyingKey::try_from(self)?
                     .verify_digest(Sha1::new_with_prefix(message), &signature)
@@ -368,11 +378,11 @@ impl TryFrom<&Signature> for ed25519_dalek::Signature {
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl Signer<Signature> for Ed25519Keypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let signature = ed25519_dalek::Keypair::try_from(self)?.sign(message);
+        let signature = ed25519_dalek::SigningKey::try_from(self)?.sign(message);
 
         Ok(Signature {
             algorithm: Algorithm::Ed25519,
-            data: signature.as_ref().to_vec(),
+            data: signature.to_vec(),
         })
     }
 }
@@ -382,7 +392,7 @@ impl Signer<Signature> for Ed25519Keypair {
 impl Verifier<Signature> for Ed25519PublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         let signature = ed25519_dalek::Signature::try_from(signature)?;
-        ed25519_dalek::PublicKey::try_from(self)?.verify(message, &signature)
+        ed25519_dalek::VerifyingKey::try_from(self)?.verify(message, &signature)
     }
 }
 
@@ -406,7 +416,7 @@ impl Verifier<Signature> for public::SkEd25519 {
         signed_data.extend(Sha256::digest(message));
 
         let signature = ed25519_dalek::Signature::try_from(signature_bytes)?;
-        ed25519_dalek::PublicKey::try_from(self.public_key())?.verify(&signed_data, &signature)
+        ed25519_dalek::VerifyingKey::try_from(self.public_key())?.verify(&signed_data, &signature)
     }
 }
 
@@ -436,14 +446,13 @@ impl TryFrom<&p256::ecdsa::Signature> for Signature {
     type Error = Error;
 
     fn try_from(signature: &p256::ecdsa::Signature) -> Result<Signature> {
-        const FIELD_SIZE: usize = 32;
-        let (r, s) = signature.as_ref().split_at(FIELD_SIZE);
+        let (r, s) = signature.split_bytes();
 
         #[allow(clippy::integer_arithmetic)]
-        let mut data = Vec::with_capacity(FIELD_SIZE * 2 + 4 * 2 + 2);
+        let mut data = Vec::with_capacity(32 * 2 + 4 * 2 + 2);
 
-        MPInt::from_positive_bytes(r)?.encode(&mut data)?;
-        MPInt::from_positive_bytes(s)?.encode(&mut data)?;
+        MPInt::from_positive_bytes(&r)?.encode(&mut data)?;
+        MPInt::from_positive_bytes(&s)?.encode(&mut data)?;
 
         Ok(Signature {
             algorithm: Algorithm::Ecdsa {
@@ -460,14 +469,13 @@ impl TryFrom<&p384::ecdsa::Signature> for Signature {
     type Error = Error;
 
     fn try_from(signature: &p384::ecdsa::Signature) -> Result<Signature> {
-        const FIELD_SIZE: usize = 48;
-        let (r, s) = signature.as_ref().split_at(FIELD_SIZE);
+        let (r, s) = signature.split_bytes();
 
         #[allow(clippy::integer_arithmetic)]
-        let mut data = Vec::with_capacity(FIELD_SIZE * 2 + 4 * 2 + 2);
+        let mut data = Vec::with_capacity(48 * 2 + 4 * 2 + 2);
 
-        MPInt::from_positive_bytes(r)?.encode(&mut data)?;
-        MPInt::from_positive_bytes(s)?.encode(&mut data)?;
+        MPInt::from_positive_bytes(&r)?.encode(&mut data)?;
+        MPInt::from_positive_bytes(&s)?.encode(&mut data)?;
 
         Ok(Signature {
             algorithm: Algorithm::Ecdsa {
@@ -578,9 +586,9 @@ impl Signer<Signature> for EcdsaKeypair {
 #[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl Signer<Signature> for EcdsaPrivateKey<32> {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        Ok(p256::ecdsa::SigningKey::from_bytes(self.as_ref())?
-            .try_sign(message)?
-            .try_into()?)
+        let signing_key = p256::ecdsa::SigningKey::from_bytes(self.as_ref())?;
+        let signature: p256::ecdsa::Signature = signing_key.try_sign(message)?;
+        Ok(signature.try_into()?)
     }
 }
 
@@ -588,9 +596,9 @@ impl Signer<Signature> for EcdsaPrivateKey<32> {
 #[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl Signer<Signature> for EcdsaPrivateKey<48> {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        Ok(p384::ecdsa::SigningKey::from_bytes(self.as_ref())?
-            .try_sign(message)?
-            .try_into()?)
+        let signing_key = p384::ecdsa::SigningKey::from_bytes(self.as_ref())?;
+        let signature: p384::ecdsa::Signature = signing_key.try_sign(message)?;
+        Ok(signature.try_into()?)
     }
 }
 
@@ -643,7 +651,7 @@ impl Verifier<Signature> for RsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
             Algorithm::Rsa { hash: Some(hash) } => {
-                let signature = rsa::pkcs1v15::Signature::from(signature.data.clone());
+                let signature = rsa::pkcs1v15::Signature::try_from(signature.data.as_ref())?;
 
                 match hash {
                     HashAlg::Sha256 => rsa::pkcs1v15::VerifyingKey::<Sha256>::try_from(self)?

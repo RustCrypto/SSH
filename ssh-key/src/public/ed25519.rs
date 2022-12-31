@@ -79,36 +79,36 @@ impl fmt::UpperHex for Ed25519PublicKey {
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl TryFrom<Ed25519PublicKey> for ed25519_dalek::PublicKey {
+impl TryFrom<Ed25519PublicKey> for ed25519_dalek::VerifyingKey {
     type Error = Error;
 
-    fn try_from(key: Ed25519PublicKey) -> Result<ed25519_dalek::PublicKey> {
-        ed25519_dalek::PublicKey::try_from(&key)
+    fn try_from(key: Ed25519PublicKey) -> Result<ed25519_dalek::VerifyingKey> {
+        ed25519_dalek::VerifyingKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl TryFrom<&Ed25519PublicKey> for ed25519_dalek::PublicKey {
+impl TryFrom<&Ed25519PublicKey> for ed25519_dalek::VerifyingKey {
     type Error = Error;
 
-    fn try_from(key: &Ed25519PublicKey) -> Result<ed25519_dalek::PublicKey> {
-        ed25519_dalek::PublicKey::from_bytes(key.as_ref()).map_err(|_| Error::Crypto)
+    fn try_from(key: &Ed25519PublicKey) -> Result<ed25519_dalek::VerifyingKey> {
+        ed25519_dalek::VerifyingKey::from_bytes(key.as_ref()).map_err(|_| Error::Crypto)
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<ed25519_dalek::PublicKey> for Ed25519PublicKey {
-    fn from(key: ed25519_dalek::PublicKey) -> Ed25519PublicKey {
+impl From<ed25519_dalek::VerifyingKey> for Ed25519PublicKey {
+    fn from(key: ed25519_dalek::VerifyingKey) -> Ed25519PublicKey {
         Ed25519PublicKey::from(&key)
     }
 }
 
 #[cfg(feature = "ed25519")]
 #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-impl From<&ed25519_dalek::PublicKey> for Ed25519PublicKey {
-    fn from(key: &ed25519_dalek::PublicKey) -> Ed25519PublicKey {
+impl From<&ed25519_dalek::VerifyingKey> for Ed25519PublicKey {
+    fn from(key: &ed25519_dalek::VerifyingKey) -> Ed25519PublicKey {
         Ed25519PublicKey(key.to_bytes())
     }
 }

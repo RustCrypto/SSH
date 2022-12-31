@@ -32,7 +32,7 @@ const ED25519_CERT_WITH_P256_CA_EXAMPLE: &str =
     include_str!("examples/id_ed25519-cert-with-p256-ca.pub");
 
 /// Ed25519 OpenSSH Certificate with RSA certificate authority
-#[cfg(feature = "p256")]
+#[cfg(feature = "rsa")]
 const ED25519_CERT_WITH_RSA_CA_EXAMPLE: &str =
     include_str!("examples/id_ed25519-cert-with-rsa-ca.pub");
 

@@ -3,6 +3,7 @@
 use super::ed25519::Ed25519Keypair;
 use crate::{public, Algorithm, Error, Result};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use subtle::{Choice, ConstantTimeEq};
 
 #[cfg(feature = "alloc")]
 use {
@@ -15,9 +16,6 @@ use super::EcdsaKeypair;
 
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
 use super::SkEcdsaSha2NistP256;
-
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
 
 /// Private key data: digital signature key pairs.
 ///
@@ -237,6 +235,45 @@ impl KeypairData {
     }
 }
 
+impl ConstantTimeEq for KeypairData {
+    fn ct_eq(&self, other: &Self) -> Choice {
+        // Note: constant-time with respect to key *data* comparisons, not algorithms
+        match (self, other) {
+            #[cfg(feature = "alloc")]
+            (Self::Dsa(a), Self::Dsa(b)) => a.ct_eq(b),
+            #[cfg(feature = "ecdsa")]
+            (Self::Ecdsa(a), Self::Ecdsa(b)) => a.ct_eq(b),
+            (Self::Ed25519(a), Self::Ed25519(b)) => a.ct_eq(b),
+            #[cfg(feature = "alloc")]
+            (Self::Encrypted(a), Self::Encrypted(b)) => a.ct_eq(b),
+            #[cfg(feature = "alloc")]
+            (Self::Rsa(a), Self::Rsa(b)) => a.ct_eq(b),
+            #[cfg(all(feature = "alloc", feature = "ecdsa"))]
+            (Self::SkEcdsaSha2NistP256(a), Self::SkEcdsaSha2NistP256(b)) => {
+                // Security Keys store the actual private key in hardware.
+                // The key structs contain all public data.
+                Choice::from((a == b) as u8)
+            }
+            #[cfg(feature = "alloc")]
+            (Self::SkEd25519(a), Self::SkEd25519(b)) => {
+                // Security Keys store the actual private key in hardware.
+                // The key structs contain all public data.
+                Choice::from((a == b) as u8)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Choice::from(0),
+        }
+    }
+}
+
+impl Eq for KeypairData {}
+
+impl PartialEq for KeypairData {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
 impl Decode for KeypairData {
     type Error = Error;
 
@@ -381,47 +418,3 @@ impl From<SkEd25519> for KeypairData {
         Self::SkEd25519(keypair)
     }
 }
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl ConstantTimeEq for KeypairData {
-    fn ct_eq(&self, other: &Self) -> Choice {
-        // Note: constant-time with respect to key *data* comparisons, not algorithms
-        match (self, other) {
-            #[cfg(feature = "alloc")]
-            (Self::Dsa(a), Self::Dsa(b)) => a.ct_eq(b),
-            #[cfg(feature = "ecdsa")]
-            (Self::Ecdsa(a), Self::Ecdsa(b)) => a.ct_eq(b),
-            (Self::Ed25519(a), Self::Ed25519(b)) => a.ct_eq(b),
-            #[cfg(feature = "alloc")]
-            (Self::Encrypted(a), Self::Encrypted(b)) => a.ct_eq(b),
-            #[cfg(feature = "alloc")]
-            (Self::Rsa(a), Self::Rsa(b)) => a.ct_eq(b),
-            #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-            (Self::SkEcdsaSha2NistP256(a), Self::SkEcdsaSha2NistP256(b)) => {
-                // Security Keys store the actual private key in hardware.
-                // The key structs contain all public data.
-                Choice::from((a == b) as u8)
-            }
-            #[cfg(feature = "alloc")]
-            (Self::SkEd25519(a), Self::SkEd25519(b)) => {
-                // Security Keys store the actual private key in hardware.
-                // The key structs contain all public data.
-                Choice::from((a == b) as u8)
-            }
-            _ => Choice::from(0),
-        }
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl PartialEq for KeypairData {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
-    }
-}
-
-#[cfg(feature = "subtle")]
-#[cfg_attr(docsrs, doc(cfg(feature = "subtle")))]
-impl Eq for KeypairData {}

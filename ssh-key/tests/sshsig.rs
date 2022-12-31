@@ -5,8 +5,11 @@
 use hex_literal::hex;
 use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
 
+#[cfg(any(feature = "dsa", feature = "ed25519", feature = "rsa"))]
+use ssh_key::PrivateKey;
+
 #[cfg(feature = "ed25519")]
-use ssh_key::{Error, PrivateKey};
+use ssh_key::Error;
 
 /// DSA OpenSSH-formatted private key.
 #[cfg(feature = "dsa")]
@@ -62,7 +65,7 @@ const RSA_PRIVATE_KEY: &str = include_str!("examples/id_rsa_3072");
 const RSA_PUBLIC_KEY: &str = include_str!("examples/id_rsa_3072.pub");
 
 /// Example message to be signed/verified.
-#[cfg(feature = "ed25519")]
+#[allow(dead_code)]
 const MSG_EXAMPLE: &[u8] = b"testing";
 
 /// Example domain/namespace used for the message.

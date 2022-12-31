@@ -48,10 +48,11 @@ jobs:
       - run: ${{ matrix.deps }}
       - run: cargo build --target ${{ matrix.target }} --release --all-features
 
-  minimal-versions:
-    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
-    with:
-        working-directory: ${{ github.workflow }}
+# TODO(tarcieri): re-enable when `ed25519-dalek` v2.0 is released
+#  minimal-versions:
+#    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
+#    with:
+#        working-directory: ${{ github.workflow }}
 
   no_std:
     runs-on: ubuntu-latest
@@ -89,4 +90,6 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
       - uses: RustCrypto/actions/cargo-hack-install@master
-      - run: cargo hack test --feature-powerset
+      - run: cargo hack test --feature-powerset --exclude-features default,std
+      - run: cargo test
+      - run: cargo test --all-features
