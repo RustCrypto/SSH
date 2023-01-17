@@ -222,11 +222,10 @@ impl SignatureEncoding for Signature {
 
 /// Decode [`Signature`] from an [`Algorithm`]-prefixed OpenSSH-encoded bytestring.
 impl TryFrom<&[u8]> for Signature {
-    // TODO(tarcieri): use `ssh_key::Error` instead of `signature::Error`
-    type Error = signature::Error;
+    type Error = Error;
 
-    fn try_from(mut bytes: &[u8]) -> signature::Result<Self> {
-        Ok(Self::decode(&mut bytes)?)
+    fn try_from(mut bytes: &[u8]) -> Result<Self> {
+        Self::decode(&mut bytes)
     }
 }
 
