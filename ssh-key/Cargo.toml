@@ -34,7 +34,7 @@ p256 = { version = "0.12", optional = true, default-features = false, features =
 p384 = { version = "0.12", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.6", optional = true, default-features = false }
 rsa = { version = "0.8", optional = true, default-features = false }
-sec1 = { version = "0.3", optional = true, default-features = false, features = ["point"] }
+sec1 = { version = "0.7", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1", optional = true }
 sha1 = { version = "0.10", optional = true, default-features = false }
 
