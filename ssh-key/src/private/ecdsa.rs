@@ -8,7 +8,7 @@ use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(feature = "rand_core")]
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private key.
 #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
@@ -105,7 +105,7 @@ impl<const SIZE: usize> fmt::Debug for EcdsaPrivateKey<SIZE> {
 impl<const SIZE: usize> fmt::LowerHex for EcdsaPrivateKey<SIZE> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_ref() {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
         Ok(())
     }
@@ -114,7 +114,7 @@ impl<const SIZE: usize> fmt::LowerHex for EcdsaPrivateKey<SIZE> {
 impl<const SIZE: usize> fmt::UpperHex for EcdsaPrivateKey<SIZE> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_ref() {
-            write!(f, "{:02X}", byte)?;
+            write!(f, "{byte:02X}")?;
         }
         Ok(())
     }
@@ -131,7 +131,7 @@ impl<const SIZE: usize> Drop for EcdsaPrivateKey<SIZE> {
 impl From<p256::SecretKey> for EcdsaPrivateKey<32> {
     fn from(sk: p256::SecretKey) -> EcdsaPrivateKey<32> {
         EcdsaPrivateKey {
-            bytes: sk.to_be_bytes().into(),
+            bytes: sk.to_bytes().into(),
         }
     }
 }
@@ -141,7 +141,7 @@ impl From<p256::SecretKey> for EcdsaPrivateKey<32> {
 impl From<p384::SecretKey> for EcdsaPrivateKey<48> {
     fn from(sk: p384::SecretKey) -> EcdsaPrivateKey<48> {
         EcdsaPrivateKey {
-            bytes: sk.to_be_bytes().into(),
+            bytes: sk.to_bytes().into(),
         }
     }
 }
@@ -183,7 +183,7 @@ impl EcdsaKeypair {
     #[cfg(feature = "rand_core")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rand_core")))]
     #[allow(unused_variables)]
-    pub fn random(rng: impl CryptoRng + RngCore, curve: EcdsaCurve) -> Result<Self> {
+    pub fn random(rng: &mut impl CryptoRngCore, curve: EcdsaCurve) -> Result<Self> {
         match curve {
             #[cfg(feature = "p256")]
             EcdsaCurve::NistP256 => {

@@ -77,7 +77,7 @@ impl fmt::Debug for Ed25519PrivateKey {
 impl fmt::LowerHex for Ed25519PrivateKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_ref() {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
         Ok(())
     }
@@ -86,7 +86,7 @@ impl fmt::LowerHex for Ed25519PrivateKey {
 impl fmt::UpperHex for Ed25519PrivateKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_ref() {
-            write!(f, "{:02X}", byte)?;
+            write!(f, "{byte:02X}")?;
         }
         Ok(())
     }
@@ -228,7 +228,7 @@ impl Decode for Ed25519Keypair {
         let mut bytes = Zeroizing::new([0u8; Self::BYTE_SIZE]);
         reader.read_prefixed(|reader| reader.read(&mut *bytes))?;
 
-        let keypair = Self::from_bytes(&*bytes)?;
+        let keypair = Self::from_bytes(&bytes)?;
 
         // Ensure public key matches the one one the keypair
         if keypair.public == public {

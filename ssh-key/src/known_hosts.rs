@@ -281,7 +281,7 @@ impl ToString for HostPatterns {
             HostPatterns::HashedName { salt, hash } => {
                 let salt = Base64::encode_string(salt);
                 let hash = Base64::encode_string(hash);
-                format!("|1|{}|{}", salt, hash)
+                format!("|1|{salt}|{hash}")
             }
         }
     }

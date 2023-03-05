@@ -167,20 +167,20 @@ impl Zeroize for MPInt {
 
 impl fmt::Debug for MPInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MPInt({:X})", self)
+        write!(f, "MPInt({self:X})")
     }
 }
 
 impl fmt::Display for MPInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:X}", self)
+        write!(f, "{self:X}")
     }
 }
 
 impl fmt::LowerHex for MPInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_bytes() {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
         Ok(())
     }
@@ -189,7 +189,7 @@ impl fmt::LowerHex for MPInt {
 impl fmt::UpperHex for MPInt {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_bytes() {
-            write!(f, "{:02X}", byte)?;
+            write!(f, "{byte:02X}")?;
         }
         Ok(())
     }

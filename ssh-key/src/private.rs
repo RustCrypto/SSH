@@ -151,7 +151,7 @@ use {
 };
 
 #[cfg(feature = "rand_core")]
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 #[cfg(feature = "std")]
 use std::{fs, path::Path};
@@ -339,7 +339,7 @@ impl PrivateKey {
     #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn encrypt(
         &self,
-        mut rng: impl CryptoRng + RngCore,
+        rng: &mut impl CryptoRngCore,
         password: impl AsRef<[u8]>,
     ) -> Result<Self> {
         let checkint = rng.next_u32();
@@ -439,7 +439,7 @@ impl PrivateKey {
     #[cfg(feature = "rand_core")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rand_core")))]
     #[allow(unreachable_code, unused_variables)]
-    pub fn random(mut rng: impl CryptoRng + RngCore, algorithm: Algorithm) -> Result<Self> {
+    pub fn random(rng: &mut impl CryptoRngCore, algorithm: Algorithm) -> Result<Self> {
         let checkint = rng.next_u32();
         let key_data = match algorithm {
             #[cfg(feature = "dsa")]
