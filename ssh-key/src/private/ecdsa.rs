@@ -11,7 +11,6 @@ use zeroize::Zeroize;
 use rand_core::CryptoRngCore;
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private key.
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 #[derive(Clone)]
 pub struct EcdsaPrivateKey<const SIZE: usize> {
     /// Byte array containing serialized big endian private scalar.
@@ -127,7 +126,6 @@ impl<const SIZE: usize> Drop for EcdsaPrivateKey<SIZE> {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl From<p256::SecretKey> for EcdsaPrivateKey<32> {
     fn from(sk: p256::SecretKey) -> EcdsaPrivateKey<32> {
         EcdsaPrivateKey {
@@ -137,7 +135,6 @@ impl From<p256::SecretKey> for EcdsaPrivateKey<32> {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl From<p384::SecretKey> for EcdsaPrivateKey<48> {
     fn from(sk: p384::SecretKey) -> EcdsaPrivateKey<48> {
         EcdsaPrivateKey {
@@ -147,7 +144,6 @@ impl From<p384::SecretKey> for EcdsaPrivateKey<48> {
 }
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private/public keypair.
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 #[derive(Clone, Debug)]
 pub enum EcdsaKeypair {
     /// NIST P-256 ECDSA keypair.
@@ -181,7 +177,6 @@ pub enum EcdsaKeypair {
 impl EcdsaKeypair {
     /// Generate a random ECDSA private key.
     #[cfg(feature = "rand_core")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "rand_core")))]
     #[allow(unused_variables)]
     pub fn random(rng: &mut impl CryptoRngCore, curve: EcdsaCurve) -> Result<Self> {
         match curve {

@@ -17,7 +17,6 @@ pub enum Error {
 
     /// Certificate field is invalid or already set.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     CertificateFieldInvalid(certificate::Field),
 
     /// Certificate validation failed.
@@ -31,7 +30,6 @@ pub enum Error {
 
     /// ECDSA key encoding errors.
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     Ecdsa(sec1::Error),
 
     /// Encoding errors.
@@ -45,7 +43,6 @@ pub enum Error {
 
     /// Input/output errors.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     Io(std::io::ErrorKind),
 
     /// Namespace invalid.
@@ -143,7 +140,6 @@ impl From<Error> for signature::Error {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<alloc::string::FromUtf8Error> for Error {
     fn from(err: alloc::string::FromUtf8Error) -> Error {
         Error::Encoding(err.into())
@@ -151,7 +147,6 @@ impl From<alloc::string::FromUtf8Error> for Error {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<sec1::Error> for Error {
     fn from(err: sec1::Error) -> Error {
         Error::Ecdsa(err)
@@ -159,7 +154,6 @@ impl From<sec1::Error> for Error {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl From<rsa::errors::Error> for Error {
     fn from(_: rsa::errors::Error) -> Error {
         Error::Crypto
@@ -167,7 +161,6 @@ impl From<rsa::errors::Error> for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         Error::Io(err.kind())
@@ -175,7 +168,6 @@ impl From<std::io::Error> for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl From<std::time::SystemTimeError> for Error {
     fn from(_: std::time::SystemTimeError) -> Error {
         Error::Time
@@ -183,7 +175,6 @@ impl From<std::time::SystemTimeError> for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {

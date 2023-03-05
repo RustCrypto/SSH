@@ -27,12 +27,10 @@ use super::SkEcdsaSha2NistP256;
 pub enum KeypairData {
     /// Digital Signature Algorithm (DSA) keypair.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Dsa(DsaKeypair),
 
     /// ECDSA keypair.
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     Ecdsa(EcdsaKeypair),
 
     /// Ed25519 keypair.
@@ -40,26 +38,22 @@ pub enum KeypairData {
 
     /// Encrypted private key (ciphertext).
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Encrypted(Vec<u8>),
 
     /// RSA keypair.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Rsa(RsaKeypair),
 
     /// Security Key (FIDO/U2F) using ECDSA/NIST P-256 as specified in [PROTOCOL.u2f].
     ///
     /// [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
     #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "ecdsa"))))]
     SkEcdsaSha2NistP256(SkEcdsaSha2NistP256),
 
     /// Security Key (FIDO/U2F) using Ed25519 as specified in [PROTOCOL.u2f].
     ///
     /// [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     SkEd25519(SkEd25519),
 }
 
@@ -85,7 +79,6 @@ impl KeypairData {
 
     /// Get DSA keypair if this key is the correct type.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn dsa(&self) -> Option<&DsaKeypair> {
         match self {
             Self::Dsa(key) => Some(key),
@@ -95,7 +88,6 @@ impl KeypairData {
 
     /// Get ECDSA private key if this key is the correct type.
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     pub fn ecdsa(&self) -> Option<&EcdsaKeypair> {
         match self {
             Self::Ecdsa(keypair) => Some(keypair),
@@ -114,7 +106,6 @@ impl KeypairData {
 
     /// Get the encrypted ciphertext if this key is encrypted.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn encrypted(&self) -> Option<&[u8]> {
         match self {
             Self::Encrypted(ciphertext) => Some(ciphertext),
@@ -124,7 +115,6 @@ impl KeypairData {
 
     /// Get RSA keypair if this key is the correct type.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn rsa(&self) -> Option<&RsaKeypair> {
         match self {
             Self::Rsa(key) => Some(key),
@@ -134,7 +124,6 @@ impl KeypairData {
 
     /// Get FIDO/U2F ECDSA/NIST P-256 private key if this key is the correct type.
     #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "ecdsa"))))]
     pub fn sk_ecdsa_p256(&self) -> Option<&SkEcdsaSha2NistP256> {
         match self {
             Self::SkEcdsaSha2NistP256(sk) => Some(sk),
@@ -144,7 +133,6 @@ impl KeypairData {
 
     /// Get FIDO/U2F Ed25519 private key if this key is the correct type.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn sk_ed25519(&self) -> Option<&SkEd25519> {
         match self {
             Self::SkEd25519(sk) => Some(sk),
@@ -154,14 +142,12 @@ impl KeypairData {
 
     /// Is this key a DSA key?
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn is_dsa(&self) -> bool {
         matches!(self, Self::Dsa(_))
     }
 
     /// Is this key an ECDSA key?
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     pub fn is_ecdsa(&self) -> bool {
         matches!(self, Self::Ecdsa(_))
     }
@@ -185,21 +171,18 @@ impl KeypairData {
 
     /// Is this key an RSA key?
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn is_rsa(&self) -> bool {
         matches!(self, Self::Rsa(_))
     }
 
     /// Is this key a FIDO/U2F ECDSA/NIST P-256 key?
     #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "ecdsa"))))]
     pub fn is_sk_ecdsa_p256(&self) -> bool {
         matches!(self, Self::SkEcdsaSha2NistP256(_))
     }
 
     /// Is this key a FIDO/U2F Ed25519 key?
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn is_sk_ed25519(&self) -> bool {
         matches!(self, Self::SkEd25519(_))
     }
@@ -374,7 +357,6 @@ impl TryFrom<&KeypairData> for public::KeyData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<DsaKeypair> for KeypairData {
     fn from(keypair: DsaKeypair) -> KeypairData {
         Self::Dsa(keypair)
@@ -382,7 +364,6 @@ impl From<DsaKeypair> for KeypairData {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<EcdsaKeypair> for KeypairData {
     fn from(keypair: EcdsaKeypair) -> KeypairData {
         Self::Ecdsa(keypair)
@@ -396,7 +377,6 @@ impl From<Ed25519Keypair> for KeypairData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<RsaKeypair> for KeypairData {
     fn from(keypair: RsaKeypair) -> KeypairData {
         Self::Rsa(keypair)
@@ -404,7 +384,6 @@ impl From<RsaKeypair> for KeypairData {
 }
 
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "ecdsa"))))]
 impl From<SkEcdsaSha2NistP256> for KeypairData {
     fn from(keypair: SkEcdsaSha2NistP256) -> KeypairData {
         Self::SkEcdsaSha2NistP256(keypair)
@@ -412,7 +391,6 @@ impl From<SkEcdsaSha2NistP256> for KeypairData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<SkEd25519> for KeypairData {
     fn from(keypair: SkEd25519) -> KeypairData {
         Self::SkEd25519(keypair)

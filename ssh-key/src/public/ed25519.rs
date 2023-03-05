@@ -78,7 +78,6 @@ impl fmt::UpperHex for Ed25519PublicKey {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl TryFrom<Ed25519PublicKey> for ed25519_dalek::VerifyingKey {
     type Error = Error;
 
@@ -88,7 +87,6 @@ impl TryFrom<Ed25519PublicKey> for ed25519_dalek::VerifyingKey {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl TryFrom<&Ed25519PublicKey> for ed25519_dalek::VerifyingKey {
     type Error = Error;
 
@@ -98,7 +96,6 @@ impl TryFrom<&Ed25519PublicKey> for ed25519_dalek::VerifyingKey {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl From<ed25519_dalek::VerifyingKey> for Ed25519PublicKey {
     fn from(key: ed25519_dalek::VerifyingKey) -> Ed25519PublicKey {
         Ed25519PublicKey::from(&key)
@@ -106,7 +103,6 @@ impl From<ed25519_dalek::VerifyingKey> for Ed25519PublicKey {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl From<&ed25519_dalek::VerifyingKey> for Ed25519PublicKey {
     fn from(key: &ed25519_dalek::VerifyingKey) -> Ed25519PublicKey {
         Ed25519PublicKey(key.to_bytes())

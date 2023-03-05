@@ -20,7 +20,6 @@ pub type EcdsaNistP521PublicKey = sec1::EncodedPoint<U66>;
 /// `sec1` feature of this crate is enabled (which it is by default).
 ///
 /// Described in [FIPS 186-4](https://csrc.nist.gov/publications/detail/fips/186/4/final).
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum EcdsaPublicKey {
     /// NIST P-256 ECDSA public key.
@@ -159,7 +158,6 @@ impl fmt::UpperHex for EcdsaPublicKey {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
     type Error = Error;
 
@@ -169,7 +167,6 @@ impl TryFrom<EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl TryFrom<EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
     type Error = Error;
 
@@ -179,7 +176,6 @@ impl TryFrom<EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
     type Error = Error;
 
@@ -194,7 +190,6 @@ impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl TryFrom<&EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
     type Error = Error;
 
@@ -209,7 +204,6 @@ impl TryFrom<&EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl From<p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
     fn from(key: p256::ecdsa::VerifyingKey) -> EcdsaPublicKey {
         EcdsaPublicKey::from(&key)
@@ -217,7 +211,6 @@ impl From<p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl From<&p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
     fn from(key: &p256::ecdsa::VerifyingKey) -> EcdsaPublicKey {
         EcdsaPublicKey::NistP256(key.to_encoded_point(false))
@@ -225,7 +218,6 @@ impl From<&p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl From<p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
     fn from(key: p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
         EcdsaPublicKey::from(&key)
@@ -233,7 +225,6 @@ impl From<p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl From<&p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
     fn from(key: &p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
         EcdsaPublicKey::NistP384(key.to_encoded_point(false))

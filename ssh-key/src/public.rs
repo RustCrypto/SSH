@@ -87,7 +87,6 @@ impl PublicKey {
     ///
     /// On `no_std` platforms, use `PublicKey::from(key_data)` instead.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn new(key_data: KeyData, comment: impl Into<String>) -> Self {
         Self {
             key_data,
@@ -141,14 +140,12 @@ impl PublicKey {
     /// Encode an OpenSSH-formatted public key, allocating a [`String`] for
     /// the result.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn to_openssh(&self) -> Result<String> {
         SshFormat::encode_string(self.algorithm().as_str(), &self.key_data, self.comment())
     }
 
     /// Serialize SSH public key as raw bytes.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut public_key_bytes = Vec::new();
         self.key_data.encode(&mut public_key_bytes)?;
@@ -169,7 +166,6 @@ impl PublicKey {
     ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
         if self.key_data() != signature.public_key() {
             return Err(Error::PublicKey);
@@ -184,7 +180,6 @@ impl PublicKey {
 
     /// Read public key from an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn read_openssh_file(path: &Path) -> Result<Self> {
         let input = fs::read_to_string(path)?;
         Self::from_openssh(&input)
@@ -192,7 +187,6 @@ impl PublicKey {
 
     /// Write public key as an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn write_openssh_file(&self, path: &Path) -> Result<()> {
         let encoded = self.to_openssh()?;
         fs::write(path, encoded.as_bytes())?;
@@ -230,7 +224,6 @@ impl PublicKey {
 
     /// Set the comment on the key.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn set_comment(&mut self, comment: impl Into<String>) {
         self.comment = comment.into();
     }
@@ -275,7 +268,6 @@ impl From<&PublicKey> for KeyData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<DsaPublicKey> for PublicKey {
     fn from(public_key: DsaPublicKey) -> PublicKey {
         KeyData::from(public_key).into()
@@ -283,7 +275,6 @@ impl From<DsaPublicKey> for PublicKey {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<EcdsaPublicKey> for PublicKey {
     fn from(public_key: EcdsaPublicKey) -> PublicKey {
         KeyData::from(public_key).into()
@@ -297,7 +288,6 @@ impl From<Ed25519PublicKey> for PublicKey {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<RsaPublicKey> for PublicKey {
     fn from(public_key: RsaPublicKey) -> PublicKey {
         KeyData::from(public_key).into()
@@ -305,7 +295,6 @@ impl From<RsaPublicKey> for PublicKey {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<SkEcdsaSha2NistP256> for PublicKey {
     fn from(public_key: SkEcdsaSha2NistP256) -> PublicKey {
         KeyData::from(public_key).into()
@@ -334,7 +323,6 @@ impl ToString for PublicKey {
 }
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "serde"))))]
 impl<'de> Deserialize<'de> for PublicKey {
     fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
     where
@@ -351,7 +339,6 @@ impl<'de> Deserialize<'de> for PublicKey {
 }
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "serde"))))]
 impl Serialize for PublicKey {
     fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where

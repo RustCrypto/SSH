@@ -18,7 +18,6 @@ const DEFAULT_APPLICATION_STRING: &str = "ssh:";
 /// Security Key (FIDO/U2F) ECDSA/NIST P-256 public key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct SkEcdsaSha2NistP256 {
     /// Elliptic curve point representing a public key.

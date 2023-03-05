@@ -15,7 +15,6 @@ use rand_core::CryptoRngCore;
 /// range `[1, q–1]`.
 ///
 /// Described in [FIPS 186-4 § 4.1](https://csrc.nist.gov/publications/detail/fips/186/4/final).
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone)]
 pub struct DsaPrivateKey {
     /// Integer representing a DSA private key.
@@ -89,7 +88,6 @@ impl Drop for DsaPrivateKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<DsaPrivateKey> for dsa::BigUint {
     type Error = Error;
 
@@ -99,7 +97,6 @@ impl TryFrom<DsaPrivateKey> for dsa::BigUint {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<&DsaPrivateKey> for dsa::BigUint {
     type Error = Error;
 
@@ -109,7 +106,6 @@ impl TryFrom<&DsaPrivateKey> for dsa::BigUint {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<dsa::SigningKey> for DsaPrivateKey {
     type Error = Error;
 
@@ -119,7 +115,6 @@ impl TryFrom<dsa::SigningKey> for DsaPrivateKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<&dsa::SigningKey> for DsaPrivateKey {
     type Error = Error;
 
@@ -131,7 +126,6 @@ impl TryFrom<&dsa::SigningKey> for DsaPrivateKey {
 }
 
 /// Digital Signature Algorithm (DSA) private/public keypair.
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone)]
 pub struct DsaKeypair {
     /// Public key.
@@ -149,7 +143,6 @@ impl DsaKeypair {
 
     /// Generate a random DSA private key.
     #[cfg(all(feature = "dsa", feature = "rand_core"))]
-    #[cfg_attr(docsrs, doc(cfg(all(feature = "dsa", feature = "rand_core"))))]
     pub fn random(rng: &mut impl CryptoRngCore) -> Result<Self> {
         let components = dsa::Components::generate(rng, Self::KEY_SIZE);
         dsa::SigningKey::generate(rng, components).try_into()
@@ -214,7 +207,6 @@ impl fmt::Debug for DsaKeypair {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<DsaKeypair> for dsa::SigningKey {
     type Error = Error;
 
@@ -224,7 +216,6 @@ impl TryFrom<DsaKeypair> for dsa::SigningKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<&DsaKeypair> for dsa::SigningKey {
     type Error = Error;
 
@@ -237,7 +228,6 @@ impl TryFrom<&DsaKeypair> for dsa::SigningKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<dsa::SigningKey> for DsaKeypair {
     type Error = Error;
 
@@ -247,7 +237,6 @@ impl TryFrom<dsa::SigningKey> for DsaKeypair {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<&dsa::SigningKey> for DsaKeypair {
     type Error = Error;
 

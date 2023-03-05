@@ -50,7 +50,6 @@ impl<'a> AuthorizedKeys<'a> {
     /// Read an [`AuthorizedKeys`] file from the filesystem, returning an
     /// [`Entry`] vector on success.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn read_file(path: impl AsRef<Path>) -> Result<Vec<Entry>> {
         // TODO(tarcieri): permissions checks
         let input = fs::read_to_string(path)?;
@@ -101,7 +100,6 @@ pub struct Entry {
 impl Entry {
     /// Get configuration options for this entry.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn config_opts(&self) -> &ConfigOpts {
         &self.config_opts
     }
@@ -186,7 +184,6 @@ impl ToString for Entry {
 /// The [`ConfigOpts::iter`] method can be used to iterate over each
 /// comma-separated value.
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ConfigOpts(String);
 

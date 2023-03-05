@@ -6,7 +6,6 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 /// Digital Signature Algorithm (DSA) public key.
 ///
 /// Described in [FIPS 186-4 § 4.1](https://csrc.nist.gov/publications/detail/fips/186/4/final).
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct DsaPublicKey {
     /// Prime modulus.
@@ -57,7 +56,6 @@ impl Encode for DsaPublicKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<DsaPublicKey> for dsa::VerifyingKey {
     type Error = Error;
 
@@ -67,7 +65,6 @@ impl TryFrom<DsaPublicKey> for dsa::VerifyingKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
     type Error = Error;
 
@@ -84,7 +81,6 @@ impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<dsa::VerifyingKey> for DsaPublicKey {
     type Error = Error;
 
@@ -94,7 +90,6 @@ impl TryFrom<dsa::VerifyingKey> for DsaPublicKey {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl TryFrom<&dsa::VerifyingKey> for DsaPublicKey {
     type Error = Error;
 

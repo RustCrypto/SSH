@@ -9,7 +9,6 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 /// Security Key (FIDO/U2F) ECDSA/NIST P-256 private key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "ecdsa"))))]
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct SkEcdsaSha2NistP256 {
     /// Public key.
@@ -83,7 +82,6 @@ impl Encode for SkEcdsaSha2NistP256 {
 /// Security Key (FIDO/U2F) Ed25519 private key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct SkEd25519 {
     /// Public key.
