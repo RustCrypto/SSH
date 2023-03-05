@@ -30,7 +30,6 @@ pub trait Decode: Sized {
 /// This is an extension trait which is auto-impl'd for types which impl the
 /// [`Decode`], [`PemLabel`], and [`Sized`] traits.
 #[cfg(feature = "pem")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 pub trait DecodePem: Decode + PemLabel + Sized {
     /// Decode the provided PEM-encoded string, interpreting the Base64-encoded
     /// body of the document using the [`Decode`] trait.
@@ -38,7 +37,6 @@ pub trait DecodePem: Decode + PemLabel + Sized {
 }
 
 #[cfg(feature = "pem")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 impl<T: Decode + PemLabel + Sized> DecodePem for T {
     fn decode_pem(pem: impl AsRef<[u8]>) -> core::result::Result<Self, Self::Error> {
         let mut reader =
@@ -142,7 +140,6 @@ impl<const N: usize> Decode for [u8; N] {
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Decode for Vec<u8> {
     type Error = Error;
 
@@ -156,7 +153,6 @@ impl Decode for Vec<u8> {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Decode for String {
     type Error = Error;
 
@@ -166,7 +162,6 @@ impl Decode for String {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Decode for Vec<String> {
     type Error = Error;
 

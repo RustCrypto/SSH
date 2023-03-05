@@ -9,9 +9,8 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
-    #[cfg(feature = "base64")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
     /// Base64-related errors.
+    #[cfg(feature = "base64")]
     Base64(base64::Error),
 
     /// Character encoding-related errors.
@@ -65,7 +64,6 @@ impl From<core::str::Utf8Error> for Error {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<alloc::string::FromUtf8Error> for Error {
     fn from(_: alloc::string::FromUtf8Error) -> Error {
         Error::CharacterEncoding
@@ -73,7 +71,6 @@ impl From<alloc::string::FromUtf8Error> for Error {
 }
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl From<base64::Error> for Error {
     fn from(err: base64::Error) -> Error {
         Error::Base64(err)
@@ -81,7 +78,6 @@ impl From<base64::Error> for Error {
 }
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl From<base64::InvalidLengthError> for Error {
     fn from(_: base64::InvalidLengthError) -> Error {
         Error::Length
@@ -89,7 +85,6 @@ impl From<base64::InvalidLengthError> for Error {
 }
 
 #[cfg(feature = "pem")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 impl From<pem::Error> for Error {
     fn from(err: pem::Error) -> Error {
         Error::Pem(err)
@@ -97,7 +92,6 @@ impl From<pem::Error> for Error {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(docsrs, doc(cfg(feature = "std")))]
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
