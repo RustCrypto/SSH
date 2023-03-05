@@ -5,7 +5,7 @@ use crate::{public, Result, Signature, SigningKey};
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "rand_core")]
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 #[cfg(feature = "std")]
 use std::time::SystemTime;
@@ -159,7 +159,7 @@ impl Builder {
     #[cfg(feature = "rand_core")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rand_core")))]
     pub fn new_with_random_nonce(
-        mut rng: impl CryptoRng + RngCore,
+        rng: &mut impl CryptoRngCore,
         public_key: impl Into<public::KeyData>,
         valid_after: u64,
         valid_before: u64,

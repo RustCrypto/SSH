@@ -9,12 +9,7 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use alloc::vec::Vec;
 
 #[cfg(feature = "encryption")]
-use {
-    crate::Cipher,
-    bcrypt_pbkdf::bcrypt_pbkdf,
-    rand_core::{CryptoRng, RngCore},
-    zeroize::Zeroizing,
-};
+use {crate::Cipher, bcrypt_pbkdf::bcrypt_pbkdf, rand_core::CryptoRngCore, zeroize::Zeroizing};
 
 /// Default number of rounds to use for bcrypt-pbkdf.
 #[cfg(feature = "encryption")]
@@ -47,7 +42,7 @@ impl Kdf {
     /// Initialize KDF configuration for the given algorithm.
     #[cfg(feature = "encryption")]
     #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
-    pub fn new(algorithm: KdfAlg, mut rng: impl CryptoRng + RngCore) -> Result<Self> {
+    pub fn new(algorithm: KdfAlg, rng: &mut impl CryptoRngCore) -> Result<Self> {
         let mut salt = vec![0u8; DEFAULT_SALT_SIZE];
         rng.fill_bytes(&mut salt);
 

@@ -8,7 +8,7 @@ use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
 use {
-    rand_core::{CryptoRng, RngCore},
+    rand_core::CryptoRngCore,
     rsa::{pkcs1v15, PublicKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
@@ -109,9 +109,9 @@ impl RsaKeypair {
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
-    pub fn random(mut rng: impl CryptoRng + RngCore, bit_size: usize) -> Result<Self> {
+    pub fn random(rng: &mut impl CryptoRngCore, bit_size: usize) -> Result<Self> {
         if bit_size >= Self::MIN_KEY_SIZE {
-            rsa::RsaPrivateKey::new(&mut rng, bit_size)?.try_into()
+            rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
         } else {
             Err(Error::Crypto)
         }
