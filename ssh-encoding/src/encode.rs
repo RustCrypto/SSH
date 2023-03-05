@@ -47,7 +47,6 @@ pub trait Encode {
 /// This is an extension trait which is auto-impl'd for types which impl the
 /// [`Encode`] and [`PemLabel`] traits.
 #[cfg(feature = "pem")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 pub trait EncodePem: Encode + PemLabel {
     /// Encode this type using the [`Encode`] trait, writing the resulting PEM
     /// document into the provided `out` buffer.
@@ -60,12 +59,10 @@ pub trait EncodePem: Encode + PemLabel {
     /// Encode this type using the [`Encode`] trait, writing the resulting PEM
     /// document to a returned [`String`].
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Self::Error>;
 }
 
 #[cfg(feature = "pem")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 impl<T: Encode + PemLabel> EncodePem for T {
     fn encode_pem<'o>(
         &self,
@@ -235,7 +232,6 @@ impl Encode for &str {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Encode for Vec<u8> {
     type Error = Error;
 
@@ -249,7 +245,6 @@ impl Encode for Vec<u8> {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Encode for String {
     type Error = Error;
 
@@ -263,7 +258,6 @@ impl Encode for String {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Encode for Vec<String> {
     type Error = Error;
 

@@ -10,7 +10,6 @@ use sha2::{Digest, Sha256, Sha512};
 
 /// Constant-time Base64 writer implementation.
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 pub type Base64Writer<'o> = base64::Encoder<'o, base64::Base64>;
 
 /// Writer trait which encodes the SSH binary format to various output
@@ -21,7 +20,6 @@ pub trait Writer: Sized {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl Writer for Vec<u8> {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         self.extend_from_slice(bytes);
@@ -30,7 +28,6 @@ impl Writer for Vec<u8> {
 }
 
 #[cfg(feature = "base64")]
-#[cfg_attr(docsrs, doc(cfg(feature = "base64")))]
 impl Writer for Base64Writer<'_> {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         Ok(self.encode(bytes)?)
@@ -38,7 +35,6 @@ impl Writer for Base64Writer<'_> {
 }
 
 #[cfg(feature = "pem")]
-#[cfg_attr(docsrs, doc(cfg(feature = "pem")))]
 impl Writer for pem::Encoder<'_, '_> {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         Ok(self.encode(bytes)?)
@@ -46,7 +42,6 @@ impl Writer for pem::Encoder<'_, '_> {
 }
 
 #[cfg(feature = "sha2")]
-#[cfg_attr(docsrs, doc(cfg(feature = "sha2")))]
 impl Writer for Sha256 {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         self.update(bytes);
@@ -55,7 +50,6 @@ impl Writer for Sha256 {
 }
 
 #[cfg(feature = "sha2")]
-#[cfg_attr(docsrs, doc(cfg(feature = "sha2")))]
 impl Writer for Sha512 {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         self.update(bytes);
