@@ -38,8 +38,6 @@ use zeroize::Zeroizing;
 /// | 80              | `00 00 00 02 00 80`
 /// |-1234            | `00 00 00 02 ed cc`
 /// | -deadbeef       | `00 00 00 05 ff 21 52 41 11`
-// TODO(tarcieri): support for heapless platforms
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone, PartialOrd, Ord)]
 pub struct MPInt {
     /// Inner big endian-serialized integer value
@@ -196,7 +194,6 @@ impl fmt::UpperHex for MPInt {
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
 impl TryFrom<bigint::BigUint> for MPInt {
     type Error = Error;
 
@@ -206,7 +203,6 @@ impl TryFrom<bigint::BigUint> for MPInt {
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
 impl TryFrom<&bigint::BigUint> for MPInt {
     type Error = Error;
 
@@ -217,7 +213,6 @@ impl TryFrom<&bigint::BigUint> for MPInt {
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
 impl TryFrom<MPInt> for bigint::BigUint {
     type Error = Error;
 
@@ -227,7 +222,6 @@ impl TryFrom<MPInt> for bigint::BigUint {
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "dsa", feature = "rsa"))))]
 impl TryFrom<&MPInt> for bigint::BigUint {
     type Error = Error;
 

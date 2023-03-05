@@ -205,7 +205,6 @@ impl PrivateKey {
     ///
     /// On `no_std` platforms, use `PrivateKey::from(key_data)` instead.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn new(key_data: KeypairData, comment: impl Into<String>) -> Result<Self> {
         if key_data.is_encrypted() {
             return Err(Error::Encrypted);
@@ -246,14 +245,12 @@ impl PrivateKey {
     /// Encode an OpenSSH-formatted PEM private key, allocating a
     /// self-zeroizing [`String`] for the result.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn to_openssh(&self, line_ending: LineEnding) -> Result<Zeroizing<String>> {
         self.encode_pem_string(line_ending).map(Zeroizing::new)
     }
 
     /// Serialize SSH private key as raw bytes.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn to_bytes(&self) -> Result<Zeroizing<Vec<u8>>> {
         let mut private_key_bytes = Vec::with_capacity(self.encoded_len()?);
         self.encode(&mut private_key_bytes)?;
@@ -273,14 +270,12 @@ impl PrivateKey {
     ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn sign(&self, namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<SshSig> {
         SshSig::sign(self, namespace, hash_alg, msg)
     }
 
     /// Read private key from an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn read_openssh_file(path: &Path) -> Result<Self> {
         // TODO(tarcieri): verify file permissions match `UNIX_FILE_PERMISSIONS`
         let pem = Zeroizing::new(fs::read_to_string(path)?);
@@ -289,7 +284,6 @@ impl PrivateKey {
 
     /// Write private key as an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn write_openssh_file(&self, path: &Path, line_ending: LineEnding) -> Result<()> {
         let pem = self.to_openssh(line_ending)?;
 
@@ -312,7 +306,6 @@ impl PrivateKey {
     ///
     /// Returns [`Error::Decrypted`] if the private key is already decrypted.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn decrypt(&self, password: impl AsRef<[u8]>) -> Result<Self> {
         let (key_bytes, iv_bytes) = self.kdf.derive_key_and_iv(self.cipher, password)?;
 
@@ -336,7 +329,6 @@ impl PrivateKey {
     ///
     /// Returns [`Error::Encrypted`] if the private key is already encrypted.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn encrypt(
         &self,
         rng: &mut impl CryptoRngCore,
@@ -357,7 +349,6 @@ impl PrivateKey {
     ///
     /// Returns [`Error::Encrypted`] if the private key is already encrypted.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn encrypt_with(
         &self,
         cipher: Cipher,
@@ -437,7 +428,6 @@ impl PrivateKey {
     /// # Returns
     /// - `Error::Algorithm` if the algorithm is unsupported.
     #[cfg(feature = "rand_core")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "rand_core")))]
     #[allow(unreachable_code, unused_variables)]
     pub fn random(rng: &mut impl CryptoRngCore, algorithm: Algorithm) -> Result<Self> {
         let checkint = rng.next_u32();
@@ -467,7 +457,6 @@ impl PrivateKey {
 
     /// Set the comment on the key.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn set_comment(&mut self, comment: impl Into<String>) {
         self.public_key.set_comment(comment);
     }
@@ -754,7 +743,6 @@ impl From<&PrivateKey> for public::KeyData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<DsaKeypair> for PrivateKey {
     fn from(keypair: DsaKeypair) -> PrivateKey {
         KeypairData::from(keypair)
@@ -764,7 +752,6 @@ impl From<DsaKeypair> for PrivateKey {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<EcdsaKeypair> for PrivateKey {
     fn from(keypair: EcdsaKeypair) -> PrivateKey {
         KeypairData::from(keypair)
@@ -782,7 +769,6 @@ impl From<Ed25519Keypair> for PrivateKey {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<RsaKeypair> for PrivateKey {
     fn from(keypair: RsaKeypair) -> PrivateKey {
         KeypairData::from(keypair)
@@ -792,7 +778,6 @@ impl From<RsaKeypair> for PrivateKey {
 }
 
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "ecdsa"))))]
 impl From<SkEcdsaSha2NistP256> for PrivateKey {
     fn from(keypair: SkEcdsaSha2NistP256) -> PrivateKey {
         KeypairData::from(keypair)
@@ -802,7 +787,6 @@ impl From<SkEcdsaSha2NistP256> for PrivateKey {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<SkEd25519> for PrivateKey {
     fn from(keypair: SkEd25519) -> PrivateKey {
         KeypairData::from(keypair)

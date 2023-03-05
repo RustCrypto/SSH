@@ -14,7 +14,6 @@ use {
 };
 
 /// RSA private key.
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone)]
 pub struct RsaPrivateKey {
     /// RSA private exponent.
@@ -91,7 +90,6 @@ impl Drop for RsaPrivateKey {
 }
 
 /// RSA private/public keypair.
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone)]
 pub struct RsaKeypair {
     /// Public key.
@@ -108,7 +106,6 @@ impl RsaKeypair {
 
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
     pub fn random(rng: &mut impl CryptoRngCore, bit_size: usize) -> Result<Self> {
         if bit_size >= Self::MIN_KEY_SIZE {
             rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
@@ -184,7 +181,6 @@ impl fmt::Debug for RsaKeypair {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<RsaKeypair> for rsa::RsaPrivateKey {
     type Error = Error;
 
@@ -194,7 +190,6 @@ impl TryFrom<RsaKeypair> for rsa::RsaPrivateKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
     type Error = Error;
 
@@ -218,7 +213,6 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<rsa::RsaPrivateKey> for RsaKeypair {
     type Error = Error;
 
@@ -228,7 +222,6 @@ impl TryFrom<rsa::RsaPrivateKey> for RsaKeypair {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
     type Error = Error;
 
@@ -256,7 +249,6 @@ impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl<D> TryFrom<&RsaKeypair> for pkcs1v15::SigningKey<D>
 where
     D: Digest + AssociatedOid,

@@ -205,7 +205,6 @@ impl Certificate {
 
     /// Read OpenSSH certificate from a file.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn read_file(path: &Path) -> Result<Self> {
         let input = fs::read_to_string(path)?;
         Self::from_openssh(&input)
@@ -213,7 +212,6 @@ impl Certificate {
 
     /// Write OpenSSH certificate to a file.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn write_file(&self, path: &Path) -> Result<()> {
         let encoded = self.to_openssh()?;
         fs::write(path, encoded.as_bytes())?;
@@ -291,14 +289,12 @@ impl Certificate {
 
     /// Valid after (system time).
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn valid_after_time(&self) -> SystemTime {
         self.valid_after.into()
     }
 
     /// Valid before (system time).
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn valid_before_time(&self) -> SystemTime {
         self.valid_before.into()
     }
@@ -343,7 +339,6 @@ impl Certificate {
     /// See [`Certificate::validate_at`] documentation for important notes on
     /// how to properly validate certificates!
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn validate<'a, I>(&self, ca_fingerprints: I) -> Result<()>
     where
         I: IntoIterator<Item = &'a Fingerprint>,
@@ -519,7 +514,6 @@ impl ToString for Certificate {
 }
 
 #[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl<'de> Deserialize<'de> for Certificate {
     fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
     where
@@ -536,7 +530,6 @@ impl<'de> Deserialize<'de> for Certificate {
 }
 
 #[cfg(feature = "serde")]
-#[cfg_attr(docsrs, doc(cfg(feature = "serde")))]
 impl Serialize for Certificate {
     fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where

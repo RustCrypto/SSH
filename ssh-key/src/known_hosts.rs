@@ -60,7 +60,6 @@ impl<'a> KnownHosts<'a> {
     /// Read a [`KnownHosts`] file from the filesystem, returning an
     /// [`Entry`] vector on success.
     #[cfg(feature = "std")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn read_file(path: impl AsRef<Path>) -> Result<Vec<Entry>> {
         // TODO(tarcieri): permissions checks
         let input = fs::read_to_string(path)?;

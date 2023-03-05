@@ -400,7 +400,6 @@ impl HashAlg {
 
     /// Compute a digest of the given message using this hash function.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn digest(self, msg: &[u8]) -> Vec<u8> {
         match self {
             HashAlg::Sha256 => Sha256::digest(msg).to_vec(),

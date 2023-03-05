@@ -89,7 +89,6 @@ impl Cipher {
 
     /// Decrypt the ciphertext in the `buffer` in-place using this cipher.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()> {
         match self {
             Self::None => return Err(Error::Crypto),
@@ -102,7 +101,6 @@ impl Cipher {
 
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()> {
         match self {
             Self::None => return Err(Error::Crypto),

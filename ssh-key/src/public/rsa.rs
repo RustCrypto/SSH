@@ -13,7 +13,6 @@ use {
 /// RSA public key.
 ///
 /// Described in [RFC4253 § 6.6](https://datatracker.ietf.org/doc/html/rfc4253#section-6.6).
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct RsaPublicKey {
     /// RSA public exponent.
@@ -53,7 +52,6 @@ impl Encode for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<RsaPublicKey> for rsa::RsaPublicKey {
     type Error = Error;
 
@@ -63,7 +61,6 @@ impl TryFrom<RsaPublicKey> for rsa::RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<&RsaPublicKey> for rsa::RsaPublicKey {
     type Error = Error;
 
@@ -83,7 +80,6 @@ impl TryFrom<&RsaPublicKey> for rsa::RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<rsa::RsaPublicKey> for RsaPublicKey {
     type Error = Error;
 
@@ -93,7 +89,6 @@ impl TryFrom<rsa::RsaPublicKey> for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
     type Error = Error;
 
@@ -106,7 +101,6 @@ impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl<D> TryFrom<&RsaPublicKey> for pkcs1v15::VerifyingKey<D>
 where
     D: Digest + AssociatedOid,

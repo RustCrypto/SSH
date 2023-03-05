@@ -16,12 +16,10 @@ use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
 pub enum KeyData {
     /// Digital Signature Algorithm (DSA) public key data.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Dsa(DsaPublicKey),
 
     /// Elliptic Curve Digital Signature Algorithm (ECDSA) public key data.
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     Ecdsa(EcdsaPublicKey),
 
     /// Ed25519 public key data.
@@ -29,14 +27,12 @@ pub enum KeyData {
 
     /// RSA public key data.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Rsa(RsaPublicKey),
 
     /// Security Key (FIDO/U2F) using ECDSA/NIST P-256 as specified in [PROTOCOL.u2f].
     ///
     /// [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     SkEcdsaSha2NistP256(SkEcdsaSha2NistP256),
 
     /// Security Key (FIDO/U2F) using Ed25519 as specified in [PROTOCOL.u2f].
@@ -64,7 +60,6 @@ impl KeyData {
 
     /// Get DSA public key if this key is the correct type.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn dsa(&self) -> Option<&DsaPublicKey> {
         match self {
             Self::Dsa(key) => Some(key),
@@ -74,7 +69,6 @@ impl KeyData {
 
     /// Get ECDSA public key if this key is the correct type.
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     pub fn ecdsa(&self) -> Option<&EcdsaPublicKey> {
         match self {
             Self::Ecdsa(key) => Some(key),
@@ -100,7 +94,6 @@ impl KeyData {
 
     /// Get RSA public key if this key is the correct type.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn rsa(&self) -> Option<&RsaPublicKey> {
         match self {
             Self::Rsa(key) => Some(key),
@@ -110,7 +103,6 @@ impl KeyData {
 
     /// Get FIDO/U2F ECDSA/NIST P-256 public key if this key is the correct type.
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     pub fn sk_ecdsa_p256(&self) -> Option<&SkEcdsaSha2NistP256> {
         match self {
             Self::SkEcdsaSha2NistP256(sk) => Some(sk),
@@ -128,14 +120,12 @@ impl KeyData {
 
     /// Is this key a DSA key?
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn is_dsa(&self) -> bool {
         matches!(self, Self::Dsa(_))
     }
 
     /// Is this key an ECDSA key?
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     pub fn is_ecdsa(&self) -> bool {
         matches!(self, Self::Ecdsa(_))
     }
@@ -147,14 +137,12 @@ impl KeyData {
 
     /// Is this key an RSA key?
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn is_rsa(&self) -> bool {
         matches!(self, Self::Rsa(_))
     }
 
     /// Is this key a FIDO/U2F ECDSA/NIST P-256 key?
     #[cfg(feature = "ecdsa")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
     pub fn is_sk_ecdsa_p256(&self) -> bool {
         matches!(self, Self::SkEcdsaSha2NistP256(_))
     }
@@ -248,7 +236,6 @@ impl Encode for KeyData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<DsaPublicKey> for KeyData {
     fn from(public_key: DsaPublicKey) -> KeyData {
         Self::Dsa(public_key)
@@ -256,7 +243,6 @@ impl From<DsaPublicKey> for KeyData {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<EcdsaPublicKey> for KeyData {
     fn from(public_key: EcdsaPublicKey) -> KeyData {
         Self::Ecdsa(public_key)
@@ -270,7 +256,6 @@ impl From<Ed25519PublicKey> for KeyData {
 }
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 impl From<RsaPublicKey> for KeyData {
     fn from(public_key: RsaPublicKey) -> KeyData {
         Self::Rsa(public_key)
@@ -278,7 +263,6 @@ impl From<RsaPublicKey> for KeyData {
 }
 
 #[cfg(feature = "ecdsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ecdsa")))]
 impl From<SkEcdsaSha2NistP256> for KeyData {
     fn from(public_key: SkEcdsaSha2NistP256) -> KeyData {
         Self::SkEcdsaSha2NistP256(public_key)

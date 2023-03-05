@@ -160,7 +160,6 @@ impl FromStr for Fingerprint {
 }
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "serde"))))]
 impl<'de> Deserialize<'de> for Fingerprint {
     fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
     where
@@ -172,7 +171,6 @@ impl<'de> Deserialize<'de> for Fingerprint {
 }
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
-#[cfg_attr(docsrs, doc(cfg(all(feature = "alloc", feature = "serde"))))]
 impl Serialize for Fingerprint {
     fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
     where

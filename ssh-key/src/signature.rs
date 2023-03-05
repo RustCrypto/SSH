@@ -82,7 +82,6 @@ where
 /// [RFC8032]: https://datatracker.ietf.org/doc/html/rfc8032
 /// [RFC8332]: https://datatracker.ietf.org/doc/html/rfc8332
 #[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub struct Signature {
     /// Signature algorithm.
     algorithm: Algorithm,
@@ -317,7 +316,6 @@ impl Verifier<Signature> for public::KeyData {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl Signer<Signature> for DsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let signature = dsa::SigningKey::try_from(self)?
@@ -332,7 +330,6 @@ impl Signer<Signature> for DsaKeypair {
 }
 
 #[cfg(feature = "dsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "dsa")))]
 impl Verifier<Signature> for DsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
@@ -349,7 +346,6 @@ impl Verifier<Signature> for DsaPublicKey {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl TryFrom<Signature> for ed25519_dalek::Signature {
     type Error = Error;
 
@@ -359,7 +355,6 @@ impl TryFrom<Signature> for ed25519_dalek::Signature {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl TryFrom<&Signature> for ed25519_dalek::Signature {
     type Error = Error;
 
@@ -374,7 +369,6 @@ impl TryFrom<&Signature> for ed25519_dalek::Signature {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl Signer<Signature> for Ed25519Keypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let signature = ed25519_dalek::SigningKey::try_from(self)?.sign(message);
@@ -387,7 +381,6 @@ impl Signer<Signature> for Ed25519Keypair {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl Verifier<Signature> for Ed25519PublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         let signature = ed25519_dalek::Signature::try_from(signature)?;
@@ -396,7 +389,6 @@ impl Verifier<Signature> for Ed25519PublicKey {
 }
 
 #[cfg(feature = "ed25519")]
-#[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
 impl Verifier<Signature> for public::SkEd25519 {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         let signature_len = signature
@@ -420,7 +412,6 @@ impl Verifier<Signature> for public::SkEd25519 {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<p256::ecdsa::Signature> for Signature {
     type Error = Error;
 
@@ -430,7 +421,6 @@ impl TryFrom<p256::ecdsa::Signature> for Signature {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl TryFrom<p384::ecdsa::Signature> for Signature {
     type Error = Error;
 
@@ -440,7 +430,6 @@ impl TryFrom<p384::ecdsa::Signature> for Signature {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<&p256::ecdsa::Signature> for Signature {
     type Error = Error;
 
@@ -463,7 +452,6 @@ impl TryFrom<&p256::ecdsa::Signature> for Signature {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl TryFrom<&p384::ecdsa::Signature> for Signature {
     type Error = Error;
 
@@ -486,7 +474,6 @@ impl TryFrom<&p384::ecdsa::Signature> for Signature {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<Signature> for p256::ecdsa::Signature {
     type Error = Error;
 
@@ -496,7 +483,6 @@ impl TryFrom<Signature> for p256::ecdsa::Signature {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl TryFrom<Signature> for p384::ecdsa::Signature {
     type Error = Error;
 
@@ -506,7 +492,6 @@ impl TryFrom<Signature> for p384::ecdsa::Signature {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl TryFrom<&Signature> for p256::ecdsa::Signature {
     type Error = Error;
 
@@ -537,7 +522,6 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl TryFrom<&Signature> for p384::ecdsa::Signature {
     type Error = Error;
 
@@ -568,7 +552,6 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
 }
 
 #[cfg(any(feature = "p256", feature = "p384"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "p256", feature = "p384"))))]
 impl Signer<Signature> for EcdsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         match self {
@@ -582,7 +565,6 @@ impl Signer<Signature> for EcdsaKeypair {
 }
 
 #[cfg(feature = "p256")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl Signer<Signature> for EcdsaPrivateKey<32> {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let signing_key = p256::ecdsa::SigningKey::from_slice(self.as_ref())?;
@@ -592,7 +574,6 @@ impl Signer<Signature> for EcdsaPrivateKey<32> {
 }
 
 #[cfg(feature = "p384")]
-#[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl Signer<Signature> for EcdsaPrivateKey<48> {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let signing_key = p384::ecdsa::SigningKey::from_slice(self.as_ref())?;
@@ -602,7 +583,6 @@ impl Signer<Signature> for EcdsaPrivateKey<48> {
 }
 
 #[cfg(any(feature = "p256", feature = "p384"))]
-#[cfg_attr(docsrs, doc(cfg(any(feature = "p256", feature = "p384"))))]
 impl Verifier<Signature> for EcdsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
@@ -628,7 +608,6 @@ impl Verifier<Signature> for EcdsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl Signer<Signature> for RsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let data = rsa::pkcs1v15::SigningKey::<Sha512>::try_from(self)?
@@ -645,7 +624,6 @@ impl Signer<Signature> for RsaKeypair {
 }
 
 #[cfg(feature = "rsa")]
-#[cfg_attr(docsrs, doc(cfg(feature = "rsa")))]
 impl Verifier<Signature> for RsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {

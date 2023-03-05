@@ -1,5 +1,5 @@
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_cfg))]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
@@ -139,15 +139,13 @@ extern crate alloc;
 extern crate std;
 
 pub mod authorized_keys;
-#[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
-pub mod known_hosts;
 pub mod private;
 pub mod public;
 
 #[cfg(feature = "alloc")]
-#[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
 pub mod certificate;
+#[cfg(feature = "alloc")]
+pub mod known_hosts;
 
 mod algorithm;
 mod cipher;

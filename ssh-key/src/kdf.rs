@@ -28,7 +28,6 @@ pub enum Kdf {
 
     /// bcrypt-pbkdf options.
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     Bcrypt {
         /// Salt
         salt: Vec<u8>,
@@ -41,7 +40,6 @@ pub enum Kdf {
 impl Kdf {
     /// Initialize KDF configuration for the given algorithm.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn new(algorithm: KdfAlg, rng: &mut impl CryptoRngCore) -> Result<Self> {
         let mut salt = vec![0u8; DEFAULT_SALT_SIZE];
         rng.fill_bytes(&mut salt);
@@ -69,7 +67,6 @@ impl Kdf {
 
     /// Derive an encryption key from the given password.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn derive(&self, password: impl AsRef<[u8]>, output: &mut [u8]) -> Result<()> {
         match self {
             Kdf::None => Err(Error::Decrypted),
@@ -84,7 +81,6 @@ impl Kdf {
     ///
     /// Returns two byte vectors containing the key and IV respectively.
     #[cfg(feature = "encryption")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "encryption")))]
     pub fn derive_key_and_iv(
         &self,
         cipher: Cipher,
@@ -113,7 +109,6 @@ impl Kdf {
 
     /// Is the KDF configured as `bcrypt` (i.e. bcrypt-pbkdf)?
     #[cfg(feature = "alloc")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "alloc")))]
     pub fn is_bcrypt(&self) -> bool {
         matches!(self, Self::Bcrypt { .. })
     }
