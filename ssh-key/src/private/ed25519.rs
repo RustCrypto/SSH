@@ -9,7 +9,7 @@ use subtle::{Choice, ConstantTimeEq};
 use zeroize::{Zeroize, Zeroizing};
 
 #[cfg(feature = "rand_core")]
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 /// Ed25519 private key.
 // TODO(tarcieri): use `ed25519::PrivateKey`? (doesn't exist yet)
@@ -23,7 +23,7 @@ impl Ed25519PrivateKey {
     /// Generate a random Ed25519 private key.
     #[cfg(feature = "rand_core")]
     #[cfg_attr(docsrs, doc(cfg(feature = "rand_core")))]
-    pub fn random(mut rng: impl CryptoRng + RngCore) -> Self {
+    pub fn random(rng: &mut impl CryptoRngCore) -> Self {
         let mut key_bytes = [0u8; Self::BYTE_SIZE];
         rng.fill_bytes(&mut key_bytes);
         Self(key_bytes)
@@ -165,7 +165,7 @@ impl Ed25519Keypair {
     /// Generate a random Ed25519 private keypair.
     #[cfg(feature = "ed25519")]
     #[cfg_attr(docsrs, doc(cfg(feature = "ed25519")))]
-    pub fn random(rng: impl CryptoRng + RngCore) -> Self {
+    pub fn random(rng: &mut impl CryptoRngCore) -> Self {
         Ed25519PrivateKey::random(rng).into()
     }
 

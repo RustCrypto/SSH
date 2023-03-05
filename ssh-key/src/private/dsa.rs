@@ -7,7 +7,7 @@ use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(all(feature = "dsa", feature = "rand_core"))]
-use rand_core::{CryptoRng, RngCore};
+use rand_core::CryptoRngCore;
 
 /// Digital Signature Algorithm (DSA) private key.
 ///
@@ -150,9 +150,9 @@ impl DsaKeypair {
     /// Generate a random DSA private key.
     #[cfg(all(feature = "dsa", feature = "rand_core"))]
     #[cfg_attr(docsrs, doc(cfg(all(feature = "dsa", feature = "rand_core"))))]
-    pub fn random(mut rng: impl CryptoRng + RngCore) -> Result<Self> {
-        let components = dsa::Components::generate(&mut rng, Self::KEY_SIZE);
-        dsa::SigningKey::generate(&mut rng, components).try_into()
+    pub fn random(rng: &mut impl CryptoRngCore) -> Result<Self> {
+        let components = dsa::Components::generate(rng, Self::KEY_SIZE);
+        dsa::SigningKey::generate(rng, components).try_into()
     }
 }
 
