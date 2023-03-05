@@ -252,7 +252,7 @@ impl fmt::Debug for Signature {
 impl fmt::LowerHex for Signature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_ref() {
-            write!(f, "{:02x}", byte)?;
+            write!(f, "{byte:02x}")?;
         }
         Ok(())
     }
@@ -261,7 +261,7 @@ impl fmt::LowerHex for Signature {
 impl fmt::UpperHex for Signature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_ref() {
-            write!(f, "{:02X}", byte)?;
+            write!(f, "{byte:02X}")?;
         }
         Ok(())
     }
@@ -585,7 +585,7 @@ impl Signer<Signature> for EcdsaKeypair {
 #[cfg_attr(docsrs, doc(cfg(feature = "p256")))]
 impl Signer<Signature> for EcdsaPrivateKey<32> {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let signing_key = p256::ecdsa::SigningKey::from_bytes(self.as_ref())?;
+        let signing_key = p256::ecdsa::SigningKey::from_slice(self.as_ref())?;
         let signature: p256::ecdsa::Signature = signing_key.try_sign(message)?;
         Ok(signature.try_into()?)
     }
@@ -595,7 +595,7 @@ impl Signer<Signature> for EcdsaPrivateKey<32> {
 #[cfg_attr(docsrs, doc(cfg(feature = "p384")))]
 impl Signer<Signature> for EcdsaPrivateKey<48> {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let signing_key = p384::ecdsa::SigningKey::from_bytes(self.as_ref())?;
+        let signing_key = p384::ecdsa::SigningKey::from_slice(self.as_ref())?;
         let signature: p384::ecdsa::Signature = signing_key.try_sign(message)?;
         Ok(signature.try_into()?)
     }

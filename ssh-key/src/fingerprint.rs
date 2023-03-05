@@ -131,7 +131,7 @@ impl Display for Fingerprint {
         // Buffer size is the largest digest size of of any supported hash function
         let mut buf = [0u8; Self::SHA512_BASE64_SIZE];
         let base64 = Base64Unpadded::encode(self.as_bytes(), &mut buf).map_err(|_| fmt::Error)?;
-        write!(f, "{}:{}", algorithm, base64)
+        write!(f, "{algorithm}:{base64}")
     }
 }
 

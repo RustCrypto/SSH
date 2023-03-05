@@ -38,16 +38,15 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             #[cfg(feature = "base64")]
-            Error::Base64(err) => write!(f, "Base64 encoding error: {}", err),
+            Error::Base64(err) => write!(f, "Base64 encoding error: {err}"),
             Error::CharacterEncoding => write!(f, "character encoding invalid"),
             Error::Length => write!(f, "length invalid"),
             Error::Overflow => write!(f, "internal overflow error"),
             #[cfg(feature = "pem")]
-            Error::Pem(err) => write!(f, "{}", err),
+            Error::Pem(err) => write!(f, "{err}"),
             Error::TrailingData { remaining } => write!(
                 f,
-                "unexpected trailing data at end of message ({} bytes)",
-                remaining
+                "unexpected trailing data at end of message ({remaining} bytes)",
             ),
         }
     }
@@ -99,4 +98,14 @@ impl From<pem::Error> for Error {
 
 #[cfg(feature = "std")]
 #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            #[cfg(feature = "base64")]
+            Self::Base64(err) => Some(err),
+            #[cfg(feature = "pem")]
+            Self::Pem(err) => Some(err),
+            _ => None,
+        }
+    }
+}

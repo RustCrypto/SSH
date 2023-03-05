@@ -76,14 +76,14 @@ impl fmt::Display for Error {
             Error::Algorithm => write!(f, "unknown or unsupported algorithm"),
             #[cfg(feature = "alloc")]
             Error::CertificateFieldInvalid(field) => {
-                write!(f, "certificate field invalid: {}", field)
+                write!(f, "certificate field invalid: {field}")
             }
             Error::CertificateValidation => write!(f, "certificate validation failed"),
             Error::Crypto => write!(f, "cryptographic error"),
             Error::Decrypted => write!(f, "private key is already decrypted"),
             #[cfg(feature = "ecdsa")]
-            Error::Ecdsa(err) => write!(f, "ECDSA encoding error: {}", err),
-            Error::Encoding(err) => write!(f, "{}", err),
+            Error::Ecdsa(err) => write!(f, "ECDSA encoding error: {err}"),
+            Error::Encoding(err) => write!(f, "{err}"),
             Error::Encrypted => write!(f, "private key is encrypted"),
             Error::FormatEncoding => write!(f, "format encoding error"),
             #[cfg(feature = "std")]
@@ -93,10 +93,9 @@ impl fmt::Display for Error {
             Error::Time => write!(f, "invalid time"),
             Error::TrailingData { remaining } => write!(
                 f,
-                "unexpected trailing data at end of message ({} bytes)",
-                remaining
+                "unexpected trailing data at end of message ({remaining} bytes)",
             ),
-            Error::Version { number: version } => write!(f, "version unsupported: {}", version),
+            Error::Version { number: version } => write!(f, "version unsupported: {version}"),
         }
     }
 }
@@ -185,4 +184,13 @@ impl From<std::time::SystemTimeError> for Error {
 
 #[cfg(feature = "std")]
 #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            #[cfg(feature = "ecdsa")]
+            Self::Ecdsa(err) => Some(err),
+            Self::Encoding(err) => Some(err),
+            _ => None,
+        }
+    }
+}

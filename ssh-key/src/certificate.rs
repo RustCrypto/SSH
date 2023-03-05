@@ -208,7 +208,7 @@ impl Certificate {
     #[cfg_attr(docsrs, doc(cfg(feature = "std")))]
     pub fn read_file(path: &Path) -> Result<Self> {
         let input = fs::read_to_string(path)?;
-        Self::from_openssh(&*input)
+        Self::from_openssh(&input)
     }
 
     /// Write OpenSSH certificate to a file.
