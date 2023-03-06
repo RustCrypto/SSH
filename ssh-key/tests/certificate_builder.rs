@@ -64,7 +64,9 @@ fn ed25519_sign_and_verify() {
         subject_key.public_key(),
         ISSUED_AT,
         EXPIRES_AT,
-    );
+    )
+    .unwrap();
+
     cert_builder.serial(SERIAL).unwrap();
     cert_builder.key_id(KEY_ID).unwrap();
     cert_builder.valid_principal(PRINCIPAL).unwrap();
@@ -124,7 +126,8 @@ fn ecdsa_nistp256_sign_and_verify() {
         subject_key.public_key(),
         ISSUED_AT,
         EXPIRES_AT,
-    );
+    )
+    .unwrap();
     cert_builder.all_principals_valid().unwrap();
     let cert = cert_builder.sign(&ca_key).unwrap();
 
@@ -178,7 +181,8 @@ R6qbyo6hPuCiV9cAAAAAAQID
         subject_key.public_key(),
         ISSUED_AT,
         EXPIRES_AT,
-    );
+    )
+    .unwrap();
     cert_builder.all_principals_valid().unwrap();
     let cert = cert_builder.sign(&ca_key).unwrap();
 

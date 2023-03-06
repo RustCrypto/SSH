@@ -65,7 +65,7 @@ use crate::PrivateKey;
 ///     subject_public_key,
 ///     valid_after,
 ///     valid_before,
-/// );
+/// )?;
 /// cert_builder.serial(42)?; // Optional: serial number chosen by the CA
 /// cert_builder.key_id("nobody-cert-02")?; // Optional: CA-specific key identifier
 /// cert_builder.cert_type(certificate::CertType::User)?; // User or host certificate
@@ -104,13 +104,18 @@ impl Builder {
         public_key: impl Into<public::KeyData>,
         valid_after: u64,
         valid_before: u64,
-    ) -> Self {
-        // TODO(tarcieri): return a `Result` instead of using `expect`
-        // Breaking change; needs to be done in the next release
-        let valid_after = UnixTime::new(valid_after).expect("valid_after time overflow");
-        let valid_before = UnixTime::new(valid_before).expect("valid_before time overflow");
+    ) -> Result<Self> {
+        let valid_after =
+            UnixTime::new(valid_after).map_err(|_| Field::ValidAfter.invalid_error())?;
 
-        Self {
+        let valid_before =
+            UnixTime::new(valid_before).map_err(|_| Field::ValidBefore.invalid_error())?;
+
+        if valid_before < valid_after {
+            return Err(Field::ValidBefore.invalid_error());
+        }
+
+        Ok(Self {
             nonce: nonce.into(),
             public_key: public_key.into(),
             serial: None,
@@ -122,7 +127,7 @@ impl Builder {
             critical_options: OptionsMap::new(),
             extensions: OptionsMap::new(),
             comment: None,
-        }
+        })
     }
 
     /// Create a new certificate builder with the validity window specified
@@ -140,17 +145,7 @@ impl Builder {
         let valid_before =
             UnixTime::try_from(valid_before).map_err(|_| Field::ValidBefore.invalid_error())?;
 
-        // TODO(tarcieri): move this check into `Builder::new`
-        if valid_before < valid_after {
-            return Err(Field::ValidBefore.invalid_error());
-        }
-
-        Ok(Self::new(
-            nonce,
-            public_key,
-            valid_before.into(),
-            valid_after.into(),
-        ))
+        Self::new(nonce, public_key, valid_before.into(), valid_after.into())
     }
 
     /// Create a new certificate builder, generating a random nonce using the
@@ -161,7 +156,7 @@ impl Builder {
         public_key: impl Into<public::KeyData>,
         valid_after: u64,
         valid_before: u64,
-    ) -> Self {
+    ) -> Result<Self> {
         let mut nonce = vec![0u8; Self::RECOMMENDED_NONCE_SIZE];
         rng.fill_bytes(&mut nonce);
         Self::new(nonce, public_key, valid_after, valid_before)
