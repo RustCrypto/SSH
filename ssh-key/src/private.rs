@@ -339,10 +339,24 @@ impl PrivateKey {
         rng: &mut impl CryptoRngCore,
         password: impl AsRef<[u8]>,
     ) -> Result<Self> {
+        self.encrypt_with_cipher(rng, Cipher::default(), password)
+    }
+
+    /// Encrypt an unencrypted private key using the provided password to
+    /// derive an encryption key for the provided [`Cipher`].
+    ///
+    /// Returns [`Error::Encrypted`] if the private key is already encrypted.
+    #[cfg(feature = "encryption")]
+    pub fn encrypt_with_cipher(
+        &self,
+        rng: &mut impl CryptoRngCore,
+        cipher: Cipher,
+        password: impl AsRef<[u8]>,
+    ) -> Result<Self> {
         let checkint = rng.next_u32();
 
         self.encrypt_with(
-            Cipher::default(),
+            cipher,
             Kdf::new(Default::default(), rng)?,
             checkint,
             password,
