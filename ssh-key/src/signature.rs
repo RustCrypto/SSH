@@ -117,9 +117,7 @@ impl Signature {
                     }
                 }
 
-                if !reader.is_finished() {
-                    return Err(encoding::Error::Length.into());
-                }
+                reader.finish(())?;
             }
             Algorithm::Ed25519 if data.len() == ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
