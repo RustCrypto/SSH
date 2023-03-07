@@ -1,18 +1,19 @@
 //! Certificate builder tests.
 
-#![cfg(all(feature = "alloc", any(feature = "ed25519", feature = "p256")))]
+#![cfg(all(
+    feature = "alloc",
+    feature = "rand_core",
+    any(feature = "ed25519", feature = "p256")
+))]
 
 use hex_literal::hex;
 use rand_chacha::{rand_core::SeedableRng, ChaCha8Rng};
-use ssh_key::{
-    certificate::{self, CertType},
-    Algorithm, PrivateKey,
-};
+use ssh_key::{certificate, Algorithm, PrivateKey};
 
 #[cfg(feature = "p256")]
 use ssh_key::EcdsaCurve;
 
-#[cfg(feature = "rsa")]
+#[cfg(all(feature = "ed25519", feature = "rsa"))]
 use std::str::FromStr;
 
 /// Example Unix timestamp when a certificate was issued (2020-09-13 12:26:40 UTC).
@@ -24,36 +25,21 @@ const VALID_AT: u64 = 1650000000;
 /// Example Unix timestamp when a certificate expires (2023-11-14 22:13:20 UTC).
 const EXPIRES_AT: u64 = 1700000000;
 
-/// Example serial number.
-const SERIAL: u64 = 42;
-
-/// Example key ID.
-const KEY_ID: &str = "example";
-
-/// Example principal name.
-const PRINCIPAL: &str = "nobody";
-
-/// Critical extension 1.
-const CRITICAL_EXTENSION_1: (&str, &str) = ("critical name 1", "critical data 2");
-
-/// Critical extension 1.
-const CRITICAL_EXTENSION_2: (&str, &str) = ("critical name 2", "critical data 2");
-
-/// Non critical extension 1.
-const EXTENSION_1: (&str, &str) = ("extension name 1", "extension data 1");
-
-/// Non critical extension 2.
-const EXTENSION_2: (&str, &str) = ("extension name 2", "extension data 2");
-
-/// Example comment.
-const COMMENT: &str = "user@example.com";
-
 /// Seed to use for PRNG.
 const PRNG_SEED: [u8; 32] = [42; 32];
 
 #[cfg(feature = "ed25519")]
 #[test]
 fn ed25519_sign_and_verify() {
+    const SERIAL: u64 = 42;
+    const KEY_ID: &str = "example";
+    const PRINCIPAL: &str = "nobody";
+    const CRITICAL_EXTENSION_1: (&str, &str) = ("critical name 1", "critical data 2");
+    const CRITICAL_EXTENSION_2: (&str, &str) = ("critical name 2", "critical data 2");
+    const EXTENSION_1: (&str, &str) = ("extension name 1", "extension data 1");
+    const EXTENSION_2: (&str, &str) = ("extension name 2", "extension data 2");
+    const COMMENT: &str = "user@example.com";
+
     let mut rng = ChaCha8Rng::from_seed(PRNG_SEED);
 
     let ca_key = PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap();
@@ -89,7 +75,7 @@ fn ed25519_sign_and_verify() {
     assert_eq!(cert.nonce(), &hex!("321fdf7e0a2afe803308f394f54c6abe"));
     assert_eq!(cert.public_key(), subject_key.public_key().key_data());
     assert_eq!(cert.serial(), SERIAL);
-    assert_eq!(cert.cert_type(), CertType::User);
+    assert_eq!(cert.cert_type(), certificate::CertType::User);
     assert_eq!(cert.key_id(), KEY_ID);
     assert_eq!(cert.valid_principals().len(), 1);
     assert_eq!(cert.valid_principals()[0], PRINCIPAL);
@@ -140,7 +126,7 @@ fn ecdsa_nistp256_sign_and_verify() {
     assert!(cert.validate_at(VALID_AT, &[ca_fingerprint]).is_ok());
 }
 
-#[cfg(feature = "rsa")]
+#[cfg(all(feature = "ed25519", feature = "rsa"))]
 #[test]
 fn rsa_sign_and_verify() {
     let ca_key = PrivateKey::from_str(
