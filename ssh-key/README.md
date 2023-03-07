@@ -44,6 +44,7 @@ respective SSH key algorithm.
 - [x] Private key generation support: DSA, Ed25519, ECDSA (P-256+P-384), and RSA
 - [x] FIDO/U2F key support (`sk-*`) as specified in [PROTOCOL.u2f]
 - [x] Fingerprint support
+  - [x] "randomart" fingerprint visualizations
 - [x] `no_std` support including support for "heapless" (no-`alloc`) targets
 - [x] Parsing `authorized_keys` files
 - [x] Parsing `known_hosts` files
