@@ -179,13 +179,13 @@ impl FromStr for Fingerprint {
     type Err = Error;
 
     fn from_str(id: &str) -> Result<Self> {
-        let (alg_str, base64) = id.split_once(':').ok_or(Error::Algorithm)?;
+        let (alg_str, base64) = id.split_once(':').ok_or(Error::AlgorithmUnknown)?;
 
         // Fingerprints use a special upper-case hash algorithm encoding.
         let algorithm = match alg_str {
             "SHA256" => HashAlg::Sha256,
             "SHA512" => HashAlg::Sha512,
-            _ => return Err(Error::Algorithm),
+            _ => return Err(Error::AlgorithmUnknown),
         };
 
         // Buffer size is the largest digest size of of any supported hash function

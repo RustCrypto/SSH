@@ -267,7 +267,7 @@ impl Decode for KeypairData {
             #[cfg(feature = "ecdsa")]
             Algorithm::Ecdsa { curve } => match EcdsaKeypair::decode(reader)? {
                 keypair if keypair.curve() == curve => Ok(Self::Ecdsa(keypair)),
-                _ => Err(Error::Algorithm),
+                _ => Err(Error::AlgorithmUnknown),
             },
             Algorithm::Ed25519 => Ed25519Keypair::decode(reader).map(Self::Ed25519),
             #[cfg(feature = "alloc")]
@@ -279,7 +279,7 @@ impl Decode for KeypairData {
             #[cfg(feature = "alloc")]
             Algorithm::SkEd25519 => SkEd25519::decode(reader).map(Self::SkEd25519),
             #[allow(unreachable_patterns)]
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 }

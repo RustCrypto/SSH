@@ -198,7 +198,7 @@ impl EcdsaKeypair {
                     public: public.into(),
                 })
             }
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 

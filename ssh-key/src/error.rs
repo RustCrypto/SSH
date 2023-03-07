@@ -1,5 +1,6 @@
 //! Error types
 
+use crate::Algorithm;
 use core::fmt;
 
 #[cfg(feature = "alloc")]
@@ -12,8 +13,22 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
-    /// Algorithm-related errors.
-    Algorithm,
+    /// Unknown algorithm.
+    ///
+    /// This is returned when an algorithm is completely unknown to this crate.
+    AlgorithmUnknown,
+
+    /// Unsupported algorithm.
+    ///
+    /// This is typically returned when an algorithm is recognized, but the
+    /// relevant crate features to support it haven't been enabled.
+    ///
+    /// It may also be returned in the event an algorithm is inappropriate for
+    /// a given usage pattern or context.
+    AlgorithmUnsupported {
+        /// Algorithm identifier.
+        algorithm: Algorithm,
+    },
 
     /// Certificate field is invalid or already set.
     #[cfg(feature = "alloc")]
@@ -70,7 +85,10 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Algorithm => write!(f, "unknown or unsupported algorithm"),
+            Error::AlgorithmUnknown => write!(f, "unknown algorithm"),
+            Error::AlgorithmUnsupported { algorithm } => {
+                write!(f, "unsupported algorithm: {algorithm}")
+            }
             #[cfg(feature = "alloc")]
             Error::CertificateFieldInvalid(field) => {
                 write!(f, "certificate field invalid: {field}")

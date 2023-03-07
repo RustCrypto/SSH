@@ -160,7 +160,7 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Algorithm::Ecdsa { curve } => match EcdsaPublicKey::decode(reader)? {
                 key if key.curve() == curve => Ok(Self::Ecdsa(key)),
-                _ => Err(Error::Algorithm),
+                _ => Err(Error::AlgorithmUnknown),
             },
             Algorithm::Ed25519 => Ed25519PublicKey::decode(reader).map(Self::Ed25519),
             #[cfg(feature = "alloc")]
@@ -171,7 +171,7 @@ impl KeyData {
             }
             Algorithm::SkEd25519 => SkEd25519::decode(reader).map(Self::SkEd25519),
             #[allow(unreachable_patterns)]
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 

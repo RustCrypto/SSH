@@ -51,7 +51,7 @@ impl EcdsaPublicKey {
                         rest.len()
                     }
                     sec1::point::Tag::Uncompressed => rest.len() / 2,
-                    _ => return Err(Error::Algorithm),
+                    _ => return Err(Error::AlgorithmUnknown),
                 };
 
                 match point_size {
@@ -109,7 +109,7 @@ impl Decode for EcdsaPublicKey {
         if key.curve() == curve {
             Ok(key)
         } else {
-            Err(Error::Algorithm)
+            Err(Error::AlgorithmUnknown)
         }
     }
 }
@@ -184,7 +184,7 @@ impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
             EcdsaPublicKey::NistP256(key) => {
                 p256::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
             }
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 }
@@ -198,7 +198,7 @@ impl TryFrom<&EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
             EcdsaPublicKey::NistP384(key) => {
                 p384::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
             }
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 }

@@ -58,7 +58,7 @@ impl Cipher {
             "none" => Ok(Self::None),
             AES256_CTR => Ok(Self::Aes256Ctr),
             AES256_GCM => Ok(Self::Aes256Gcm),
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 
