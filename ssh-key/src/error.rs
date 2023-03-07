@@ -145,15 +145,35 @@ impl From<encoding::pem::Error> for Error {
     }
 }
 
+#[cfg(not(feature = "std"))]
 impl From<signature::Error> for Error {
     fn from(_: signature::Error) -> Error {
         Error::Crypto
     }
 }
 
+#[cfg(feature = "std")]
+impl From<signature::Error> for Error {
+    fn from(err: signature::Error) -> Error {
+        use std::error::Error as _;
+
+        err.source()
+            .and_then(|source| source.downcast_ref().copied())
+            .unwrap_or(Error::Crypto)
+    }
+}
+
+#[cfg(not(feature = "std"))]
 impl From<Error> for signature::Error {
     fn from(_: Error) -> signature::Error {
         signature::Error::new()
+    }
+}
+
+#[cfg(feature = "std")]
+impl From<Error> for signature::Error {
+    fn from(err: Error) -> signature::Error {
+        signature::Error::from_source(err)
     }
 }
 

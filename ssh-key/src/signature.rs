@@ -282,7 +282,7 @@ impl Signer<Signature> for private::KeypairData {
             Self::Ed25519(keypair) => keypair.try_sign(message),
             #[cfg(feature = "rsa")]
             Self::Rsa(keypair) => keypair.try_sign(message),
-            _ => Err(signature::Error::new()),
+            _ => Err(self.algorithm()?.unsupported_error().into()),
         }
     }
 }
@@ -308,7 +308,7 @@ impl Verifier<Signature> for public::KeyData {
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
             #[allow(unreachable_patterns)]
-            _ => Err(signature::Error::new()),
+            _ => Err(self.algorithm().unsupported_error().into()),
         }
     }
 }
@@ -338,7 +338,7 @@ impl Verifier<Signature> for DsaPublicKey {
                     .verify_digest(Sha1::new_with_prefix(message), &signature)
                     .map_err(|_| signature::Error::new())
             }
-            _ => Err(signature::Error::new()),
+            _ => Err(signature.algorithm().unsupported_error().into()),
         }
     }
 }
@@ -557,7 +557,7 @@ impl Signer<Signature> for EcdsaKeypair {
             Self::NistP256 { private, .. } => private.try_sign(message),
             #[cfg(feature = "p384")]
             Self::NistP384 { private, .. } => private.try_sign(message),
-            _ => Err(signature::Error::new()),
+            _ => Err(self.algorithm().unsupported_error().into()),
         }
     }
 }
@@ -591,6 +591,7 @@ impl Verifier<Signature> for EcdsaPublicKey {
                     let signature = p256::ecdsa::Signature::try_from(signature)?;
                     verifying_key.verify(message, &signature)
                 }
+
                 #[cfg(feature = "p384")]
                 EcdsaCurve::NistP384 => {
                     let verifying_key = p384::ecdsa::VerifyingKey::try_from(self)?;
@@ -598,9 +599,9 @@ impl Verifier<Signature> for EcdsaPublicKey {
                     verifying_key.verify(message, &signature)
                 }
 
-                _ => Err(signature::Error::new()),
+                _ => Err(signature.algorithm().unsupported_error().into()),
             },
-            _ => Err(signature::Error::new()),
+            _ => Err(signature.algorithm().unsupported_error().into()),
         }
     }
 }
@@ -637,7 +638,7 @@ impl Verifier<Signature> for RsaPublicKey {
                         .map_err(|_| signature::Error::new()),
                 }
             }
-            _ => Err(signature::Error::new()),
+            _ => Err(signature.algorithm().unsupported_error().into()),
         }
     }
 }
