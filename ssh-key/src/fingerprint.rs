@@ -1,5 +1,8 @@
 //! SSH public key fingerprints.
 
+mod randomart;
+
+use self::randomart::Randomart;
 use crate::{public, Error, HashAlg, Result};
 use core::{
     fmt::{self, Display},
@@ -14,11 +17,11 @@ use sha2::{Digest, Sha256, Sha512};
 /// Fingerprint encoding error message.
 const FINGERPRINT_ERR_MSG: &str = "fingerprint encoding error";
 
+#[cfg(feature = "alloc")]
+use alloc::string::{String, ToString};
+
 #[cfg(all(feature = "alloc", feature = "serde"))]
-use {
-    alloc::string::{String, ToString},
-    serde::{de, ser, Deserialize, Serialize},
-};
+use serde::{de, ser, Deserialize, Serialize};
 
 /// SSH public key fingerprints.
 ///
@@ -79,6 +82,22 @@ impl Fingerprint {
         }
     }
 
+    /// Get the name of the hash algorithm (upper case e.g. "SHA256").
+    pub fn prefix(self) -> &'static str {
+        match self.algorithm() {
+            HashAlg::Sha256 => "SHA256",
+            HashAlg::Sha512 => "SHA512",
+        }
+    }
+
+    /// Get the bracketed hash algorithm footer for use in "randomart".
+    fn footer(self) -> &'static str {
+        match self.algorithm() {
+            HashAlg::Sha256 => "[SHA256]",
+            HashAlg::Sha512 => "[SHA512]",
+        }
+    }
+
     /// Get the raw digest output for the fingerprint as bytes.
     pub fn as_bytes(&self) -> &[u8] {
         match self {
@@ -112,6 +131,31 @@ impl Fingerprint {
     pub fn is_sha512(self) -> bool {
         matches!(self, Self::Sha512(_))
     }
+
+    /// Format "randomart" for this fingerprint using the provided formatter.
+    pub fn fmt_randomart(self, header: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Randomart::new(header, self).fmt(f)
+    }
+
+    /// Render "randomart" hash visualization for this fingerprint as a string.
+    ///
+    /// ```text
+    /// +--[ED25519 256]--+
+    /// |o+oO==+ o..      |
+    /// |.o++Eo+o..       |
+    /// |. +.oO.o . .     |
+    /// | . o..B.. . .    |
+    /// |  ...+ .S. o     |
+    /// |  .o. . . . .    |
+    /// |  o..    o       |
+    /// |   B      .      |
+    /// |  .o*            |
+    /// +----[SHA256]-----+
+    /// ```
+    #[cfg(feature = "alloc")]
+    pub fn to_randomart(self, header: &str) -> String {
+        Randomart::new(header, self).to_string()
+    }
 }
 
 impl AsRef<[u8]> for Fingerprint {
@@ -122,16 +166,12 @@ impl AsRef<[u8]> for Fingerprint {
 
 impl Display for Fingerprint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Fingerprints use a special upper-case hash algorithm encoding.
-        let algorithm = match self.algorithm() {
-            HashAlg::Sha256 => "SHA256",
-            HashAlg::Sha512 => "SHA512",
-        };
+        let prefix = self.prefix();
 
         // Buffer size is the largest digest size of of any supported hash function
         let mut buf = [0u8; Self::SHA512_BASE64_SIZE];
         let base64 = Base64Unpadded::encode(self.as_bytes(), &mut buf).map_err(|_| fmt::Error)?;
-        write!(f, "{algorithm}:{base64}")
+        write!(f, "{prefix}:{base64}")
     }
 }
 
