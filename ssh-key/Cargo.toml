@@ -53,7 +53,6 @@ alloc = [
 ]
 std = [
     "alloc",
-    "ed25519-dalek?/std",
     "encoding/std",
     "p256?/std",
     "p384?/std",

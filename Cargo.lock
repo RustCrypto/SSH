@@ -177,17 +177,6 @@ dependencies = [
  "packed_simd_2",
  "platforms",
  "subtle",
- "zeroize",
-]
-
-[[package]]
-name = "der"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1a467a65c5e759bce6e65eaf91cc29f466cdc57cb65777bd646872a8a1fd4de"
-dependencies = [
- "const-oid",
- "zeroize",
 ]
 
 [[package]]
@@ -221,7 +210,7 @@ dependencies = [
  "digest",
  "num-bigint-dig",
  "num-traits",
- "pkcs8 0.10.1",
+ "pkcs8",
  "rfc6979",
  "sha2",
  "signature",
@@ -234,7 +223,7 @@ version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cbcfcadd7eade8d8f960aa721e9731a50081694d3118c80eba744cbf68c7e5db"
 dependencies = [
- "der 0.7.0",
+ "der",
  "elliptic-curve",
  "rfc6979",
  "signature",
@@ -242,25 +231,21 @@ dependencies = [
 
 [[package]]
 name = "ed25519"
-version = "2.1.0"
+version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3cf420a7ec85d98495b0c34aa4a58ca117f982ffbece111aeb545160148d7010"
+checksum = "be522bee13fa6d8059f4903a4084aa3bd50725e18150202f0238deb615cd6371"
 dependencies = [
- "pkcs8 0.9.0",
  "signature",
 ]
 
 [[package]]
 name = "ed25519-dalek"
 version = "2.0.0-pre.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bd577ba9d4bcab443cac60003d8fd32c638e7024a3ec92c200d7af5d2c397ed"
+source = "git+https://github.com/dalek-cryptography/ed25519-dalek.git#64b26ad07448637d0116951e70dcffcbd5816e3d"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
- "serde",
  "sha2",
- "zeroize",
 ]
 
 [[package]]
@@ -275,7 +260,7 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
- "pkcs8 0.10.1",
+ "pkcs8",
  "rand_core",
  "sec1",
  "subtle",
@@ -559,20 +544,10 @@ version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "178ba28ece1961eafdff1991bd1744c29564cbab5d803f3ccb4a4895a6c550a7"
 dependencies = [
- "der 0.7.0",
- "pkcs8 0.10.1",
- "spki 0.7.0",
+ "der",
+ "pkcs8",
+ "spki",
  "zeroize",
-]
-
-[[package]]
-name = "pkcs8"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9eca2c590a5f85da82668fa685c09ce2888b9430e83299debf1f34b65fd4a4ba"
-dependencies = [
- "der 0.6.1",
- "spki 0.6.0",
 ]
 
 [[package]]
@@ -581,8 +556,8 @@ version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3d2820d87d2b008616e5c27212dd9e0e694fb4c6b522de06094106813328cb49"
 dependencies = [
- "der 0.7.0",
- "spki 0.7.0",
+ "der",
+ "spki",
 ]
 
 [[package]]
@@ -679,7 +654,7 @@ dependencies = [
  "num-iter",
  "num-traits",
  "pkcs1",
- "pkcs8 0.10.1",
+ "pkcs8",
  "rand_core",
  "signature",
  "subtle",
@@ -707,9 +682,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48518a2b5775ba8ca5b46596aae011caa431e6ce7e4a67ead66d92f08884220e"
 dependencies = [
  "base16ct",
- "der 0.7.0",
+ "der",
  "generic-array",
- "pkcs8 0.10.1",
+ "pkcs8",
  "subtle",
  "zeroize",
 ]
@@ -766,22 +741,12 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "spki"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "67cf02bbac7a337dc36e4f5a693db6c21e7863f45070f7064577eb4367a3212b"
-dependencies = [
- "base64ct",
- "der 0.6.1",
-]
-
-[[package]]
-name = "spki"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0445c905640145c7ea8c1993555957f65e7c46d0535b91ba501bc9bfc85522f"
 dependencies = [
  "base64ct",
- "der 0.7.0",
+ "der",
 ]
 
 [[package]]
