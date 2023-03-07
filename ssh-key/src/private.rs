@@ -648,7 +648,9 @@ impl Decode for PrivateKey {
             }
 
             if !reader.is_finished() {
-                return Err(encoding::Error::Length.into());
+                return Err(Error::TrailingData {
+                    remaining: reader.remaining_len(),
+                });
             }
 
             return Ok(Self {
