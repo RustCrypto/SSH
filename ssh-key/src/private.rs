@@ -136,7 +136,9 @@ pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
 pub use self::sk::SkEcdsaSha2NistP256;
 
-use crate::{public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result};
+use crate::{
+    cipher::Tag, public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result,
+};
 use core::str;
 use encoding::{
     pem::{LineEnding, PemLabel},
@@ -195,6 +197,9 @@ pub struct PrivateKey {
 
     /// Private keypair data.
     key_data: KeypairData,
+
+    /// Authentication tag for authenticated encryption modes.
+    auth_tag: Option<Tag>,
 }
 
 impl PrivateKey {
@@ -307,11 +312,11 @@ impl PrivateKey {
     /// Returns [`Error::Decrypted`] if the private key is already decrypted.
     #[cfg(feature = "encryption")]
     pub fn decrypt(&self, password: impl AsRef<[u8]>) -> Result<Self> {
-        let (key_bytes, iv_bytes) = self.kdf.derive_key_and_iv(self.cipher, password)?;
+        let (key, iv) = self.kdf.derive_key_and_iv(self.cipher, password)?;
 
         let ciphertext = self.key_data.encrypted().ok_or(Error::Decrypted)?;
         let mut buffer = Zeroizing::new(ciphertext.to_vec());
-        self.cipher.decrypt(&key_bytes, &iv_bytes, &mut buffer)?;
+        self.cipher.decrypt(&key, &iv, &mut buffer, self.auth_tag)?;
 
         Self::decode_privatekey_comment_pair(
             &mut &**buffer,
@@ -366,7 +371,7 @@ impl PrivateKey {
 
         // Encode and encrypt private key
         self.encode_privatekey_comment_pair(&mut out, cipher, checkint)?;
-        cipher.encrypt(&key_bytes, &iv_bytes, out.as_mut_slice())?;
+        let auth_tag = cipher.encrypt(&key_bytes, &iv_bytes, out.as_mut_slice())?;
 
         Ok(Self {
             cipher,
@@ -374,6 +379,7 @@ impl PrivateKey {
             checkint: None,
             public_key: self.public_key.key_data.clone().into(),
             key_data: KeypairData::Encrypted(out),
+            auth_tag,
         })
     }
 
@@ -452,6 +458,7 @@ impl PrivateKey {
             checkint: Some(checkint),
             public_key: public_key.into(),
             key_data,
+            auth_tag: None,
         })
     }
 
@@ -543,6 +550,7 @@ impl PrivateKey {
             checkint: Some(checkint1),
             public_key,
             key_data,
+            auth_tag: None,
         })
     }
 
@@ -647,6 +655,14 @@ impl Decode for PrivateKey {
                 return Err(Error::Crypto);
             }
 
+            let auth_tag = if cipher.has_tag() {
+                let mut tag = Tag::default();
+                reader.read(&mut tag)?;
+                Some(tag)
+            } else {
+                None
+            };
+
             if !reader.is_finished() {
                 return Err(Error::TrailingData {
                     remaining: reader.remaining_len(),
@@ -659,6 +675,7 @@ impl Decode for PrivateKey {
                 checkint: None,
                 public_key: public_key.into(),
                 key_data: KeypairData::Encrypted(ciphertext),
+                auth_tag,
             });
         }
 
@@ -690,6 +707,7 @@ impl Encode for PrivateKey {
             4, // number of keys (uint32)
             self.public_key.key_data().encoded_len_prefixed()?,
             private_key_len,
+            self.auth_tag.map(|tag| tag.len()).unwrap_or(0),
         ]
         .checked_sum()?)
     }
@@ -708,6 +726,10 @@ impl Encode for PrivateKey {
         // Encode private key
         if self.is_encrypted() {
             self.key_data.encode_prefixed(writer)?;
+
+            if let Some(tag) = &self.auth_tag {
+                writer.write(tag)?;
+            }
         } else {
             self.encoded_privatekey_comment_pair_len(Cipher::None)?
                 .encode(writer)?;
@@ -809,6 +831,7 @@ impl TryFrom<KeypairData> for PrivateKey {
             checkint: None,
             public_key: public_key.into(),
             key_data,
+            auth_tag: None,
         })
     }
 }

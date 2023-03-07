@@ -12,8 +12,23 @@ use aes::{
     Aes256,
 };
 
+#[cfg(feature = "aes-gcm")]
+use aes_gcm::{aead::AeadInPlace, Aes256Gcm};
+
 /// AES-256 in counter (CTR) mode
 const AES256_CTR: &str = "aes256-ctr";
+
+/// AES-256 in Galois/Counter Mode (GCM).
+const AES256_GCM: &str = "aes256-gcm@openssh.com";
+
+/// Nonces for AEAD modes.
+#[cfg(feature = "aes-gcm")]
+type AeadNonce = [u8; 12];
+
+/// Authentication tag for ciphertext data.
+///
+/// This is used by e.g. `aes256-gcm@openssh.com`
+pub(crate) type Tag = [u8; 16];
 
 /// Counter mode with a 32-bit big endian counter.
 #[cfg(feature = "encryption")]
@@ -28,6 +43,9 @@ pub enum Cipher {
 
     /// AES-256 in counter (CTR) mode.
     Aes256Ctr,
+
+    /// AES-256 in Galois/Counter Mode (GCM).
+    Aes256Gcm,
 }
 
 impl Cipher {
@@ -39,6 +57,7 @@ impl Cipher {
         match ciphername {
             "none" => Ok(Self::None),
             AES256_CTR => Ok(Self::Aes256Ctr),
+            AES256_GCM => Ok(Self::Aes256Gcm),
             _ => Err(Error::Algorithm),
         }
     }
@@ -48,6 +67,7 @@ impl Cipher {
         match self {
             Self::None => "none",
             Self::Aes256Ctr => AES256_CTR,
+            Self::Aes256Gcm => AES256_GCM,
         }
     }
 
@@ -56,6 +76,7 @@ impl Cipher {
         match self {
             Self::None => None,
             Self::Aes256Ctr => Some((32, 16)),
+            Self::Aes256Gcm => Some((32, 12)),
         }
     }
 
@@ -63,7 +84,7 @@ impl Cipher {
     pub fn block_size(self) -> usize {
         match self {
             Self::None => 8,
-            Self::Aes256Ctr => 16,
+            Self::Aes256Ctr | Self::Aes256Gcm => 16,
         }
     }
 
@@ -75,6 +96,11 @@ impl Cipher {
             0 => 0,
             input_rem => self.block_size() - input_rem,
         }
+    }
+
+    /// Does this cipher have an authentication tag? (i.e. is it an AEAD mode?)
+    pub fn has_tag(self) -> bool {
+        matches!(self, Self::Aes256Gcm)
     }
 
     /// Is this cipher `none`?
@@ -89,21 +115,36 @@ impl Cipher {
 
     /// Decrypt the ciphertext in the `buffer` in-place using this cipher.
     #[cfg(feature = "encryption")]
-    pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()> {
+    pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
         match self {
-            Self::None => return Err(Error::Crypto),
-            // Counter mode encryption and decryption are the same operation
-            Self::Aes256Ctr => self.encrypt(key, iv, buffer)?,
-        }
+            Self::Aes256Ctr => {
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
 
-        Ok(())
+                // Counter mode encryption and decryption are the same operation
+                self.encrypt(key, iv, buffer)?;
+                Ok(())
+            }
+            #[cfg(feature = "aes-gcm")]
+            Self::Aes256Gcm => {
+                let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::Crypto)?;
+                let nonce = AeadNonce::try_from(iv).map_err(|_| Error::Crypto)?;
+                let tag = tag.ok_or(Error::Crypto)?;
+                cipher
+                    .decrypt_in_place_detached(&nonce.into(), &[], buffer, &tag.into())
+                    .map_err(|_| Error::Crypto)?;
+
+                Ok(())
+            }
+            _ => Err(Error::Crypto),
+        }
     }
 
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
     #[cfg(feature = "encryption")]
-    pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()> {
+    pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<Option<Tag>> {
         match self {
-            Self::None => return Err(Error::Crypto),
             Self::Aes256Ctr => {
                 let cipher = Aes256::new_from_slice(key)
                     .and_then(|aes| Ctr128BE::inner_iv_slice_init(aes, iv))
@@ -112,10 +153,21 @@ impl Cipher {
                 cipher
                     .try_apply_keystream_partial(buffer.into())
                     .map_err(|_| Error::Crypto)?;
-            }
-        }
 
-        Ok(())
+                Ok(None)
+            }
+            #[cfg(feature = "aes-gcm")]
+            Self::Aes256Gcm => {
+                let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::Crypto)?;
+                let nonce = AeadNonce::try_from(iv).map_err(|_| Error::Crypto)?;
+                let tag = cipher
+                    .encrypt_in_place_detached(&nonce.into(), &[], buffer)
+                    .map_err(|_| Error::Crypto)?;
+
+                Ok(Some(tag.into()))
+            }
+            _ => Err(Error::Crypto),
+        }
     }
 }
 
