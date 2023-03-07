@@ -126,18 +126,12 @@ fn encrypt_openssh_aes_ctr() {
 #[cfg(all(feature = "aes-gcm", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes_gcm() {
-    use rand_core::{OsRng, RngCore};
+    use rand_core::OsRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
 
-    let checkint = RngCore::next_u32(&mut OsRng);
     let key_enc = key_dec
-        .encrypt_with(
-            Cipher::Aes256Gcm,
-            Kdf::new(Default::default(), &mut OsRng).unwrap(),
-            checkint,
-            PASSWORD,
-        )
+        .encrypt_with_cipher(&mut OsRng, Cipher::Aes256Gcm, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
