@@ -108,7 +108,7 @@ impl PublicKey {
 
         // Verify that the algorithm in the Base64-encoded data matches the text
         if encapsulation.algorithm_id != key_data.algorithm().as_str() {
-            return Err(Error::Algorithm);
+            return Err(Error::AlgorithmUnknown);
         }
 
         let public_key = Self {

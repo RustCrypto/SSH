@@ -47,7 +47,7 @@ impl Kdf {
         match algorithm {
             KdfAlg::None => {
                 // Disallow explicit initialization with a `none` algorithm
-                Err(Error::Algorithm)
+                Err(Error::AlgorithmUnknown)
             }
             KdfAlg::Bcrypt => Ok(Kdf::Bcrypt {
                 salt,
@@ -129,12 +129,12 @@ impl Decode for Kdf {
                 if usize::decode(reader)? == 0 {
                     Ok(Self::None)
                 } else {
-                    Err(Error::Algorithm)
+                    Err(Error::AlgorithmUnknown)
                 }
             }
             KdfAlg::Bcrypt => {
                 #[cfg(not(feature = "alloc"))]
-                return Err(Error::Algorithm);
+                return Err(Error::AlgorithmUnknown);
 
                 #[cfg(feature = "alloc")]
                 reader.read_prefixed(|reader| {

@@ -177,7 +177,7 @@ impl Certificate {
 
         // Verify that the algorithm in the Base64-encoded data matches the text
         if encapsulation.algorithm_id != cert.algorithm().as_certificate_str() {
-            return Err(Error::Algorithm);
+            return Err(Error::AlgorithmUnknown);
         }
 
         cert.comment = encapsulation.comment.to_owned();

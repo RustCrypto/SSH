@@ -148,7 +148,7 @@ impl Algorithm {
             SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
             SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 
@@ -185,7 +185,7 @@ impl Algorithm {
             CERT_RSA => Ok(Algorithm::Rsa { hash: None }),
             CERT_SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             CERT_SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 
@@ -250,6 +250,12 @@ impl Algorithm {
     pub fn is_rsa(self) -> bool {
         matches!(self, Algorithm::Rsa { .. })
     }
+
+    /// Return an error indicating this algorithm is unsupported.
+    #[allow(dead_code)]
+    pub(crate) fn unsupported_error(self) -> Error {
+        Error::AlgorithmUnsupported { algorithm: self }
+    }
 }
 
 impl AsRef<str> for Algorithm {
@@ -308,7 +314,7 @@ impl EcdsaCurve {
             "nistp256" => Ok(EcdsaCurve::NistP256),
             "nistp384" => Ok(EcdsaCurve::NistP384),
             "nistp521" => Ok(EcdsaCurve::NistP521),
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 
@@ -378,7 +384,7 @@ impl HashAlg {
         match id {
             SHA256 => Ok(HashAlg::Sha256),
             SHA512 => Ok(HashAlg::Sha512),
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 
@@ -458,7 +464,7 @@ impl KdfAlg {
         match kdfname {
             NONE => Ok(Self::None),
             BCRYPT => Ok(Self::Bcrypt),
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 

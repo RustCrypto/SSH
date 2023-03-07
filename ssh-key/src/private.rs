@@ -446,7 +446,7 @@ impl PrivateKey {
     /// Generate a random key which uses the given algorithm.
     ///
     /// # Returns
-    /// - `Error::Algorithm` if the algorithm is unsupported.
+    /// - `Error::AlgorithmUnknown` if the algorithm is unsupported.
     #[cfg(feature = "rand_core")]
     #[allow(unreachable_code, unused_variables)]
     pub fn random(rng: &mut impl CryptoRngCore, algorithm: Algorithm) -> Result<Self> {
@@ -462,7 +462,7 @@ impl PrivateKey {
             Algorithm::Rsa { .. } => {
                 KeypairData::from(RsaKeypair::random(rng, DEFAULT_RSA_KEY_SIZE)?)
             }
-            _ => return Err(Error::Algorithm),
+            _ => return Err(Error::AlgorithmUnknown),
         };
         let public_key = public::KeyData::try_from(&key_data)?;
 

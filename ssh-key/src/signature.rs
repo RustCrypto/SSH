@@ -361,7 +361,7 @@ impl TryFrom<&Signature> for ed25519_dalek::Signature {
             Algorithm::Ed25519 | Algorithm::SkEd25519 => {
                 Ok(ed25519_dalek::Signature::try_from(signature.as_bytes())?)
             }
-            _ => Err(Error::Algorithm),
+            _ => Err(Error::AlgorithmUnknown),
         }
     }
 }
@@ -514,7 +514,7 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
                     _ => Err(Error::Crypto),
                 }
             }
-            _ => Err(Error::Algorithm),
+            _ => Err(signature.algorithm.unsupported_error()),
         }
     }
 }
@@ -544,7 +544,7 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
                     _ => Err(Error::Crypto),
                 }
             }
-            _ => Err(Error::Algorithm),
+            _ => Err(signature.algorithm.unsupported_error()),
         }
     }
 }
