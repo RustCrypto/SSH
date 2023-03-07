@@ -531,9 +531,9 @@ dependencies = [
 
 [[package]]
 name = "pem-rfc7468"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24d159833a9105500e0398934e205e0773f0b27529557134ecfc51c27646adac"
+checksum = "88b39c9bfcfc231068454382784bb460aae594343fb030d46e9f50a645418412"
 dependencies = [
  "base64ct",
 ]
@@ -751,7 +751,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.1.0"
+version = "0.2.0-pre"
 dependencies = [
  "base64ct",
  "hex-literal",
