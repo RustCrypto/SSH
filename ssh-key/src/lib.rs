@@ -177,7 +177,7 @@ pub use sha2;
 pub use crate::{
     certificate::Certificate,
     known_hosts::KnownHosts,
-    mpint::MPInt,
+    mpint::Mpint,
     signature::{Signature, SigningKey},
     sshsig::SshSig,
 };

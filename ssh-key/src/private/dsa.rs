@@ -1,6 +1,6 @@
 //! Digital Signature Algorithm (DSA) private keys.
 
-use crate::{public::DsaPublicKey, Error, MPInt, Result};
+use crate::{public::DsaPublicKey, Error, Mpint, Result};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
@@ -18,7 +18,7 @@ use rand_core::CryptoRngCore;
 #[derive(Clone)]
 pub struct DsaPrivateKey {
     /// Integer representing a DSA private key.
-    inner: MPInt,
+    inner: Mpint,
 }
 
 impl DsaPrivateKey {
@@ -27,8 +27,8 @@ impl DsaPrivateKey {
         self.inner.as_bytes()
     }
 
-    /// Get the inner [`MPInt`].
-    pub fn as_mpint(&self) -> &MPInt {
+    /// Get the inner [`Mpint`].
+    pub fn as_mpint(&self) -> &Mpint {
         &self.inner
     }
 }
@@ -58,7 +58,7 @@ impl Decode for DsaPrivateKey {
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         Ok(Self {
-            inner: MPInt::decode(reader)?,
+            inner: Mpint::decode(reader)?,
         })
     }
 }

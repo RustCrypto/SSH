@@ -1,6 +1,6 @@
 //! Rivest–Shamir–Adleman (RSA) private keys.
 
-use crate::{public::RsaPublicKey, Error, MPInt, Result};
+use crate::{public::RsaPublicKey, Error, Mpint, Result};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
@@ -17,16 +17,16 @@ use {
 #[derive(Clone)]
 pub struct RsaPrivateKey {
     /// RSA private exponent.
-    pub d: MPInt,
+    pub d: Mpint,
 
     /// CRT coefficient: `(inverse of q) mod p`.
-    pub iqmp: MPInt,
+    pub iqmp: Mpint,
 
     /// First prime factor of `n`.
-    pub p: MPInt,
+    pub p: Mpint,
 
     /// Second prime factor of `n`.
-    pub q: MPInt,
+    pub q: Mpint,
 }
 
 impl ConstantTimeEq for RsaPrivateKey {
@@ -50,10 +50,10 @@ impl Decode for RsaPrivateKey {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let d = MPInt::decode(reader)?;
-        let iqmp = MPInt::decode(reader)?;
-        let p = MPInt::decode(reader)?;
-        let q = MPInt::decode(reader)?;
+        let d = Mpint::decode(reader)?;
+        let iqmp = Mpint::decode(reader)?;
+        let p = Mpint::decode(reader)?;
+        let q = Mpint::decode(reader)?;
         Ok(Self { d, iqmp, p, q })
     }
 }
@@ -133,8 +133,8 @@ impl Decode for RsaKeypair {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let n = MPInt::decode(reader)?;
-        let e = MPInt::decode(reader)?;
+        let n = Mpint::decode(reader)?;
+        let e = Mpint::decode(reader)?;
         let public = RsaPublicKey { n, e };
         let private = RsaPrivateKey::decode(reader)?;
         Ok(RsaKeypair { public, private })

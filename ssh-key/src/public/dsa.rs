@@ -1,6 +1,6 @@
 //! Digital Signature Algorithm (DSA) public keys.
 
-use crate::{Error, MPInt, Result};
+use crate::{Error, Mpint, Result};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Digital Signature Algorithm (DSA) public key.
@@ -9,27 +9,27 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct DsaPublicKey {
     /// Prime modulus.
-    pub p: MPInt,
+    pub p: Mpint,
 
     /// Prime divisor of `p - 1`.
-    pub q: MPInt,
+    pub q: Mpint,
 
     /// Generator of a subgroup of order `q` in the multiplicative group
     /// `GF(p)`, such that `1 < g < p`.
-    pub g: MPInt,
+    pub g: Mpint,
 
     /// The public key, where `y = gˣ mod p`.
-    pub y: MPInt,
+    pub y: Mpint,
 }
 
 impl Decode for DsaPublicKey {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let p = MPInt::decode(reader)?;
-        let q = MPInt::decode(reader)?;
-        let g = MPInt::decode(reader)?;
-        let y = MPInt::decode(reader)?;
+        let p = Mpint::decode(reader)?;
+        let q = Mpint::decode(reader)?;
+        let g = Mpint::decode(reader)?;
+        let y = Mpint::decode(reader)?;
         Ok(Self { p, q, g, y })
     }
 }
