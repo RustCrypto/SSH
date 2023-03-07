@@ -39,12 +39,12 @@ use zeroize::Zeroizing;
 /// |-1234            | `00 00 00 02 ed cc`
 /// | -deadbeef       | `00 00 00 05 ff 21 52 41 11`
 #[derive(Clone, PartialOrd, Ord)]
-pub struct MPInt {
+pub struct Mpint {
     /// Inner big endian-serialized integer value
     inner: Vec<u8>,
 }
 
-impl MPInt {
+impl Mpint {
     /// Create a new multiple precision integer from the given
     /// big endian-encoded byte slice.
     ///
@@ -74,7 +74,7 @@ impl MPInt {
     /// Get the big integer data encoded as big endian bytes.
     ///
     /// This slice will contain a leading zero if the value is positive but the
-    /// MSB is also set. Use [`MPInt::as_positive_bytes`] to ensure the number
+    /// MSB is also set. Use [`Mpint::as_positive_bytes`] to ensure the number
     /// is positive and strip the leading zero byte if it exists.
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner
@@ -94,27 +94,27 @@ impl MPInt {
     }
 }
 
-impl AsRef<[u8]> for MPInt {
+impl AsRef<[u8]> for Mpint {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
     }
 }
 
-impl ConstantTimeEq for MPInt {
+impl ConstantTimeEq for Mpint {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.as_ref().ct_eq(other.as_ref())
     }
 }
 
-impl Eq for MPInt {}
+impl Eq for Mpint {}
 
-impl PartialEq for MPInt {
+impl PartialEq for Mpint {
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).into()
     }
 }
 
-impl Decode for MPInt {
+impl Decode for Mpint {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
@@ -122,7 +122,7 @@ impl Decode for MPInt {
     }
 }
 
-impl Encode for MPInt {
+impl Encode for Mpint {
     type Error = Error;
 
     fn encoded_len(&self) -> Result<usize> {
@@ -135,7 +135,7 @@ impl Encode for MPInt {
     }
 }
 
-impl TryFrom<&[u8]> for MPInt {
+impl TryFrom<&[u8]> for Mpint {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self> {
@@ -143,7 +143,7 @@ impl TryFrom<&[u8]> for MPInt {
     }
 }
 
-impl TryFrom<Vec<u8>> for MPInt {
+impl TryFrom<Vec<u8>> for Mpint {
     type Error = Error;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self> {
@@ -157,25 +157,25 @@ impl TryFrom<Vec<u8>> for MPInt {
     }
 }
 
-impl Zeroize for MPInt {
+impl Zeroize for Mpint {
     fn zeroize(&mut self) {
         self.inner.zeroize();
     }
 }
 
-impl fmt::Debug for MPInt {
+impl fmt::Debug for Mpint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "MPInt({self:X})")
+        write!(f, "Mpint({self:X})")
     }
 }
 
-impl fmt::Display for MPInt {
+impl fmt::Display for Mpint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{self:X}")
     }
 }
 
-impl fmt::LowerHex for MPInt {
+impl fmt::LowerHex for Mpint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_bytes() {
             write!(f, "{byte:02x}")?;
@@ -184,7 +184,7 @@ impl fmt::LowerHex for MPInt {
     }
 }
 
-impl fmt::UpperHex for MPInt {
+impl fmt::UpperHex for Mpint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.as_bytes() {
             write!(f, "{byte:02X}")?;
@@ -194,38 +194,38 @@ impl fmt::UpperHex for MPInt {
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-impl TryFrom<bigint::BigUint> for MPInt {
+impl TryFrom<bigint::BigUint> for Mpint {
     type Error = Error;
 
-    fn try_from(uint: bigint::BigUint) -> Result<MPInt> {
-        MPInt::try_from(&uint)
+    fn try_from(uint: bigint::BigUint) -> Result<Mpint> {
+        Mpint::try_from(&uint)
     }
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-impl TryFrom<&bigint::BigUint> for MPInt {
+impl TryFrom<&bigint::BigUint> for Mpint {
     type Error = Error;
 
-    fn try_from(uint: &bigint::BigUint) -> Result<MPInt> {
+    fn try_from(uint: &bigint::BigUint) -> Result<Mpint> {
         let bytes = Zeroizing::new(uint.to_bytes_be());
-        MPInt::from_positive_bytes(bytes.as_slice())
+        Mpint::from_positive_bytes(bytes.as_slice())
     }
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-impl TryFrom<MPInt> for bigint::BigUint {
+impl TryFrom<Mpint> for bigint::BigUint {
     type Error = Error;
 
-    fn try_from(mpint: MPInt) -> Result<bigint::BigUint> {
+    fn try_from(mpint: Mpint) -> Result<bigint::BigUint> {
         bigint::BigUint::try_from(&mpint)
     }
 }
 
 #[cfg(any(feature = "dsa", feature = "rsa"))]
-impl TryFrom<&MPInt> for bigint::BigUint {
+impl TryFrom<&Mpint> for bigint::BigUint {
     type Error = Error;
 
-    fn try_from(mpint: &MPInt) -> Result<bigint::BigUint> {
+    fn try_from(mpint: &Mpint) -> Result<bigint::BigUint> {
         mpint
             .as_positive_bytes()
             .map(bigint::BigUint::from_bytes_be)
@@ -235,30 +235,30 @@ impl TryFrom<&MPInt> for bigint::BigUint {
 
 #[cfg(test)]
 mod tests {
-    use super::MPInt;
+    use super::Mpint;
     use hex_literal::hex;
 
     #[test]
     fn decode_0() {
-        let n = MPInt::from_bytes(b"").unwrap();
+        let n = Mpint::from_bytes(b"").unwrap();
         assert_eq!(b"", n.as_bytes())
     }
 
     #[test]
     fn reject_extra_leading_zeroes() {
-        assert!(MPInt::from_bytes(&hex!("00")).is_err());
-        assert!(MPInt::from_bytes(&hex!("00 00")).is_err());
-        assert!(MPInt::from_bytes(&hex!("00 01")).is_err());
+        assert!(Mpint::from_bytes(&hex!("00")).is_err());
+        assert!(Mpint::from_bytes(&hex!("00 00")).is_err());
+        assert!(Mpint::from_bytes(&hex!("00 01")).is_err());
     }
 
     #[test]
     fn decode_9a378f9b2e332a7() {
-        assert!(MPInt::from_bytes(&hex!("09 a3 78 f9 b2 e3 32 a7")).is_ok());
+        assert!(Mpint::from_bytes(&hex!("09 a3 78 f9 b2 e3 32 a7")).is_ok());
     }
 
     #[test]
     fn decode_80() {
-        let n = MPInt::from_bytes(&hex!("00 80")).unwrap();
+        let n = Mpint::from_bytes(&hex!("00 80")).unwrap();
 
         // Leading zero stripped
         assert_eq!(&hex!("80"), n.as_positive_bytes().unwrap())
@@ -267,14 +267,14 @@ mod tests {
     // TODO(tarcieri): drop support for negative numbers?
     #[test]
     fn decode_neg_1234() {
-        let n = MPInt::from_bytes(&hex!("ed cc")).unwrap();
+        let n = Mpint::from_bytes(&hex!("ed cc")).unwrap();
         assert!(n.as_positive_bytes().is_none());
     }
 
     // TODO(tarcieri): drop support for negative numbers?
     #[test]
     fn decode_neg_deadbeef() {
-        let n = MPInt::from_bytes(&hex!("ff 21 52 41 11")).unwrap();
+        let n = Mpint::from_bytes(&hex!("ff 21 52 41 11")).unwrap();
         assert!(n.as_positive_bytes().is_none());
     }
 }

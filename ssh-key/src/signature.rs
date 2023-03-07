@@ -1,6 +1,6 @@
 //! Signatures (e.g. CA signatures over SSH certificates)
 
-use crate::{private, public, Algorithm, Error, MPInt, PrivateKey, PublicKey, Result};
+use crate::{private, public, Algorithm, Error, Mpint, PrivateKey, PublicKey, Result};
 use alloc::vec::Vec;
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
@@ -108,7 +108,7 @@ impl Signature {
                 let reader = &mut data.as_slice();
 
                 for _ in 0..2 {
-                    let component = MPInt::decode(reader)?;
+                    let component = Mpint::decode(reader)?;
 
                     if component.as_positive_bytes().ok_or(Error::Crypto)?.len()
                         != curve.field_size()
@@ -437,8 +437,8 @@ impl TryFrom<&p256::ecdsa::Signature> for Signature {
         #[allow(clippy::integer_arithmetic)]
         let mut data = Vec::with_capacity(32 * 2 + 4 * 2 + 2);
 
-        MPInt::from_positive_bytes(&r)?.encode(&mut data)?;
-        MPInt::from_positive_bytes(&s)?.encode(&mut data)?;
+        Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
+        Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
 
         Ok(Signature {
             algorithm: Algorithm::Ecdsa {
@@ -459,8 +459,8 @@ impl TryFrom<&p384::ecdsa::Signature> for Signature {
         #[allow(clippy::integer_arithmetic)]
         let mut data = Vec::with_capacity(48 * 2 + 4 * 2 + 2);
 
-        MPInt::from_positive_bytes(&r)?.encode(&mut data)?;
-        MPInt::from_positive_bytes(&s)?.encode(&mut data)?;
+        Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
+        Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
 
         Ok(Signature {
             algorithm: Algorithm::Ecdsa {
@@ -501,8 +501,8 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
                 curve: EcdsaCurve::NistP256,
             } => {
                 let reader = &mut signature.as_bytes();
-                let r = MPInt::decode(reader)?;
-                let s = MPInt::decode(reader)?;
+                let r = Mpint::decode(reader)?;
+                let s = Mpint::decode(reader)?;
 
                 match (r.as_positive_bytes(), s.as_positive_bytes()) {
                     (Some(r), Some(s)) if r.len() == FIELD_SIZE && s.len() == FIELD_SIZE => {
@@ -531,8 +531,8 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
                 curve: EcdsaCurve::NistP256,
             } => {
                 let reader = &mut signature.as_bytes();
-                let r = MPInt::decode(reader)?;
-                let s = MPInt::decode(reader)?;
+                let r = Mpint::decode(reader)?;
+                let s = Mpint::decode(reader)?;
 
                 match (r.as_positive_bytes(), s.as_positive_bytes()) {
                     (Some(r), Some(s)) if r.len() == FIELD_SIZE && s.len() == FIELD_SIZE => {

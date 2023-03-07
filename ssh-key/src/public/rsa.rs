@@ -1,6 +1,6 @@
 //! Rivest–Shamir–Adleman (RSA) public keys.
 
-use crate::{Error, MPInt, Result};
+use crate::{Error, Mpint, Result};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
@@ -16,10 +16,10 @@ use {
 #[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub struct RsaPublicKey {
     /// RSA public exponent.
-    pub e: MPInt,
+    pub e: Mpint,
 
     /// RSA modulus.
-    pub n: MPInt,
+    pub n: Mpint,
 }
 
 impl RsaPublicKey {
@@ -32,8 +32,8 @@ impl Decode for RsaPublicKey {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let e = MPInt::decode(reader)?;
-        let n = MPInt::decode(reader)?;
+        let e = Mpint::decode(reader)?;
+        let n = Mpint::decode(reader)?;
         Ok(Self { e, n })
     }
 }
