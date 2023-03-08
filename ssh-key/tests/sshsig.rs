@@ -5,7 +5,12 @@
 use hex_literal::hex;
 use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
 
-#[cfg(any(feature = "dsa", feature = "ed25519", feature = "rsa"))]
+#[cfg(any(
+    feature = "dsa",
+    feature = "ed25519",
+    feature = "p256",
+    feature = "rsa"
+))]
 use ssh_key::PrivateKey;
 
 #[cfg(feature = "ed25519")]

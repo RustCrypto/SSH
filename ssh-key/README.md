@@ -61,7 +61,7 @@ respective SSH key algorithm.
   - [ ] [RFC4716] public keys
   - [ ] SEC1
 
-## Supported algorithms
+### Supported Signature Algorithms
 
 | Name                                 | Decode | Encode | Cert | Keygen | Sign | Verify | Feature   | `no_std` |
 |--------------------------------------|--------|--------|------|--------|------|--------|-----------|----------|
@@ -74,7 +74,13 @@ respective SSH key algorithm.
 | `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc`  |
 | `sk‑ssh‑ed25519@openssh.com`         | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc`  |
 
-Note: the "Feature" section lists the name of `ssh-key` crate features which can
+By default *no algorithms are enabled* and you will get an
+`Error::AlgorithmUnsupported` error if you try to use them.
+
+Enable the `crypto` feature or the "Feature" for specific algorithms in the
+chart above (e.g. `p256`, `rsa`) in order to use cryptographic functionality.
+
+The "Feature" column lists the name of `ssh-key` crate features which can
 be enabled to provide full support for the "Keygen", "Sign", and "Verify"
 functionality for a particular SSH key algorithm.
 
