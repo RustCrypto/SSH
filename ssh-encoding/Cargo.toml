@@ -20,7 +20,7 @@ pem = { package = "pem-rfc7468", version = "0.7", optional = true }
 sha2 = { version = "0.10", optional = true, default-features = false }
 
 [dev-dependencies]
-hex-literal = "0.3"
+hex-literal = "0.4.1"
 
 [features]
 alloc = ["base64?/alloc", "pem?/alloc"]
