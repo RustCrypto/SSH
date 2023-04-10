@@ -203,9 +203,9 @@ dependencies = [
 
 [[package]]
 name = "dsa"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8740edd2ee6308c3dc0a424117c0fc83248330f58d875ba83e412022f27753c9"
+checksum = "b5638f6d17447bc0ffc46354949ee366847e83450e2a07895862942085cc9761"
 dependencies = [
  "digest",
  "num-bigint-dig",
