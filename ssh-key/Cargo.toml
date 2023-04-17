@@ -42,7 +42,6 @@ sha1 = { version = "0.10", optional = true, default-features = false }
 [dev-dependencies]
 hex-literal = "0.4.1"
 rand_chacha = "0.3"
-tempfile = "3"
 
 [features]
 default = ["ecdsa", "rand_core", "std"]
