@@ -426,9 +426,13 @@ fn encoding_test(private_key: &str) {
 /// Parse PEM encoded using `PrivateKey::to_openssh` using the `ssh-keygen` utility.
 #[cfg(all(feature = "std"))]
 fn encoding_integration_test(private_key: PrivateKey) {
-    let dir = tempfile::tempdir().unwrap();
-    let mut path = dir.path().to_owned();
-    path.push("id_example");
+    let fingerprint = private_key
+        .fingerprint(Default::default())
+        .to_string()
+        .replace(':', "-")
+        .replace('/', "_");
+
+    let path = std::path::PathBuf::from(&format!("tests/scratch/{}", fingerprint));
 
     private_key
         .write_openssh_file(&path, LineEnding::LF)
