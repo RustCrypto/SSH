@@ -108,6 +108,6 @@ where
     type Error = Error;
 
     fn try_from(key: &RsaPublicKey) -> Result<pkcs1v15::VerifyingKey<D>> {
-        Ok(pkcs1v15::VerifyingKey::new_with_prefix(key.try_into()?))
+        Ok(pkcs1v15::VerifyingKey::new(key.try_into()?))
     }
 }

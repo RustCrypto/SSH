@@ -256,6 +256,6 @@ where
     type Error = Error;
 
     fn try_from(keypair: &RsaKeypair) -> Result<pkcs1v15::SigningKey<D>> {
-        Ok(pkcs1v15::SigningKey::new_with_prefix(keypair.try_into()?))
+        Ok(pkcs1v15::SigningKey::new(keypair.try_into()?))
     }
 }
