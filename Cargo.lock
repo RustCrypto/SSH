@@ -475,14 +475,13 @@ dependencies = [
 
 [[package]]
 name = "pkcs1"
-version = "0.7.2"
+version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "575fd6eebed721a2929faa1ee1383a49788378083bbbd7f299af75dd84195cee"
+checksum = "c8ffb9f10fa047879315e6625af03c164b16962a5368d724ed16323b68ace47f"
 dependencies = [
  "der",
  "pkcs8",
  "spki",
- "zeroize",
 ]
 
 [[package]]
@@ -569,9 +568,9 @@ dependencies = [
 
 [[package]]
 name = "rsa"
-version = "0.9.0-pre.1"
+version = "0.9.0-pre.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f16504cc31b04d2a5ec729f0c7e1b62e76634a9537f089df0ca1981dc8208a89"
+checksum = "65db0998ad35adcaca498b7358992e088ee16cc783fe6fb899da203e113a63e5"
 dependencies = [
  "byteorder",
  "const-oid",
