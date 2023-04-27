@@ -6,7 +6,7 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 #[cfg(feature = "rsa")]
 use {
     crate::private::RsaKeypair,
-    rsa::{pkcs1v15, PublicKeyParts},
+    rsa::{pkcs1v15, traits::PublicKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
 

@@ -34,7 +34,7 @@ ed25519-dalek = { version = "=2.0.0-rc.2", optional = true, default-features = f
 p256 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.6.4", optional = true, default-features = false }
-rsa = { version = "=0.9.0-pre.2", optional = true, default-features = false, features = ["sha2"] }
+rsa = { version = "0.9", optional = true, default-features = false, features = ["sha2"] }
 sec1 = { version = "0.7", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1", optional = true }
 sha1 = { version = "0.10", optional = true, default-features = false }

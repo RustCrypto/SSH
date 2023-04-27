@@ -9,7 +9,10 @@ use zeroize::Zeroize;
 #[cfg(feature = "rsa")]
 use {
     rand_core::CryptoRngCore,
-    rsa::{pkcs1v15, PublicKeyParts},
+    rsa::{
+        pkcs1v15,
+        traits::{PrivateKeyParts, PublicKeyParts},
+    },
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
 
