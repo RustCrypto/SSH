@@ -12,6 +12,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
+    bigint::BigUint,
     sha1::Sha1,
     signature::{DigestSigner, DigestVerifier},
 };
@@ -320,9 +321,20 @@ impl Signer<Signature> for DsaKeypair {
             .try_sign_digest(Sha1::new_with_prefix(message))
             .map_err(|_| signature::Error::new())?;
 
+        // Note that we need to roll our own signature encoding, as [RFC4253 section 6.6]
+        // specifies two raw 80 bit integer but the dsa::SigningKey serialization
+        // encodes to a der format.
+        let mut buf: Vec<u8> = Vec::new();
+        buf.append(&mut signature.r().to_bytes_be());
+        buf.append(&mut signature.s().to_bytes_be());
+
+        if buf.len() != DSA_SIGNATURE_SIZE {
+            return Err(signature::Error::new());
+        }
+
         Ok(Signature {
             algorithm: Algorithm::Dsa,
-            data: signature.to_vec(),
+            data: buf,
         })
     }
 }
@@ -332,8 +344,15 @@ impl Verifier<Signature> for DsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
             Algorithm::Dsa => {
-                let signature = dsa::Signature::try_from(signature.data.as_slice())?;
-
+                let data = signature.data.as_slice();
+                if data.len() != DSA_SIGNATURE_SIZE {
+                    return Err(signature::Error::new());
+                }
+                let (r, s) = data.split_at(DSA_SIGNATURE_SIZE / 2);
+                let signature = dsa::Signature::from_components(
+                    BigUint::from_bytes_be(r),
+                    BigUint::from_bytes_be(s),
+                )?;
                 dsa::VerifyingKey::try_from(self)?
                     .verify_digest(Sha1::new_with_prefix(message), &signature)
                     .map_err(|_| signature::Error::new())

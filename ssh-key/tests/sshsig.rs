@@ -16,6 +16,9 @@ use ssh_key::PrivateKey;
 #[cfg(feature = "ed25519")]
 use ssh_key::Error;
 
+#[cfg(feature = "dsa")]
+use {encoding::Decode, signature::Verifier, ssh_key::Signature};
+
 /// DSA OpenSSH-formatted private key.
 #[cfg(feature = "dsa")]
 const DSA_PRIVATE_KEY: &str = include_str!("examples/id_dsa_1024");
@@ -76,6 +79,13 @@ const MSG_EXAMPLE: &[u8] = b"testing";
 /// Example domain/namespace used for the message.
 const NAMESPACE_EXAMPLE: &str = "example";
 
+/// An ssh-agent signature response signing MSG_EXAMPLE with DSA_PRIVATE_KEY
+#[cfg(feature = "dsa")]
+const DSA_SIGNATURE_BYTES: [u8; 55] = hex!(
+    "000000077373682d647373000000282d0c9613d9745c6088ae4d9e8dbf35a557"
+    "7bd0e6796acccb22ab4809d569e86ec619510ec48b6950"
+);
+
 #[test]
 fn decode_ed25519() {
     let sshsig = ED25519_SIGNATURE.parse::<SshSig>().unwrap();
@@ -132,6 +142,17 @@ fn sign_dsa() {
         verifying_key.verify(NAMESPACE_EXAMPLE, MSG_EXAMPLE, &signature),
         Ok(())
     );
+}
+
+#[test]
+#[cfg(feature = "dsa")]
+fn verify_dsa() {
+    let signature = Signature::decode(&mut DSA_SIGNATURE_BYTES.as_ref()).unwrap();
+    let verifying_key = DSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+    verifying_key
+        .key_data()
+        .verify(MSG_EXAMPLE, &signature)
+        .unwrap();
 }
 
 #[test]
