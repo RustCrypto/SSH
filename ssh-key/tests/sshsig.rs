@@ -11,13 +11,10 @@ use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
     feature = "p256",
     feature = "rsa"
 ))]
-use ssh_key::PrivateKey;
+use {encoding::Decode, signature::Verifier, ssh_key::PrivateKey, ssh_key::Signature};
 
 #[cfg(feature = "ed25519")]
 use ssh_key::Error;
-
-#[cfg(feature = "dsa")]
-use {encoding::Decode, signature::Verifier, ssh_key::Signature};
 
 /// DSA OpenSSH-formatted private key.
 #[cfg(feature = "dsa")]
@@ -81,9 +78,44 @@ const NAMESPACE_EXAMPLE: &str = "example";
 
 /// An ssh-agent signature response signing MSG_EXAMPLE with DSA_PRIVATE_KEY
 #[cfg(feature = "dsa")]
-const DSA_SIGNATURE_BYTES: [u8; 55] = hex!(
+const DSA_SIGNATURE_OPENSSH_WIRE: [u8; 55] = hex!(
     "000000077373682d647373000000282d0c9613d9745c6088ae4d9e8dbf35a557"
     "7bd0e6796acccb22ab4809d569e86ec619510ec48b6950"
+);
+
+/// An ssh-agent signature response signing MSG_EXAMPLE with RSA_PRIVATE_KEY
+#[cfg(feature = "rsa")]
+const RSA_SIGNATURE_OPENSSH_WIRE: [u8; 404] = hex!(
+    "0000000c7273612d736861322d353132000001804ebc4f9fe2bfa1badd9f6b80"
+    "df806e6f93a31d4af7b15637d4b15e0ac180271467d5ab7a864fc48dedabf6dd"
+    "8f318a9f36824f84cba1353f453c23d6a60431aa9cc243c849cc33c9e358418b"
+    "9fe833bb8985ac35d6b72a7960097bff5e02263c4076f31eb0e64bf2a02fc85f"
+    "d75a569e13e167e29543e101e1f84254e60f0841f7843cf6e461a1ce06d1f590"
+    "c9446358ef04dfa25ec98b2c14393c9267684c6a568425bb6245d0a0dd44f9fd"
+    "bf352cb70eba53c6b2aaff8890a22d8769fd253b3d4c6a19237d2b7f6ae08557"
+    "a7e7cca3e78bef33f3f8a86adbce79713221911c9647c126d5511b0f5c1f9133"
+    "0a6015f3bf9a27d5afea84a499e9e4a1c058355c09d2ce5ff441638596b4447c"
+    "717db04b6365dff0d6f9a0123e9304b033c404b2f4709446c71adc0acc3c042b"
+    "f221ae7446f2371bd40937be31da77c04027c3be1bbd4ec8ac77cd5d453fbca1"
+    "c9805d54f4b8348549bf480892cc6430ba13f9483361632b82ae54829bdfa435"
+    "4d7ac8daa4f05b03039d140ff4fb88f5e5499ee5"
+);
+
+/// An ssh-agent signature response signing MSG_EXAMPLE with ECDSA_P256_PRIVATE_KEY
+#[cfg(feature = "p256")]
+const ECDSA_P256_SIGNATURE_OPENSSH_WIRE: [u8; 100] = hex!(
+    "0000001365636473612d736861322d6e69737470323536000000490000002100"
+    "f8291cf8859e0776394431c2a20d9efe80938844decfb7f29617475bc739c832"
+    "0000002038228f9c5cde47a7daf510f423ab6b8457fff1907c13af4cabf27a8f"
+    "3df7d99c"
+);
+
+/// An ssh-agent signature response signing MSG_EXAMPLE with ED25519_PRIVATE_KEY
+#[cfg(feature = "ed25519")]
+const ED25519_SIGNATURE_OPENSSH_WIRE: [u8; 83] = hex!(
+    "0000000b7373682d6564323535313900000040e4d03342608fdb46fb6ab5b0aa"
+    "07dfecae8ee2a7ce8514065f580aec85c325795e9f65415d7554ee7929f43b5a"
+    "9fc9f13874d8f2e2158c22dfd66d3ab92ede0d"
 );
 
 #[test]
@@ -146,8 +178,8 @@ fn sign_dsa() {
 
 #[test]
 #[cfg(feature = "dsa")]
-fn verify_dsa() {
-    let signature = Signature::decode(&mut DSA_SIGNATURE_BYTES.as_ref()).unwrap();
+fn verify_dsa_openssh_wire_format() {
+    let signature = Signature::decode(&mut DSA_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
     let verifying_key = DSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -172,6 +204,17 @@ fn sign_ecdsa_p256() {
 }
 
 #[test]
+#[cfg(feature = "p256")]
+fn verify_ecdsa_p256_openssh_wire_format() {
+    let signature = Signature::decode(&mut ECDSA_P256_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let verifying_key = ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+    verifying_key
+        .key_data()
+        .verify(MSG_EXAMPLE, &signature)
+        .unwrap();
+}
+
+#[test]
 #[cfg(feature = "ed25519")]
 fn sign_ed25519() {
     let signing_key = PrivateKey::from_openssh(ED25519_PRIVATE_KEY).unwrap();
@@ -180,6 +223,17 @@ fn sign_ed25519() {
         .unwrap();
 
     assert_eq!(signature, ED25519_SIGNATURE.parse::<SshSig>().unwrap());
+}
+
+#[test]
+#[cfg(feature = "ed25519")]
+fn verify_ed25519_openssh_wire_format() {
+    let signature = Signature::decode(&mut ED25519_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let verifying_key = ED25519_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+    verifying_key
+        .key_data()
+        .verify(MSG_EXAMPLE, &signature)
+        .unwrap();
 }
 
 #[test]
@@ -196,6 +250,17 @@ fn sign_rsa() {
         verifying_key.verify(NAMESPACE_EXAMPLE, MSG_EXAMPLE, &signature),
         Ok(())
     );
+}
+
+#[test]
+#[cfg(feature = "rsa")]
+fn verify_rsa_openssh_wire_format() {
+    let signature = Signature::decode(&mut RSA_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let verifying_key = RSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+    verifying_key
+        .key_data()
+        .verify(MSG_EXAMPLE, &signature)
+        .unwrap();
 }
 
 #[test]
