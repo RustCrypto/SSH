@@ -8,15 +8,35 @@ use encoding::Label;
 
 #[cfg(feature = "encryption")]
 use aes::{
-    cipher::{InnerIvInit, KeyInit, StreamCipherCore},
-    Aes256,
+    cipher::{BlockCipher, BlockDecryptMut, BlockEncryptMut, KeyInit, KeyIvInit, StreamCipherCore},
+    Aes128, Aes192, Aes256,
 };
+#[cfg(feature = "encryption")]
+use cbc::{cipher::block_padding::NoPadding, Decryptor, Encryptor};
 
 #[cfg(feature = "aes-gcm")]
-use aes_gcm::{aead::AeadInPlace, Aes256Gcm};
+use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
+
+/// AES-128 in block chaining (CBC) mode
+const AES128_CBC: &str = "aes128-cbc";
+
+/// AES-192 in block chaining (CBC) mode
+const AES192_CBC: &str = "aes192-cbc";
+
+/// AES-256 in block chaining (CBC) mode
+const AES256_CBC: &str = "aes256-cbc";
+
+/// AES-128 in counter (CTR) mode
+const AES128_CTR: &str = "aes128-ctr";
+
+/// AES-192 in counter (CTR) mode
+const AES192_CTR: &str = "aes192-ctr";
 
 /// AES-256 in counter (CTR) mode
 const AES256_CTR: &str = "aes256-ctr";
+
+/// AES-128 in Galois/Counter Mode (GCM).
+const AES128_GCM: &str = "aes128-gcm@openssh.com";
 
 /// AES-256 in Galois/Counter Mode (GCM).
 const AES256_GCM: &str = "aes256-gcm@openssh.com";
@@ -41,9 +61,27 @@ pub enum Cipher {
     /// No cipher (unencrypted key).
     None,
 
+    /// AES-128 in block chaining (CBC) mode.
+    Aes128Cbc,
+
+    /// AES-192 in block chaining (CBC) mode.
+    Aes192Cbc,
+
+    /// AES-256 in block chaining (CBC) mode.
+    Aes256Cbc,
+
+    /// AES-128 in counter (CTR) mode.
+    Aes128Ctr,
+
+    /// AES-192 in counter (CTR) mode.
+    Aes192Ctr,
+
     /// AES-256 in counter (CTR) mode.
     #[default]
     Aes256Ctr,
+
+    /// AES-128 in Galois/Counter Mode (GCM).
+    Aes128Gcm,
 
     /// AES-256 in Galois/Counter Mode (GCM).
     Aes256Gcm,
@@ -57,7 +95,13 @@ impl Cipher {
     pub fn new(ciphername: &str) -> Result<Self> {
         match ciphername {
             "none" => Ok(Self::None),
+            AES128_CBC => Ok(Self::Aes128Cbc),
+            AES192_CBC => Ok(Self::Aes192Cbc),
+            AES256_CBC => Ok(Self::Aes256Cbc),
+            AES128_CTR => Ok(Self::Aes128Ctr),
+            AES192_CTR => Ok(Self::Aes192Ctr),
             AES256_CTR => Ok(Self::Aes256Ctr),
+            AES128_GCM => Ok(Self::Aes128Gcm),
             AES256_GCM => Ok(Self::Aes256Gcm),
             _ => Err(Error::AlgorithmUnknown),
         }
@@ -67,7 +111,13 @@ impl Cipher {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
+            Self::Aes128Cbc => AES128_CBC,
+            Self::Aes192Cbc => AES192_CBC,
+            Self::Aes256Cbc => AES256_CBC,
+            Self::Aes128Ctr => AES128_CTR,
+            Self::Aes192Ctr => AES192_CTR,
             Self::Aes256Ctr => AES256_CTR,
+            Self::Aes128Gcm => AES128_GCM,
             Self::Aes256Gcm => AES256_GCM,
         }
     }
@@ -76,7 +126,13 @@ impl Cipher {
     pub fn key_and_iv_size(self) -> Option<(usize, usize)> {
         match self {
             Self::None => None,
+            Self::Aes128Cbc => Some((16, 16)),
+            Self::Aes192Cbc => Some((24, 16)),
+            Self::Aes256Cbc => Some((32, 16)),
+            Self::Aes128Ctr => Some((16, 16)),
+            Self::Aes192Ctr => Some((24, 16)),
             Self::Aes256Ctr => Some((32, 16)),
+            Self::Aes128Gcm => Some((16, 12)),
             Self::Aes256Gcm => Some((32, 12)),
         }
     }
@@ -85,7 +141,14 @@ impl Cipher {
     pub fn block_size(self) -> usize {
         match self {
             Self::None => 8,
-            Self::Aes256Ctr | Self::Aes256Gcm => 16,
+            Self::Aes128Cbc
+            | Self::Aes192Cbc
+            | Self::Aes256Cbc
+            | Self::Aes128Ctr
+            | Self::Aes192Ctr
+            | Self::Aes256Ctr
+            | Self::Aes128Gcm
+            | Self::Aes256Gcm => 16,
         }
     }
 
@@ -101,7 +164,7 @@ impl Cipher {
 
     /// Does this cipher have an authentication tag? (i.e. is it an AEAD mode?)
     pub fn has_tag(self) -> bool {
-        matches!(self, Self::Aes256Gcm)
+        matches!(self, Self::Aes128Gcm | Self::Aes256Gcm)
     }
 
     /// Is this cipher `none`?
@@ -118,13 +181,42 @@ impl Cipher {
     #[cfg(feature = "encryption")]
     pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
         match self {
-            Self::Aes256Ctr => {
+            Self::Aes128Cbc => {
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
+                cbc_decrypt::<Aes128>(key, iv, buffer)
+            }
+            Self::Aes192Cbc => {
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
+                cbc_decrypt::<Aes192>(key, iv, buffer)
+            }
+            Self::Aes256Cbc => {
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
+                cbc_decrypt::<Aes256>(key, iv, buffer)
+            }
+            Self::Aes128Ctr | Self::Aes192Ctr | Self::Aes256Ctr => {
                 if tag.is_some() {
                     return Err(Error::Crypto);
                 }
 
                 // Counter mode encryption and decryption are the same operation
                 self.encrypt(key, iv, buffer)?;
+                Ok(())
+            }
+            #[cfg(feature = "aes-gcm")]
+            Self::Aes128Gcm => {
+                let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::Crypto)?;
+                let nonce = AeadNonce::try_from(iv).map_err(|_| Error::Crypto)?;
+                let tag = tag.ok_or(Error::Crypto)?;
+                cipher
+                    .decrypt_in_place_detached(&nonce.into(), &[], buffer, &tag.into())
+                    .map_err(|_| Error::Crypto)?;
+
                 Ok(())
             }
             #[cfg(feature = "aes-gcm")]
@@ -146,16 +238,39 @@ impl Cipher {
     #[cfg(feature = "encryption")]
     pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<Option<Tag>> {
         match self {
-            Self::Aes256Ctr => {
-                let cipher = Aes256::new_from_slice(key)
-                    .and_then(|aes| Ctr128BE::inner_iv_slice_init(aes, iv))
-                    .map_err(|_| Error::Crypto)?;
-
-                cipher
-                    .try_apply_keystream_partial(buffer.into())
-                    .map_err(|_| Error::Crypto)?;
-
+            Self::Aes128Cbc => {
+                cbc_encrypt::<Aes128>(key, iv, buffer)?;
                 Ok(None)
+            }
+            Self::Aes192Cbc => {
+                cbc_encrypt::<Aes192>(key, iv, buffer)?;
+                Ok(None)
+            }
+            Self::Aes256Cbc => {
+                cbc_encrypt::<Aes256>(key, iv, buffer)?;
+                Ok(None)
+            }
+            Self::Aes128Ctr => {
+                ctr_encrypt::<Ctr128BE<Aes128>>(key, iv, buffer)?;
+                Ok(None)
+            }
+            Self::Aes192Ctr => {
+                ctr_encrypt::<Ctr128BE<Aes192>>(key, iv, buffer)?;
+                Ok(None)
+            }
+            Self::Aes256Ctr => {
+                ctr_encrypt::<Ctr128BE<Aes256>>(key, iv, buffer)?;
+                Ok(None)
+            }
+            #[cfg(feature = "aes-gcm")]
+            Self::Aes128Gcm => {
+                let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::Crypto)?;
+                let nonce = AeadNonce::try_from(iv).map_err(|_| Error::Crypto)?;
+                let tag = cipher
+                    .encrypt_in_place_detached(&nonce.into(), &[], buffer)
+                    .map_err(|_| Error::Crypto)?;
+
+                Ok(Some(tag.into()))
             }
             #[cfg(feature = "aes-gcm")]
             Self::Aes256Gcm => {
@@ -194,4 +309,46 @@ impl str::FromStr for Cipher {
     fn from_str(id: &str) -> Result<Self> {
         Self::new(id)
     }
+}
+
+#[cfg(feature = "encryption")]
+fn cbc_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
+where
+    C: BlockEncryptMut + BlockCipher + KeyInit,
+{
+    let cipher = Encryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::Crypto)?;
+
+    // Since the passed in buffer is already padded, using NoPadding here
+    cipher
+        .encrypt_padded_mut::<NoPadding>(buffer, buffer.len())
+        .map_err(|_| Error::Crypto)?;
+    Ok(())
+}
+
+#[cfg(feature = "encryption")]
+fn cbc_decrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
+where
+    C: BlockDecryptMut + BlockCipher + KeyInit,
+{
+    let cipher = Decryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::Crypto)?;
+
+    // Since the passed in buffer is already padded, using NoPadding here
+    cipher
+        .decrypt_padded_mut::<NoPadding>(buffer)
+        .map_err(|_| Error::Crypto)?;
+    Ok(())
+}
+
+#[cfg(feature = "encryption")]
+fn ctr_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
+where
+    C: StreamCipherCore + KeyIvInit
+{
+    let cipher = C::new_from_slices(key, iv)
+        .map_err(|_| Error::Crypto)?;
+
+    cipher
+        .try_apply_keystream_partial(buffer.into())
+        .map_err(|_| Error::Crypto)?;
+    Ok(())
 }
