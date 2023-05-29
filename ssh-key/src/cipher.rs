@@ -41,6 +41,12 @@ const AES128_GCM: &str = "aes128-gcm@openssh.com";
 /// AES-256 in Galois/Counter Mode (GCM).
 const AES256_GCM: &str = "aes256-gcm@openssh.com";
 
+/// ChaCha20-Poly1305
+const CHACHA20_POLY1305: &str = "chacha20-poly1305@openssh.com";
+
+/// Triple-DES in block chaining (CBC) mode
+const TDES_CBC: &str = "3des-cbc";
+
 /// Nonces for AEAD modes.
 #[cfg(feature = "aes-gcm")]
 type AeadNonce = [u8; 12];
@@ -85,6 +91,12 @@ pub enum Cipher {
 
     /// AES-256 in Galois/Counter Mode (GCM).
     Aes256Gcm,
+
+    /// ChaCha20-Poly1305
+    ChaCha20Poly1305,
+
+    /// TripleDES in block chaining (CBC) mode
+    TDesCbc,
 }
 
 impl Cipher {
@@ -103,6 +115,8 @@ impl Cipher {
             AES256_CTR => Ok(Self::Aes256Ctr),
             AES128_GCM => Ok(Self::Aes128Gcm),
             AES256_GCM => Ok(Self::Aes256Gcm),
+            CHACHA20_POLY1305 => Ok(Self::ChaCha20Poly1305),
+            TDES_CBC => Ok(Self::TDesCbc),
             _ => Err(Error::AlgorithmUnknown),
         }
     }
@@ -119,6 +133,8 @@ impl Cipher {
             Self::Aes256Ctr => AES256_CTR,
             Self::Aes128Gcm => AES128_GCM,
             Self::Aes256Gcm => AES256_GCM,
+            Self::ChaCha20Poly1305 => CHACHA20_POLY1305,
+            Self::TDesCbc => TDES_CBC,
         }
     }
 
@@ -134,13 +150,15 @@ impl Cipher {
             Self::Aes256Ctr => Some((32, 16)),
             Self::Aes128Gcm => Some((16, 12)),
             Self::Aes256Gcm => Some((32, 12)),
+            Self::ChaCha20Poly1305 => Some((64, 0)),
+            Self::TDesCbc => Some((24, 8)),
         }
     }
 
     /// Get the block size for this cipher in bytes.
     pub fn block_size(self) -> usize {
         match self {
-            Self::None => 8,
+            Self::None | Self::ChaCha20Poly1305 | Self::TDesCbc => 8,
             Self::Aes128Cbc
             | Self::Aes192Cbc
             | Self::Aes256Cbc
@@ -164,7 +182,10 @@ impl Cipher {
 
     /// Does this cipher have an authentication tag? (i.e. is it an AEAD mode?)
     pub fn has_tag(self) -> bool {
-        matches!(self, Self::Aes128Gcm | Self::Aes256Gcm)
+        matches!(
+            self,
+            Self::Aes128Gcm | Self::Aes256Gcm | Self::ChaCha20Poly1305
+        )
     }
 
     /// Is this cipher `none`?
@@ -342,10 +363,9 @@ where
 #[cfg(feature = "encryption")]
 fn ctr_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
 where
-    C: StreamCipherCore + KeyIvInit
+    C: StreamCipherCore + KeyIvInit,
 {
-    let cipher = C::new_from_slices(key, iv)
-        .map_err(|_| Error::Crypto)?;
+    let cipher = C::new_from_slices(key, iv).map_err(|_| Error::Crypto)?;
 
     cipher
         .try_apply_keystream_partial(buffer.into())

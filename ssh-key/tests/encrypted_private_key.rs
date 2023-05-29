@@ -49,6 +49,16 @@ const OPENSSH_AES128_GCM_ED25519_EXAMPLE: &str = include_str!("examples/id_ed255
 /// Plaintext is `OPENSSH_ED25519_EXAMPLE`.
 const OPENSSH_AES256_GCM_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519.aes256-gcm.enc");
 
+/// ChaCha20-Poly1305 encrypted Ed25519 OpenSSH-formatted private key.
+///
+/// Plaintext is `OPENSSH_ED25519_EXAMPLE`.
+const OPENSSH_CHACHA20_POLY1305_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519.chacha20-poly1305.enc");
+
+/// TripleDES-CBC encrypted Ed25519 OpenSSH-formatted private key.
+///
+/// Plaintext is `OPENSSH_ED25519_EXAMPLE`.
+const OPENSSH_3DES_CBC_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519.3des-cbc.enc");
+
 /// Bad password; don't actually use outside tests!
 #[cfg(all(feature = "encryption"))]
 const PASSWORD: &[u8] = b"hunter42";
@@ -94,6 +104,49 @@ fn decode_openssh_aes256_gcm() {
         key.public_key().key_data().ed25519().unwrap().as_ref(),
     );
 }
+
+#[test]
+fn decode_openssh_chacha20_poly1305() {
+    let key = PrivateKey::from_openssh(OPENSSH_CHACHA20_POLY1305_ED25519_EXAMPLE).unwrap();
+    assert_eq!(Algorithm::Ed25519, key.algorithm());
+    assert_eq!(Cipher::ChaCha20Poly1305, key.cipher());
+    assert_eq!(KdfAlg::Bcrypt, key.kdf().algorithm());
+
+    match key.kdf() {
+        Kdf::Bcrypt { salt, rounds } => {
+            assert_eq!(salt, &hex!("f651ca3efb15904d05c216a5041ea89a"));
+            assert_eq!(*rounds, 16);
+        }
+        other => panic!("unexpected KDF algorithm: {:?}", other),
+    }
+
+    assert_eq!(
+        &hex!("b33eaef37ea2df7caa010defdea34e241f65f1b529a4f43ed14327f5c54aab62"),
+        key.public_key().key_data().ed25519().unwrap().as_ref(),
+    );
+}
+
+#[test]
+fn decode_openssh_3des_cbc() {
+    let key = PrivateKey::from_openssh(OPENSSH_3DES_CBC_ED25519_EXAMPLE).unwrap();
+    assert_eq!(Algorithm::Ed25519, key.algorithm());
+    assert_eq!(Cipher::TDesCbc, key.cipher());
+    assert_eq!(KdfAlg::Bcrypt, key.kdf().algorithm());
+
+    match key.kdf() {
+        Kdf::Bcrypt { salt, rounds } => {
+            assert_eq!(salt, &hex!("1afcebea3c598c277e7edc2b78db1e94"));
+            assert_eq!(*rounds, 16);
+        }
+        other => panic!("unexpected KDF algorithm: {:?}", other),
+    }
+
+    assert_eq!(
+        &hex!("b33eaef37ea2df7caa010defdea34e241f65f1b529a4f43ed14327f5c54aab62"),
+        key.public_key().key_data().ed25519().unwrap().as_ref(),
+    );
+}
+
 #[cfg(all(feature = "encryption"))]
 #[test]
 fn decrypt_openssh_aes128_ctr() {
