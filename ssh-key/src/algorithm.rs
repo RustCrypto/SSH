@@ -80,7 +80,7 @@ const SK_SSH_ED25519: &str = "sk-ssh-ed25519@openssh.com";
 ///
 /// This type provides a registry of supported digital signature algorithms
 /// used for SSH keys.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Algorithm {
     /// Digital Signature Algorithm
@@ -93,6 +93,7 @@ pub enum Algorithm {
     },
 
     /// Ed25519
+    #[default]
     Ed25519,
 
     /// RSA
@@ -268,12 +269,6 @@ impl Label for Algorithm {
     type Error = Error;
 }
 
-impl Default for Algorithm {
-    fn default() -> Algorithm {
-        Algorithm::Ed25519
-    }
-}
-
 impl fmt::Display for Algorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
@@ -363,10 +358,11 @@ impl str::FromStr for EcdsaCurve {
 }
 
 /// Hashing algorithms a.k.a. digest functions.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum HashAlg {
     /// SHA-256
+    #[default]
     Sha256,
 
     /// SHA-512
@@ -424,12 +420,6 @@ impl AsRef<str> for HashAlg {
     }
 }
 
-impl Default for HashAlg {
-    fn default() -> Self {
-        HashAlg::Sha256
-    }
-}
-
 impl fmt::Display for HashAlg {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(self.as_str())
@@ -445,13 +435,14 @@ impl str::FromStr for HashAlg {
 }
 
 /// Key Derivation Function (KDF) algorithms.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum KdfAlg {
     /// None.
     None,
 
     /// bcrypt-pbkdf.
+    #[default]
     Bcrypt,
 }
 
@@ -489,12 +480,6 @@ impl Label for KdfAlg {
 impl AsRef<str> for KdfAlg {
     fn as_ref(&self) -> &str {
         self.as_str()
-    }
-}
-
-impl Default for KdfAlg {
-    fn default() -> KdfAlg {
-        KdfAlg::Bcrypt
     }
 }
 
