@@ -35,13 +35,14 @@ pub(crate) type Tag = [u8; 16];
 type Ctr128BE<Cipher> = ctr::CtrCore<Cipher, ctr::flavors::Ctr128BE>;
 
 /// Cipher algorithms.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Cipher {
     /// No cipher (unencrypted key).
     None,
 
     /// AES-256 in counter (CTR) mode.
+    #[default]
     Aes256Ctr,
 
     /// AES-256 in Galois/Counter Mode (GCM).
@@ -179,12 +180,6 @@ impl AsRef<str> for Cipher {
 
 impl Label for Cipher {
     type Error = Error;
-}
-
-impl Default for Cipher {
-    fn default() -> Cipher {
-        Cipher::Aes256Ctr
-    }
 }
 
 impl fmt::Display for Cipher {
