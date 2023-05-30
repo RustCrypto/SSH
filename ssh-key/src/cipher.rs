@@ -48,7 +48,7 @@ const CHACHA20_POLY1305: &str = "chacha20-poly1305@openssh.com";
 const TDES_CBC: &str = "3des-cbc";
 
 /// Nonces for AEAD modes.
-#[cfg(feature = "aes-gcm")]
+#[cfg(any(feature = "aes-gcm", feature = "chacha20poly1305"))]
 type AeadNonce = [u8; 12];
 
 /// Authentication tag for ciphertext data.
@@ -251,6 +251,10 @@ impl Cipher {
 
                 Ok(())
             }
+            #[cfg(feature = "chacha20poly1305")]
+            Self::ChaCha20Poly1305 => {
+                chacha20_poly1305_openssh::chacha20poly1305_decrypt(key, buffer, tag)
+            }
             _ => Err(Error::Crypto),
         }
     }
@@ -302,6 +306,10 @@ impl Cipher {
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(Some(tag.into()))
+            }
+            #[cfg(feature = "chacha20poly1305")]
+            Self::ChaCha20Poly1305 => {
+                chacha20_poly1305_openssh::chacha20poly1305_encrypt(key, buffer).map(Some)
             }
             _ => Err(Error::Crypto),
         }
@@ -371,4 +379,70 @@ where
         .try_apply_keystream_partial(buffer.into())
         .map_err(|_| Error::Crypto)?;
     Ok(())
+}
+
+/// There are some differences between `chacha20-poly1305@openssh.com` and
+/// RFC 8439 `chacha20-poly1305`. Therefore, this module implements the cipher
+/// required by the sshkey.
+///
+/// - The input of Poly1305 is not padded
+/// - The lengths of ciphertext and AAD do not authenticate with Poly1305
+/// - There are two ChaCha20 keys derived from KDF
+/// - IV is not generated from KDF
+#[cfg(feature = "chacha20poly1305")]
+mod chacha20_poly1305_openssh {
+    use super::*;
+
+    #[cfg(feature = "encryption")]
+    use aes::cipher::{StreamCipher, StreamCipherSeek};
+    use chacha20::ChaCha20;
+    use poly1305::Poly1305;
+    use subtle::ConstantTimeEq;
+
+    type ChaCha20Key = [u8; 32];
+
+    #[inline]
+    fn chacha20poly1305_init(key: &[u8]) -> Result<(ChaCha20, Poly1305)> {
+        // The key here is actually concatenation of two chacha20 keys.
+        if key.len() != 64 {
+            return Err(Error::Crypto);
+        }
+        let k_main = ChaCha20Key::try_from(&key[..32]).map_err(|_| Error::Crypto)?;
+        let _k_header = ChaCha20Key::try_from(&key[32..]).map_err(|_| Error::Crypto)?;
+        // The nonce is from packet seq, but the value is alway 0 in sshkey.
+        let nonce: AeadNonce = [0u8; 12];
+
+        let mut main_cipher = ChaCha20::new(&k_main.into(), &nonce.into());
+        let mut poly1305_key = poly1305::Key::default();
+        main_cipher.apply_keystream(&mut poly1305_key);
+        let poly1305 = Poly1305::new(&poly1305_key);
+        // Seek to block 1
+        main_cipher.seek(64);
+
+        Ok((main_cipher, poly1305))
+    }
+
+    #[inline]
+    pub fn chacha20poly1305_encrypt(key: &[u8], buffer: &mut [u8]) -> Result<Tag> {
+        let (mut cipher, poly1305) = chacha20poly1305_init(key)?;
+
+        cipher.apply_keystream(buffer);
+        let tag = poly1305.compute_unpadded(buffer);
+
+        Ok(tag.into())
+    }
+
+    #[inline]
+    pub fn chacha20poly1305_decrypt(key: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
+        let (mut cipher, poly1305) = chacha20poly1305_init(key)?;
+        let tag = tag.ok_or(Error::Crypto)?;
+
+        let expect_tag = poly1305.compute_unpadded(buffer);
+        if expect_tag.ct_eq(&tag).into() {
+            cipher.apply_keystream(buffer);
+            Ok(())
+        } else {
+            Err(Error::Crypto)
+        }
+    }
 }
