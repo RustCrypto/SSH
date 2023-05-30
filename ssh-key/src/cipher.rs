@@ -389,6 +389,8 @@ where
 /// - The lengths of ciphertext and AAD do not authenticate with Poly1305
 /// - There are two ChaCha20 keys derived from KDF
 /// - IV is not generated from KDF
+///
+/// [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
 #[cfg(feature = "chacha20poly1305")]
 mod chacha20_poly1305_openssh {
     use super::*;
