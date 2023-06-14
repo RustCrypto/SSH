@@ -33,6 +33,7 @@ poly1305 = { version = "0.8.0", optional = true, default-features = false }
 bcrypt-pbkdf = { version = "0.10", optional = true, default-features = false, features = ["alloc"] }
 bigint = { package = "num-bigint-dig", version = "0.8", optional = true, default-features = false }
 dsa = { version = "0.6", optional = true, default-features = false }
+des = { version = "0.8.1", optional = true, default-features = false }
 ed25519-dalek = { version = "=2.0.0-rc.2", optional = true, default-features = false }
 p256 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
@@ -75,6 +76,7 @@ getrandom = ["rand_core/getrandom"]
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 rsa = ["dep:bigint", "dep:rsa", "alloc", "rand_core"]
+des = ["dep:des", "encryption"]
 
 [package.metadata.docs.rs]
 all-features = true

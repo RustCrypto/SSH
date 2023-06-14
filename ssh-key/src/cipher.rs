@@ -17,6 +17,9 @@ use cbc::{cipher::block_padding::NoPadding, Decryptor, Encryptor};
 #[cfg(feature = "aes-gcm")]
 use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
 
+#[cfg(feature = "des")]
+use des::TdesEde3;
+
 /// AES-128 in block chaining (CBC) mode
 const AES128_CBC: &str = "aes128-cbc";
 
@@ -255,6 +258,13 @@ impl Cipher {
             Self::ChaCha20Poly1305 => {
                 chacha20_poly1305_openssh::chacha20poly1305_decrypt(key, buffer, tag)
             }
+            #[cfg(feature = "des")]
+            Self::TDesCbc => {
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
+                cbc_decrypt::<TdesEde3>(key, iv, buffer)
+            }
             _ => Err(Error::Crypto),
         }
     }
@@ -310,6 +320,11 @@ impl Cipher {
             #[cfg(feature = "chacha20poly1305")]
             Self::ChaCha20Poly1305 => {
                 chacha20_poly1305_openssh::chacha20poly1305_encrypt(key, buffer).map(Some)
+            }
+            #[cfg(feature = "des")]
+            Self::TDesCbc => {
+                cbc_encrypt::<TdesEde3>(key, iv, buffer)?;
+                Ok(None)
             }
             _ => Err(Error::Crypto),
         }

@@ -262,6 +262,18 @@ fn decrypt_openssh_chacha20_poly1305() {
     );
 }
 
+#[cfg(all(feature = "des"))]
+#[test]
+fn decrypt_openssh_3des() {
+    let key_enc = PrivateKey::from_openssh(OPENSSH_3DES_CBC_ED25519_EXAMPLE).unwrap();
+    assert_eq!(Cipher::TDesCbc, key_enc.cipher());
+    let key_dec = key_enc.decrypt(PASSWORD).unwrap();
+    assert_eq!(
+        PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap(),
+        key_dec
+    );
+}
+
 #[test]
 fn encode_openssh_aes256_ctr() {
     let key = PrivateKey::from_openssh(OPENSSH_AES256_CTR_ED25519_EXAMPLE).unwrap();
@@ -449,6 +461,27 @@ fn encrypt_openssh_chacha20_poly1305() {
 
     let key_enc = key_dec
         .encrypt_with_cipher(&mut OsRng, Cipher::ChaCha20Poly1305, PASSWORD)
+        .unwrap();
+
+    // Ensure encrypted key round trips through encoder/decoder
+    let key_enc_str = key_enc.to_openssh(Default::default()).unwrap();
+    let key_enc2 = PrivateKey::from_openssh(&*key_enc_str).unwrap();
+    assert_eq!(key_enc, key_enc2);
+
+    // Ensure decrypted key matches the original
+    let key_dec2 = key_enc.decrypt(PASSWORD).unwrap();
+    assert_eq!(key_dec, key_dec2);
+}
+
+#[cfg(all(feature = "des", feature = "getrandom"))]
+#[test]
+fn encrypt_openssh_3des() {
+    use rand_core::OsRng;
+
+    let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
+
+    let key_enc = key_dec
+        .encrypt_with_cipher(&mut OsRng, Cipher::TDesCbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
