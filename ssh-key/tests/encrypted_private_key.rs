@@ -262,7 +262,7 @@ fn decrypt_openssh_chacha20_poly1305() {
     );
 }
 
-#[cfg(all(feature = "des"))]
+#[cfg(all(feature = "tdes"))]
 #[test]
 fn decrypt_openssh_3des() {
     let key_enc = PrivateKey::from_openssh(OPENSSH_3DES_CBC_ED25519_EXAMPLE).unwrap();
@@ -473,7 +473,7 @@ fn encrypt_openssh_chacha20_poly1305() {
     assert_eq!(key_dec, key_dec2);
 }
 
-#[cfg(all(feature = "des", feature = "getrandom"))]
+#[cfg(all(feature = "tdes", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_3des() {
     use rand_core::OsRng;
