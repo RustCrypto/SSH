@@ -115,18 +115,16 @@ impl Decode for EcdsaPublicKey {
 }
 
 impl Encode for EcdsaPublicKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.curve().encoded_len()?,
             4, // uint32 length prefix
             self.as_ref().len(),
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.curve().encode(writer)?;
         self.as_ref().encode(writer)?;
         Ok(())

@@ -2,7 +2,7 @@
 
 use crate::{Error, Result};
 use core::{fmt, str};
-use encoding::Label;
+use encoding::{Label, LabelError};
 
 #[cfg(feature = "alloc")]
 use {
@@ -128,29 +128,7 @@ impl Algorithm {
     /// - `sk-ecdsa-sha2-nistp256@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519@openssh.com` (FIDO/U2F key)
     pub fn new(id: &str) -> Result<Self> {
-        match id {
-            SSH_DSA => Ok(Algorithm::Dsa),
-            ECDSA_SHA2_P256 => Ok(Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP256,
-            }),
-            ECDSA_SHA2_P384 => Ok(Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP384,
-            }),
-            ECDSA_SHA2_P521 => Ok(Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP521,
-            }),
-            RSA_SHA2_256 => Ok(Algorithm::Rsa {
-                hash: Some(HashAlg::Sha256),
-            }),
-            RSA_SHA2_512 => Ok(Algorithm::Rsa {
-                hash: Some(HashAlg::Sha512),
-            }),
-            SSH_ED25519 => Ok(Algorithm::Ed25519),
-            SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
-            SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
-            SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
-            _ => Err(Error::AlgorithmUnknown),
-        }
+        Ok(id.parse()?)
     }
 
     /// Decode algorithm from the given string identifier as used by
@@ -265,9 +243,7 @@ impl AsRef<str> for Algorithm {
     }
 }
 
-impl Label for Algorithm {
-    type Error = Error;
-}
+impl Label for Algorithm {}
 
 impl fmt::Display for Algorithm {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -276,10 +252,32 @@ impl fmt::Display for Algorithm {
 }
 
 impl str::FromStr for Algorithm {
-    type Err = Error;
+    type Err = LabelError;
 
-    fn from_str(id: &str) -> Result<Self> {
-        Self::new(id)
+    fn from_str(id: &str) -> core::result::Result<Self, LabelError> {
+        match id {
+            SSH_DSA => Ok(Algorithm::Dsa),
+            ECDSA_SHA2_P256 => Ok(Algorithm::Ecdsa {
+                curve: EcdsaCurve::NistP256,
+            }),
+            ECDSA_SHA2_P384 => Ok(Algorithm::Ecdsa {
+                curve: EcdsaCurve::NistP384,
+            }),
+            ECDSA_SHA2_P521 => Ok(Algorithm::Ecdsa {
+                curve: EcdsaCurve::NistP521,
+            }),
+            RSA_SHA2_256 => Ok(Algorithm::Rsa {
+                hash: Some(HashAlg::Sha256),
+            }),
+            RSA_SHA2_512 => Ok(Algorithm::Rsa {
+                hash: Some(HashAlg::Sha512),
+            }),
+            SSH_ED25519 => Ok(Algorithm::Ed25519),
+            SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
+            SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
+            SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            _ => Err(LabelError::new(id)),
+        }
     }
 }
 
@@ -305,12 +303,7 @@ impl EcdsaCurve {
     /// - `nistp384`
     /// - `nistp521`
     pub fn new(id: &str) -> Result<Self> {
-        match id {
-            "nistp256" => Ok(EcdsaCurve::NistP256),
-            "nistp384" => Ok(EcdsaCurve::NistP384),
-            "nistp521" => Ok(EcdsaCurve::NistP521),
-            _ => Err(Error::AlgorithmUnknown),
-        }
+        Ok(id.parse()?)
     }
 
     /// Get the string identifier which corresponds to this ECDSA elliptic curve.
@@ -339,9 +332,7 @@ impl AsRef<str> for EcdsaCurve {
     }
 }
 
-impl Label for EcdsaCurve {
-    type Error = Error;
-}
+impl Label for EcdsaCurve {}
 
 impl fmt::Display for EcdsaCurve {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -350,10 +341,15 @@ impl fmt::Display for EcdsaCurve {
 }
 
 impl str::FromStr for EcdsaCurve {
-    type Err = Error;
+    type Err = LabelError;
 
-    fn from_str(id: &str) -> Result<Self> {
-        EcdsaCurve::new(id)
+    fn from_str(id: &str) -> core::result::Result<Self, LabelError> {
+        match id {
+            "nistp256" => Ok(EcdsaCurve::NistP256),
+            "nistp384" => Ok(EcdsaCurve::NistP384),
+            "nistp521" => Ok(EcdsaCurve::NistP521),
+            _ => Err(LabelError::new(id)),
+        }
     }
 }
 
@@ -377,11 +373,7 @@ impl HashAlg {
     /// - `sha256`
     /// - `sha512`
     pub fn new(id: &str) -> Result<Self> {
-        match id {
-            SHA256 => Ok(HashAlg::Sha256),
-            SHA512 => Ok(HashAlg::Sha512),
-            _ => Err(Error::AlgorithmUnknown),
-        }
+        Ok(id.parse()?)
     }
 
     /// Get the string identifier for this hash algorithm.
@@ -410,9 +402,7 @@ impl HashAlg {
     }
 }
 
-impl Label for HashAlg {
-    type Error = Error;
-}
+impl Label for HashAlg {}
 
 impl AsRef<str> for HashAlg {
     fn as_ref(&self) -> &str {
@@ -427,10 +417,14 @@ impl fmt::Display for HashAlg {
 }
 
 impl str::FromStr for HashAlg {
-    type Err = Error;
+    type Err = LabelError;
 
-    fn from_str(id: &str) -> Result<Self> {
-        HashAlg::new(id)
+    fn from_str(id: &str) -> core::result::Result<Self, LabelError> {
+        match id {
+            SHA256 => Ok(HashAlg::Sha256),
+            SHA512 => Ok(HashAlg::Sha512),
+            _ => Err(LabelError::new(id)),
+        }
     }
 }
 
@@ -452,11 +446,7 @@ impl KdfAlg {
     /// # Supported KDF names
     /// - `none`
     pub fn new(kdfname: &str) -> Result<Self> {
-        match kdfname {
-            NONE => Ok(Self::None),
-            BCRYPT => Ok(Self::Bcrypt),
-            _ => Err(Error::AlgorithmUnknown),
-        }
+        Ok(kdfname.parse()?)
     }
 
     /// Get the string identifier which corresponds to this algorithm.
@@ -473,9 +463,7 @@ impl KdfAlg {
     }
 }
 
-impl Label for KdfAlg {
-    type Error = Error;
-}
+impl Label for KdfAlg {}
 
 impl AsRef<str> for KdfAlg {
     fn as_ref(&self) -> &str {
@@ -490,9 +478,13 @@ impl fmt::Display for KdfAlg {
 }
 
 impl str::FromStr for KdfAlg {
-    type Err = Error;
+    type Err = LabelError;
 
-    fn from_str(id: &str) -> Result<Self> {
-        Self::new(id)
+    fn from_str(kdfname: &str) -> core::result::Result<Self, LabelError> {
+        match kdfname {
+            NONE => Ok(Self::None),
+            BCRYPT => Ok(Self::Bcrypt),
+            _ => Err(LabelError::new(kdfname)),
+        }
     }
 }

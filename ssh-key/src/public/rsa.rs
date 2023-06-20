@@ -39,13 +39,11 @@ impl Decode for RsaPublicKey {
 }
 
 impl Encode for RsaPublicKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([self.e.encoded_len()?, self.n.encoded_len()?].checked_sum()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [self.e.encoded_len()?, self.n.encoded_len()?].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.e.encode(writer)?;
         self.n.encode(writer)
     }

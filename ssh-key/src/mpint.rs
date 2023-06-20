@@ -123,13 +123,11 @@ impl Decode for Mpint {
 }
 
 impl Encode for Mpint {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([4, self.as_bytes().len()].checked_sum()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [4, self.as_bytes().len()].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.as_bytes().encode(writer)?;
         Ok(())
     }

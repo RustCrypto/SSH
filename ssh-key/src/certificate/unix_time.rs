@@ -74,13 +74,11 @@ impl Decode for UnixTime {
 }
 
 impl Encode for UnixTime {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok(self.secs.encoded_len()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        self.secs.encoded_len()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.secs.encode(writer)?;
         Ok(())
     }

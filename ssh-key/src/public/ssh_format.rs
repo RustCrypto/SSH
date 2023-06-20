@@ -12,7 +12,7 @@
 //! ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILM+rvN+ot98qgEN796jTiQfZfG1KaT0PtFDJ/XFSqti user@example.com
 //! ```
 
-use crate::{Error, Result};
+use crate::Result;
 use core::str;
 use encoding::{Base64Writer, Encode};
 
@@ -60,7 +60,7 @@ impl<'a> SshFormat<'a> {
         out: &'o mut [u8],
     ) -> Result<&'o str>
     where
-        K: Encode<Error = Error>,
+        K: Encode,
     {
         let mut offset = 0;
         encode_str(out, &mut offset, algorithm_id)?;
@@ -86,7 +86,7 @@ impl<'a> SshFormat<'a> {
     #[cfg(feature = "alloc")]
     pub(crate) fn encode_string<K>(algorithm_id: &str, key: &K, comment: &str) -> Result<String>
     where
-        K: Encode<Error = Error>,
+        K: Encode,
     {
         let encoded_len = [
             2, // interstitial spaces

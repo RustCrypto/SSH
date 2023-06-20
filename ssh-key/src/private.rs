@@ -244,14 +244,14 @@ impl PrivateKey {
         line_ending: LineEnding,
         out: &'o mut [u8],
     ) -> Result<&'o str> {
-        self.encode_pem(line_ending, out)
+        Ok(self.encode_pem(line_ending, out)?)
     }
 
     /// Encode an OpenSSH-formatted PEM private key, allocating a
     /// self-zeroizing [`String`] for the result.
     #[cfg(feature = "alloc")]
     pub fn to_openssh(&self, line_ending: LineEnding) -> Result<Zeroizing<String>> {
-        self.encode_pem_string(line_ending).map(Zeroizing::new)
+        Ok(self.encode_pem_string(line_ending).map(Zeroizing::new)?)
     }
 
     /// Serialize SSH private key as raw bytes.
@@ -575,7 +575,7 @@ impl PrivateKey {
         writer: &mut impl Writer,
         cipher: Cipher,
         checkint: u32,
-    ) -> Result<()> {
+    ) -> encoding::Result<()> {
         let unpadded_len = self.unpadded_privatekey_comment_pair_len()?;
         let padding_len = cipher.padding_len(unpadded_len);
 
@@ -589,27 +589,25 @@ impl PrivateKey {
 
     /// Get the length of this private key when encoded with the given comment
     /// and padded using the padding size for the given cipher.
-    fn encoded_privatekey_comment_pair_len(&self, cipher: Cipher) -> Result<usize> {
+    fn encoded_privatekey_comment_pair_len(&self, cipher: Cipher) -> encoding::Result<usize> {
         let len = self.unpadded_privatekey_comment_pair_len()?;
-        Ok([len, cipher.padding_len(len)].checked_sum()?)
+        [len, cipher.padding_len(len)].checked_sum()
     }
 
     /// Get the length of this private key when encoded with the given comment.
     ///
     /// This length is just the checkints, private key data, and comment sans
     /// any padding.
-    fn unpadded_privatekey_comment_pair_len(&self) -> Result<usize> {
+    fn unpadded_privatekey_comment_pair_len(&self) -> encoding::Result<usize> {
         // This method is intended for use with unencrypted keys only
-        if self.is_encrypted() {
-            return Err(Error::Encrypted);
-        }
+        debug_assert!(!self.is_encrypted(), "called on encrypted key");
 
-        Ok([
+        [
             8, // 2 x uint32 checkints,
             self.key_data.encoded_len()?,
             self.comment().encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 }
 
@@ -705,16 +703,14 @@ impl Decode for PrivateKey {
 }
 
 impl Encode for PrivateKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
         let private_key_len = if self.is_encrypted() {
             self.key_data.encoded_len_prefixed()?
         } else {
             [4, self.encoded_privatekey_comment_pair_len(Cipher::None)?].checked_sum()?
         };
 
-        Ok([
+        [
             Self::AUTH_MAGIC.len(),
             self.cipher.encoded_len()?,
             self.kdf.encoded_len()?,
@@ -723,10 +719,10 @@ impl Encode for PrivateKey {
             private_key_len,
             self.auth_tag.map(|tag| tag.len()).unwrap_or(0),
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         writer.write(Self::AUTH_MAGIC)?;
         self.cipher.encode(writer)?;
         self.kdf.encode(writer)?;

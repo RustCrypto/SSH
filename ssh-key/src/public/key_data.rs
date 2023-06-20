@@ -177,7 +177,7 @@ impl KeyData {
 
     /// Get the encoded length of this key data without a leading algorithm
     /// identifier.
-    pub(crate) fn encoded_key_data_len(&self) -> Result<usize> {
+    pub(crate) fn encoded_key_data_len(&self) -> encoding::Result<usize> {
         match self {
             #[cfg(feature = "alloc")]
             Self::Dsa(key) => key.encoded_len(),
@@ -193,7 +193,7 @@ impl KeyData {
     }
 
     /// Encode the key data without a leading algorithm identifier.
-    pub(crate) fn encode_key_data(&self, writer: &mut impl Writer) -> Result<()> {
+    pub(crate) fn encode_key_data(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         match self {
             #[cfg(feature = "alloc")]
             Self::Dsa(key) => key.encode(writer),
@@ -219,17 +219,15 @@ impl Decode for KeyData {
 }
 
 impl Encode for KeyData {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.algorithm().encoded_len()?,
             self.encoded_key_data_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.algorithm().encode(writer)?;
         self.encode_key_data(writer)
     }

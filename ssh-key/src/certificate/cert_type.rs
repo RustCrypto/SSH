@@ -41,13 +41,11 @@ impl Decode for CertType {
 }
 
 impl Encode for CertType {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
         Ok(4)
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         u32::from(*self).encode(writer)?;
         Ok(())
     }

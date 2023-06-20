@@ -36,7 +36,7 @@ pub use crate::{
     decode::Decode,
     encode::Encode,
     error::{Error, Result},
-    label::Label,
+    label::{Label, LabelError},
     reader::{NestedReader, Reader},
     writer::Writer,
 };

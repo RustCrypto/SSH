@@ -85,7 +85,7 @@ impl SshSig {
     /// -----BEGIN SSH SIGNATURE-----
     /// ```
     pub fn to_pem(&self, line_ending: LineEnding) -> Result<String> {
-        self.encode_pem_string(line_ending)
+        Ok(self.encode_pem_string(line_ending)?)
     }
 
     /// Sign the given message with the provided signing key.
@@ -254,10 +254,8 @@ impl Decode for SshSig {
 }
 
 impl Encode for SshSig {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             Self::MAGIC_PREAMBLE.len(),
             self.version.encoded_len()?,
             self.public_key.encoded_len_prefixed()?,
@@ -266,10 +264,10 @@ impl Encode for SshSig {
             self.hash_alg.encoded_len()?,
             self.signature.encoded_len_prefixed()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         writer.write(Self::MAGIC_PREAMBLE)?;
         self.version.encode(writer)?;
         self.public_key.encode_prefixed(writer)?;
@@ -317,21 +315,19 @@ impl<'a> SignedData<'a> {
     }
 }
 
-impl<'a> Encode for SignedData<'a> {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+impl Encode for SignedData<'_> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             SshSig::MAGIC_PREAMBLE.len(),
             self.namespace.encoded_len()?,
             self.reserved.encoded_len()?,
             self.hash_alg.encoded_len()?,
             self.hash.encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         writer.write(SshSig::MAGIC_PREAMBLE)?;
         self.namespace.encode(writer)?;
         self.reserved.encode(writer)?;

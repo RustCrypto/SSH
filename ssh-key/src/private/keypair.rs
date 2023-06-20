@@ -285,9 +285,14 @@ impl Decode for KeypairData {
 }
 
 impl Encode for KeypairData {
-    type Error = Error;
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        let alg_len = self
+            .algorithm()
+            .ok()
+            .map(|alg| alg.encoded_len())
+            .transpose()?
+            .unwrap_or(0);
 
-    fn encoded_len(&self) -> Result<usize> {
         let key_len = match self {
             #[cfg(feature = "alloc")]
             Self::Dsa(key) => key.encoded_len()?,
@@ -304,12 +309,12 @@ impl Encode for KeypairData {
             Self::SkEd25519(sk) => sk.encoded_len()?,
         };
 
-        Ok([self.algorithm()?.encoded_len()?, key_len].checked_sum()?)
+        [alg_len, key_len].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
-        if !self.is_encrypted() {
-            self.algorithm()?.encode(writer)?;
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
+        if let Ok(alg) = self.algorithm() {
+            alg.encode(writer)?;
         }
 
         match self {

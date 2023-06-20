@@ -2,17 +2,21 @@
 //!
 //! These are used for encrypting private keys.
 
-use crate::{Error, Result};
+use crate::Result;
 use core::{fmt, str};
-use encoding::Label;
+use encoding::{Label, LabelError};
 
 #[cfg(feature = "encryption")]
-use aes::{
-    cipher::{BlockCipher, BlockDecryptMut, BlockEncryptMut, KeyInit, KeyIvInit, StreamCipherCore},
-    Aes128, Aes192, Aes256,
+use {
+    crate::Error,
+    aes::{
+        cipher::{
+            BlockCipher, BlockDecryptMut, BlockEncryptMut, KeyInit, KeyIvInit, StreamCipherCore,
+        },
+        Aes128, Aes192, Aes256,
+    },
+    cbc::{cipher::block_padding::NoPadding, Decryptor, Encryptor},
 };
-#[cfg(feature = "encryption")]
-use cbc::{cipher::block_padding::NoPadding, Decryptor, Encryptor};
 
 #[cfg(feature = "aes-gcm")]
 use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
@@ -108,20 +112,7 @@ impl Cipher {
     /// # Supported cipher names
     /// - `aes256-ctr`
     pub fn new(ciphername: &str) -> Result<Self> {
-        match ciphername {
-            "none" => Ok(Self::None),
-            AES128_CBC => Ok(Self::Aes128Cbc),
-            AES192_CBC => Ok(Self::Aes192Cbc),
-            AES256_CBC => Ok(Self::Aes256Cbc),
-            AES128_CTR => Ok(Self::Aes128Ctr),
-            AES192_CTR => Ok(Self::Aes192Ctr),
-            AES256_CTR => Ok(Self::Aes256Ctr),
-            AES128_GCM => Ok(Self::Aes128Gcm),
-            AES256_GCM => Ok(Self::Aes256Gcm),
-            CHACHA20_POLY1305 => Ok(Self::ChaCha20Poly1305),
-            TDES_CBC => Ok(Self::TDesCbc),
-            _ => Err(Error::AlgorithmUnknown),
-        }
+        Ok(ciphername.parse()?)
     }
 
     /// Get the string identifier which corresponds to this algorithm.
@@ -337,9 +328,7 @@ impl AsRef<str> for Cipher {
     }
 }
 
-impl Label for Cipher {
-    type Error = Error;
-}
+impl Label for Cipher {}
 
 impl fmt::Display for Cipher {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -348,10 +337,23 @@ impl fmt::Display for Cipher {
 }
 
 impl str::FromStr for Cipher {
-    type Err = Error;
+    type Err = LabelError;
 
-    fn from_str(id: &str) -> Result<Self> {
-        Self::new(id)
+    fn from_str(ciphername: &str) -> core::result::Result<Self, LabelError> {
+        match ciphername {
+            "none" => Ok(Self::None),
+            AES128_CBC => Ok(Self::Aes128Cbc),
+            AES192_CBC => Ok(Self::Aes192Cbc),
+            AES256_CBC => Ok(Self::Aes256Cbc),
+            AES128_CTR => Ok(Self::Aes128Ctr),
+            AES192_CTR => Ok(Self::Aes192Ctr),
+            AES256_CTR => Ok(Self::Aes256Ctr),
+            AES128_GCM => Ok(Self::Aes128Gcm),
+            AES256_GCM => Ok(Self::Aes256Gcm),
+            CHACHA20_POLY1305 => Ok(Self::ChaCha20Poly1305),
+            TDES_CBC => Ok(Self::TDesCbc),
+            _ => Err(LabelError::new(ciphername)),
+        }
     }
 }
 

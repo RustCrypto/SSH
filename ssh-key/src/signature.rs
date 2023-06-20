@@ -181,19 +181,17 @@ impl Decode for Signature {
 }
 
 impl Encode for Signature {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.algorithm().encoded_len()?,
             self.as_bytes().encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         if self.is_placeholder() {
-            return Err(encoding::Error::Length.into());
+            return Err(encoding::Error::Length);
         }
 
         self.algorithm().encode(writer)?;
@@ -782,7 +780,7 @@ mod tests {
         let mut writer = Vec::new();
         assert_eq!(
             placeholder.encode(&mut writer),
-            Err(encoding::Error::Length.into())
+            Err(encoding::Error::Length)
         );
     }
 }

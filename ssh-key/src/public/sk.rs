@@ -75,18 +75,16 @@ impl Decode for SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl Encode for SkEcdsaSha2NistP256 {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             EcdsaCurve::NistP256.encoded_len()?,
             self.ec_point.as_bytes().encoded_len()?,
             self.application().encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         EcdsaCurve::NistP256.encode(writer)?;
         self.ec_point.as_bytes().encode(writer)?;
         self.application().encode(writer)?;
@@ -163,17 +161,15 @@ impl Decode for SkEd25519 {
 }
 
 impl Encode for SkEd25519 {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.public_key.encoded_len()?,
             self.application().encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.public_key.encode(writer)?;
         self.application().encode(writer)?;
         Ok(())
