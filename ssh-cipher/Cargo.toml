@@ -19,7 +19,7 @@ rust-version = "1.60"
 
 [dependencies]
 cipher = "0.4"
-encoding = { package = "ssh-encoding", version = "=0.2.0-pre", path = "../ssh-encoding" }
+encoding = { package = "ssh-encoding", version = "=0.2.0-pre.0", path = "../ssh-encoding" }
 
 # optional dependencies
 aes = { version = "0.8", optional = true, default-features = false }
