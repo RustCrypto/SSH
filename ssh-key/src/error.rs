@@ -115,6 +115,12 @@ impl fmt::Display for Error {
     }
 }
 
+impl From<cipher::Error> for Error {
+    fn from(_: cipher::Error) -> Error {
+        Error::Crypto
+    }
+}
+
 impl From<core::array::TryFromSliceError> for Error {
     fn from(_: core::array::TryFromSliceError) -> Error {
         Error::Encoding(encoding::Error::Length)

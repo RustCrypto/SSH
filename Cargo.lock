@@ -715,6 +715,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssh-cipher"
+version = "0.1.0-pre"
+dependencies = [
+ "aes",
+ "aes-gcm",
+ "cbc",
+ "chacha20",
+ "cipher",
+ "ctr",
+ "des",
+ "poly1305",
+ "ssh-encoding",
+ "subtle",
+]
+
+[[package]]
 name = "ssh-encoding"
 version = "0.2.0-pre"
 dependencies = [
@@ -728,20 +744,13 @@ dependencies = [
 name = "ssh-key"
 version = "0.6.0-rc.0"
 dependencies = [
- "aes",
- "aes-gcm",
  "bcrypt-pbkdf",
- "cbc",
- "chacha20",
- "ctr",
- "des",
  "dsa",
  "ed25519-dalek",
  "hex-literal",
  "num-bigint-dig",
  "p256",
  "p384",
- "poly1305",
  "rand_chacha",
  "rand_core",
  "rsa",
@@ -750,6 +759,7 @@ dependencies = [
  "sha1",
  "sha2",
  "signature",
+ "ssh-cipher",
  "ssh-encoding",
  "subtle",
  "zeroize",

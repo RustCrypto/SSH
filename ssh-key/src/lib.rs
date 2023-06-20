@@ -148,7 +148,6 @@ pub mod certificate;
 pub mod known_hosts;
 
 mod algorithm;
-mod cipher;
 mod error;
 mod fingerprint;
 mod kdf;
@@ -163,13 +162,13 @@ mod sshsig;
 pub use crate::{
     algorithm::{Algorithm, EcdsaCurve, HashAlg, KdfAlg},
     authorized_keys::AuthorizedKeys,
-    cipher::Cipher,
     error::{Error, Result},
     fingerprint::Fingerprint,
     kdf::Kdf,
     private::PrivateKey,
     public::PublicKey,
 };
+pub use cipher::Cipher;
 pub use encoding::LineEnding;
 pub use sha2;
 
