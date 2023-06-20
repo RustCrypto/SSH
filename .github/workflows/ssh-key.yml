@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - ".github/workflows/ssh-key.yml"
+      - "ssh-cipher/**"
+      - "ssh-encoding/**"
       - "ssh-key/**"
       - "Cargo.*"
   push:
@@ -84,9 +86,8 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       - uses: RustCrypto/actions/cargo-hack-install@master
-      - run: cargo hack test --feature-powerset --exclude-features aes-gcm,crypto,default,encryption,getrandom,std --release
+      - run: cargo hack test --feature-powerset --exclude-features crypto,default,encryption,getrandom,std --release
       - run: cargo test --release
-      - run: cargo test --release --features aes-gcm
       - run: cargo test --release --features crypto
       - run: cargo test --release --features encryption
       - run: cargo test --release --features getrandom

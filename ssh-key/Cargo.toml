@@ -17,6 +17,7 @@ edition = "2021"
 rust-version = "1.65"
 
 [dependencies]
+cipher = { package = "ssh-cipher", version = "=0.1.0-pre", path = "../ssh-cipher" }
 encoding = { package = "ssh-encoding", version = "=0.2.0-pre", features = ["base64", "pem", "sha2"], path = "../ssh-encoding" }
 sha2 = { version = "0.10.7", default-features = false }
 signature = { version = "2", default-features = false }
@@ -24,16 +25,9 @@ subtle = { version = "2", default-features = false }
 zeroize = { version = "1", default-features = false }
 
 # optional dependencies
-aes = { version = "0.8", optional = true, default-features = false }
-aes-gcm = { version = "0.10", optional = true, default-features = false, features = ["aes"] }
-cbc = { version = "0.1.2", optional = true }
-ctr = { version = "0.9", optional = true, default-features = false }
-chacha20 = { version = "0.9.1", optional = true, default-features = false }
-poly1305 = { version = "0.8.0", optional = true, default-features = false }
 bcrypt-pbkdf = { version = "0.10", optional = true, default-features = false, features = ["alloc"] }
 bigint = { package = "num-bigint-dig", version = "0.8", optional = true, default-features = false }
 dsa = { version = "0.6", optional = true, default-features = false }
-des = { version = "0.8.1", optional = true, default-features = false }
 ed25519-dalek = { version = "=2.0.0-rc.2", optional = true, default-features = false }
 p256 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
@@ -64,19 +58,24 @@ std = [
     "signature/std"
 ]
 
-aes-cbc = ["dep:cbc", "encryption"]
-aes-gcm = ["dep:aes-gcm", "encryption"]
-chacha20poly1305 = ["dep:chacha20", "dep:poly1305", "encryption"]
-crypto = ["aes-gcm", "ed25519", "p256", "p384", "rsa"] # NOTE: `dsa` is obsolete/weak
+crypto = ["ed25519", "p256", "p384", "rsa"] # NOTE: `dsa` is obsolete/weak
 dsa = ["dep:bigint", "dep:dsa", "dep:sha1", "alloc", "signature/rand_core"]
 ecdsa = ["dep:sec1"]
 ed25519 = ["dep:ed25519-dalek", "rand_core"]
-encryption = [ "alloc", "dep:aes", "dep:bcrypt-pbkdf", "dep:cbc", "dep:ctr", "rand_core"]
+encryption = [
+    "dep:bcrypt-pbkdf",
+    "alloc",
+    "cipher/aes-cbc",
+    "cipher/aes-ctr",
+    "cipher/aes-gcm",
+    "cipher/chacha20poly1305",
+    "rand_core"
+]
 getrandom = ["rand_core/getrandom"]
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 rsa = ["dep:bigint", "dep:rsa", "alloc", "rand_core"]
-tdes = ["dep:des", "encryption"]
+tdes = ["cipher/tdes", "encryption"]
 
 [package.metadata.docs.rs]
 all-features = true

@@ -1,9 +1,10 @@
-name: ssh-encoding
+name: ssh-cipher
 
 on:
   pull_request:
     paths:
-      - ".github/workflows/ssh-encoding.yml"
+      - ".github/workflows/ssh-cipher.yml"
+      - "ssh-cipher/**"
       - "ssh-encoding/**"
       - "Cargo.*"
   push:
@@ -11,7 +12,7 @@ on:
 
 defaults:
   run:
-    working-directory: ssh-encoding
+    working-directory: ssh-cipher
 
 env:
   RUSTFLAGS: "-Dwarnings"

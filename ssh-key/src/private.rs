@@ -136,9 +136,8 @@ pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
 pub use self::sk::SkEcdsaSha2NistP256;
 
-use crate::{
-    cipher::Tag, public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result,
-};
+use crate::{public, Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result};
+use cipher::Tag;
 use core::str;
 use encoding::{
     pem::{LineEnding, PemLabel},
@@ -339,7 +338,7 @@ impl PrivateKey {
         rng: &mut impl CryptoRngCore,
         password: impl AsRef<[u8]>,
     ) -> Result<Self> {
-        self.encrypt_with_cipher(rng, Cipher::default(), password)
+        self.encrypt_with_cipher(rng, Cipher::Aes256Ctr, password)
     }
 
     /// Encrypt an unencrypted private key using the provided password to
