@@ -33,13 +33,11 @@ impl Decode for Ed25519PublicKey {
 }
 
 impl Encode for Ed25519PublicKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([4, Self::BYTE_SIZE].checked_sum()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [4, Self::BYTE_SIZE].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.0.encode(writer)?;
         Ok(())
     }

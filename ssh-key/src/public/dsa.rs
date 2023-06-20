@@ -35,19 +35,17 @@ impl Decode for DsaPublicKey {
 }
 
 impl Encode for DsaPublicKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.p.encoded_len()?,
             self.q.encoded_len()?,
             self.g.encoded_len()?,
             self.y.encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.p.encode(writer)?;
         self.q.encode(writer)?;
         self.g.encode(writer)?;

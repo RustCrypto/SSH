@@ -62,9 +62,7 @@ impl Decode for OptionsMap {
 }
 
 impl Encode for OptionsMap {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
         self.iter()
             .try_fold(4, |acc, (name, data)| {
                 [acc, 4, name.len(), 4, data.len()].checked_sum()
@@ -72,7 +70,7 @@ impl Encode for OptionsMap {
             .map_err(Into::into)
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.encoded_len()?
             .checked_sub(4)
             .ok_or(encoding::Error::Length)?

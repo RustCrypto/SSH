@@ -62,19 +62,17 @@ impl Decode for RsaPrivateKey {
 }
 
 impl Encode for RsaPrivateKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.d.encoded_len()?,
             self.iqmp.encoded_len()?,
             self.p.encoded_len()?,
             self.q.encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.d.encode(writer)?;
         self.iqmp.encode(writer)?;
         self.p.encode(writer)?;
@@ -145,18 +143,16 @@ impl Decode for RsaKeypair {
 }
 
 impl Encode for RsaKeypair {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.public.n.encoded_len()?,
             self.public.e.encoded_len()?,
             self.private.encoded_len()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.public.n.encode(writer)?;
         self.public.e.encode(writer)?;
         self.private.encode(writer)

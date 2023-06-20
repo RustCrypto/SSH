@@ -64,13 +64,11 @@ impl Decode for DsaPrivateKey {
 }
 
 impl Encode for DsaPrivateKey {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
         self.inner.encoded_len()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.inner.encode(writer)
     }
 }
@@ -174,13 +172,11 @@ impl Decode for DsaKeypair {
 }
 
 impl Encode for DsaKeypair {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([self.public.encoded_len()?, self.private.encoded_len()?].checked_sum()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [self.public.encoded_len()?, self.private.encoded_len()?].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.public.encode(writer)?;
         self.private.encode(writer)
     }

@@ -1,12 +1,13 @@
 //! Error types
 
+use crate::LabelError;
 use core::fmt;
 
 /// Result type with `ssh-encoding` crate's [`Error`] as the error type.
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Error type.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
     /// Base64-related errors.
@@ -15,6 +16,9 @@ pub enum Error {
 
     /// Character encoding-related errors.
     CharacterEncoding,
+
+    /// Invalid label.
+    Label(LabelError),
 
     /// Invalid length.
     Length,
@@ -39,6 +43,7 @@ impl fmt::Display for Error {
             #[cfg(feature = "base64")]
             Error::Base64(err) => write!(f, "Base64 encoding error: {err}"),
             Error::CharacterEncoding => write!(f, "character encoding invalid"),
+            Error::Label(err) => write!(f, "{}", err),
             Error::Length => write!(f, "length invalid"),
             Error::Overflow => write!(f, "internal overflow error"),
             #[cfg(feature = "pem")]
@@ -48,6 +53,12 @@ impl fmt::Display for Error {
                 "unexpected trailing data at end of message ({remaining} bytes)",
             ),
         }
+    }
+}
+
+impl From<LabelError> for Error {
+    fn from(err: LabelError) -> Error {
+        Error::Label(err)
     }
 }
 

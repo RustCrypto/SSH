@@ -428,7 +428,7 @@ impl Certificate {
 
     /// Encode the portion of the certificate "to be signed" by the CA
     /// (or to be verified against an existing CA signature)
-    fn encode_tbs(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode_tbs(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.algorithm().as_certificate_str().encode(writer)?;
         self.nonce.encode(writer)?;
         self.public_key.encode_key_data(writer)?;
@@ -471,10 +471,8 @@ impl Decode for Certificate {
 }
 
 impl Encode for Certificate {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [
             self.algorithm().as_certificate_str().encoded_len()?,
             self.nonce.encoded_len()?,
             self.public_key.encoded_key_data_len()?,
@@ -490,10 +488,10 @@ impl Encode for Certificate {
             self.signature_key.encoded_len_prefixed()?,
             self.signature.encoded_len_prefixed()?,
         ]
-        .checked_sum()?)
+        .checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.encode_tbs(writer)?;
         self.signature.encode_prefixed(writer)
     }

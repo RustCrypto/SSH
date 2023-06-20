@@ -10,7 +10,7 @@ use crate::certificate;
 pub type Result<T> = core::result::Result<T, Error>;
 
 /// Error type.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
     /// Unknown algorithm.
@@ -133,6 +133,12 @@ impl From<encoding::Error> for Error {
     }
 }
 
+impl From<encoding::LabelError> for Error {
+    fn from(err: encoding::LabelError) -> Error {
+        Error::Encoding(err.into())
+    }
+}
+
 impl From<encoding::base64::Error> for Error {
     fn from(err: encoding::base64::Error) -> Error {
         Error::Encoding(err.into())
@@ -158,7 +164,7 @@ impl From<signature::Error> for Error {
         use std::error::Error as _;
 
         err.source()
-            .and_then(|source| source.downcast_ref().copied())
+            .and_then(|source| source.downcast_ref().cloned())
             .unwrap_or(Error::Crypto)
     }
 }

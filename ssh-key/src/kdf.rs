@@ -149,19 +149,17 @@ impl Decode for Kdf {
 }
 
 impl Encode for Kdf {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
         let kdfopts_prefixed_len = match self {
             Self::None => 4,
             #[cfg(feature = "alloc")]
             Self::Bcrypt { salt, .. } => [12, salt.len()].checked_sum()?,
         };
 
-        Ok([self.algorithm().encoded_len()?, kdfopts_prefixed_len].checked_sum()?)
+        [self.algorithm().encoded_len()?, kdfopts_prefixed_len].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.algorithm().encode(writer)?;
 
         match self {

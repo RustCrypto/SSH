@@ -55,13 +55,11 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
 }
 
 impl<const SIZE: usize> Encode for EcdsaPrivateKey<SIZE> {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([4, self.needs_leading_zero().into(), SIZE].checked_sum()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [4, self.needs_leading_zero().into(), SIZE].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         [self.needs_leading_zero().into(), SIZE]
             .checked_sum()?
             .encode(writer)?;
@@ -288,9 +286,7 @@ impl Decode for EcdsaKeypair {
 }
 
 impl Encode for EcdsaKeypair {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
+    fn encoded_len(&self) -> encoding::Result<usize> {
         let public_len = EcdsaPublicKey::from(self).encoded_len()?;
 
         let private_len = match self {
@@ -299,10 +295,10 @@ impl Encode for EcdsaKeypair {
             Self::NistP521 { private, .. } => private.encoded_len()?,
         };
 
-        Ok([public_len, private_len].checked_sum()?)
+        [public_len, private_len].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         EcdsaPublicKey::from(self).encode(writer)?;
 
         match self {

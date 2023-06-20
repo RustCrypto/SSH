@@ -231,13 +231,11 @@ impl Decode for Ed25519Keypair {
 }
 
 impl Encode for Ed25519Keypair {
-    type Error = Error;
-
-    fn encoded_len(&self) -> Result<usize> {
-        Ok([4, self.public.encoded_len()?, Self::BYTE_SIZE].checked_sum()?)
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        [4, self.public.encoded_len()?, Self::BYTE_SIZE].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.public.encode(writer)?;
         Zeroizing::new(self.to_bytes()).as_ref().encode(writer)?;
         Ok(())
