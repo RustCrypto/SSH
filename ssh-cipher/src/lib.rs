@@ -20,6 +20,9 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(feature = "chacha20poly1305")]
+mod chacha20poly1305;
+
 use core::{fmt, str};
 use encoding::{Label, LabelError};
 
@@ -28,6 +31,9 @@ use cipher::StreamCipherCore;
 
 #[cfg(feature = "aes-gcm")]
 use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
+
+#[cfg(feature = "chacha20poly1305")]
+use crate::chacha20poly1305::ChaCha20Poly1305;
 
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
 use aes::{Aes128, Aes192, Aes256};
@@ -38,20 +44,10 @@ use {
     cipher::{block_padding::NoPadding, BlockCipher, BlockDecryptMut, BlockEncryptMut},
 };
 
-#[cfg(any(
-    feature = "aes-cbc",
-    feature = "aes-gcm",
-    feature = "chacha20poly1305",
-    feature = "tdes"
-))]
+#[cfg(any(feature = "aes-cbc", feature = "aes-gcm", feature = "tdes"))]
 use cipher::KeyInit;
 
-#[cfg(any(
-    feature = "aes-cbc",
-    feature = "aes-ctr",
-    feature = "chacha20poly1305",
-    feature = "tdes"
-))]
+#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
 use cipher::KeyIvInit;
 
 #[cfg(feature = "tdes")]
@@ -304,7 +300,8 @@ impl Cipher {
             }
             #[cfg(feature = "chacha20poly1305")]
             Self::ChaCha20Poly1305 => {
-                chacha20_poly1305_openssh::chacha20poly1305_decrypt(key, buffer, tag)
+                let tag = tag.ok_or(Error)?;
+                ChaCha20Poly1305::new(key, iv)?.decrypt(buffer, tag)
             }
             #[cfg(feature = "tdes")]
             Self::TDesCbc => {
@@ -376,7 +373,8 @@ impl Cipher {
             }
             #[cfg(feature = "chacha20poly1305")]
             Self::ChaCha20Poly1305 => {
-                chacha20_poly1305_openssh::chacha20poly1305_encrypt(key, buffer).map(Some)
+                let tag = ChaCha20Poly1305::new(key, iv)?.encrypt(buffer);
+                Ok(Some(tag))
             }
             #[cfg(feature = "tdes")]
             Self::TDesCbc => {
@@ -466,68 +464,4 @@ where
         .try_apply_keystream_partial(buffer.into())
         .map_err(|_| Error)?;
     Ok(())
-}
-
-/// There are some differences between `chacha20-poly1305@openssh.com` and
-/// RFC 8439 `chacha20-poly1305`. Therefore, this module implements the cipher
-/// required by the sshkey.
-///
-/// - The input of Poly1305 is not padded
-/// - The lengths of ciphertext and AAD do not authenticate with Poly1305
-/// - There are two ChaCha20 keys derived from KDF
-/// - IV is not generated from KDF
-///
-/// [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
-#[cfg(feature = "chacha20poly1305")]
-mod chacha20_poly1305_openssh {
-    use super::*;
-    use chacha20::ChaCha20;
-    use cipher::{StreamCipher, StreamCipherSeek};
-    use poly1305::Poly1305;
-    use subtle::ConstantTimeEq;
-
-    type ChaCha20Key = [u8; 32];
-
-    #[inline]
-    fn chacha20poly1305_init(key: &[u8]) -> Result<(ChaCha20, Poly1305)> {
-        if key.len() != 64 {
-            return Err(Error);
-        }
-
-        let k_main = ChaCha20Key::try_from(&key[..32]).map_err(|_| Error)?;
-        let _k_header = ChaCha20Key::try_from(&key[32..]).map_err(|_| Error)?;
-        let mut main_cipher = ChaCha20::new(&k_main.into(), &Nonce::default().into());
-        let mut poly1305_key = poly1305::Key::default();
-        main_cipher.apply_keystream(&mut poly1305_key);
-
-        let poly1305 = Poly1305::new(&poly1305_key);
-
-        // Seek to block 1
-        main_cipher.seek(64);
-
-        Ok((main_cipher, poly1305))
-    }
-
-    #[inline]
-    pub fn chacha20poly1305_encrypt(key: &[u8], buffer: &mut [u8]) -> Result<Tag> {
-        let (mut cipher, poly1305) = chacha20poly1305_init(key)?;
-        cipher.apply_keystream(buffer);
-
-        let tag = poly1305.compute_unpadded(buffer);
-        Ok(tag.into())
-    }
-
-    #[inline]
-    pub fn chacha20poly1305_decrypt(key: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
-        let (mut cipher, poly1305) = chacha20poly1305_init(key)?;
-        let tag = tag.ok_or(Error)?;
-
-        let expected_tag = poly1305.compute_unpadded(buffer);
-        if expected_tag.ct_eq(&tag).into() {
-            cipher.apply_keystream(buffer);
-            Ok(())
-        } else {
-            Err(Error)
-        }
-    }
 }

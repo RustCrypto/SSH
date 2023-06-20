@@ -250,7 +250,7 @@ fn decrypt_openssh_aes256_gcm() {
     );
 }
 
-#[cfg(feature = "chacha20poly1305")]
+#[cfg(feature = "encryption")]
 #[test]
 fn decrypt_openssh_chacha20_poly1305() {
     let key_enc = PrivateKey::from_openssh(OPENSSH_CHACHA20_POLY1305_ED25519_EXAMPLE).unwrap();
@@ -452,7 +452,7 @@ fn encrypt_openssh_aes256_gcm() {
     assert_eq!(key_dec, key_dec2);
 }
 
-#[cfg(all(feature = "chacha20poly1305", feature = "getrandom"))]
+#[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_chacha20_poly1305() {
     use rand_core::OsRng;
