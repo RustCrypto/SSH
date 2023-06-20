@@ -41,7 +41,7 @@ impl ChaCha20Poly1305 {
     pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self> {
         #[allow(clippy::integer_arithmetic)]
         if key.len() != KEY_SIZE * 2 {
-            return Err(Error);
+            return Err(Error::KeySize);
         }
 
         // TODO(tarcieri): support for using both keys
@@ -52,7 +52,7 @@ impl ChaCha20Poly1305 {
             // For key encryption
             Nonce::default()
         } else {
-            Nonce::try_from(nonce).map_err(|_| Error)?
+            Nonce::try_from(nonce).map_err(|_| Error::IvSize)?
         };
 
         let mut cipher = ChaCha20::new(key, &nonce.into());
@@ -81,7 +81,7 @@ impl ChaCha20Poly1305 {
             self.cipher.apply_keystream(buffer);
             Ok(())
         } else {
-            Err(Error)
+            Err(Error::Crypto)
         }
     }
 }
