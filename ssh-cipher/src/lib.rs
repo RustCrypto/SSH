@@ -20,8 +20,12 @@
 #[cfg(feature = "std")]
 extern crate std;
 
+mod error;
+
 #[cfg(feature = "chacha20poly1305")]
 mod chacha20poly1305;
+
+pub use crate::error::{Error, Result};
 
 use core::{fmt, str};
 use encoding::{Label, LabelError};
@@ -82,25 +86,6 @@ const CHACHA20_POLY1305: &str = "chacha20-poly1305@openssh.com";
 
 /// Triple-DES in block chaining (CBC) mode
 const TDES_CBC: &str = "3des-cbc";
-
-/// Deliberately opaque error type.
-///
-/// This type is deliberately opaque because revealing information about what
-/// went wrong with symmetric encryption has enabled past sidechannel attacks.
-#[derive(Clone, Copy, Default, Debug, Eq, PartialEq)]
-pub struct Error;
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Error")
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Error {}
-
-/// Result type with [`Error`] as the error type.
-pub type Result<T> = core::result::Result<T, Error>;
 
 /// Nonce for AEAD modes.
 ///
@@ -248,28 +233,28 @@ impl Cipher {
             #[cfg(feature = "aes-cbc")]
             Self::Aes128Cbc => {
                 if tag.is_some() {
-                    return Err(Error);
+                    return Err(Error::TagSize);
                 }
                 cbc_decrypt::<Aes128>(key, iv, buffer)
             }
             #[cfg(feature = "aes-cbc")]
             Self::Aes192Cbc => {
                 if tag.is_some() {
-                    return Err(Error);
+                    return Err(Error::TagSize);
                 }
                 cbc_decrypt::<Aes192>(key, iv, buffer)
             }
             #[cfg(feature = "aes-cbc")]
             Self::Aes256Cbc => {
                 if tag.is_some() {
-                    return Err(Error);
+                    return Err(Error::TagSize);
                 }
                 cbc_decrypt::<Aes256>(key, iv, buffer)
             }
             #[cfg(feature = "aes-ctr")]
             Self::Aes128Ctr | Self::Aes192Ctr | Self::Aes256Ctr => {
                 if tag.is_some() {
-                    return Err(Error);
+                    return Err(Error::TagSize);
                 }
 
                 // Counter mode encryption and decryption are the same operation
@@ -278,42 +263,42 @@ impl Cipher {
             }
             #[cfg(feature = "aes-gcm")]
             Self::Aes128Gcm => {
-                let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error)?;
-                let tag = tag.ok_or(Error)?;
+                let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
+                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
+                let tag = tag.ok_or(Error::TagSize)?;
                 cipher
                     .decrypt_in_place_detached(&nonce.into(), &[], buffer, &tag.into())
-                    .map_err(|_| Error)?;
+                    .map_err(|_| Error::Crypto)?;
 
                 Ok(())
             }
             #[cfg(feature = "aes-gcm")]
             Self::Aes256Gcm => {
-                let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error)?;
-                let tag = tag.ok_or(Error)?;
+                let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
+                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
+                let tag = tag.ok_or(Error::TagSize)?;
                 cipher
                     .decrypt_in_place_detached(&nonce.into(), &[], buffer, &tag.into())
-                    .map_err(|_| Error)?;
+                    .map_err(|_| Error::Crypto)?;
 
                 Ok(())
             }
             #[cfg(feature = "chacha20poly1305")]
             Self::ChaCha20Poly1305 => {
-                let tag = tag.ok_or(Error)?;
+                let tag = tag.ok_or(Error::TagSize)?;
                 ChaCha20Poly1305::new(key, iv)?.decrypt(buffer, tag)
             }
             #[cfg(feature = "tdes")]
             Self::TDesCbc => {
                 if tag.is_some() {
-                    return Err(Error);
+                    return Err(Error::TagSize);
                 }
                 cbc_decrypt::<TdesEde3>(key, iv, buffer)
             }
             _ => {
                 // Suppress unused variable warnings.
                 let (_, _, _, _) = (key, iv, buffer, tag);
-                Err(Error)
+                Err(self.unsupported())
             }
         }
     }
@@ -353,21 +338,21 @@ impl Cipher {
             }
             #[cfg(feature = "aes-gcm")]
             Self::Aes128Gcm => {
-                let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error)?;
+                let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
+                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
                 let tag = cipher
                     .encrypt_in_place_detached(&nonce.into(), &[], buffer)
-                    .map_err(|_| Error)?;
+                    .map_err(|_| Error::Crypto)?;
 
                 Ok(Some(tag.into()))
             }
             #[cfg(feature = "aes-gcm")]
             Self::Aes256Gcm => {
-                let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error)?;
+                let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
+                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
                 let tag = cipher
                     .encrypt_in_place_detached(&nonce.into(), &[], buffer)
-                    .map_err(|_| Error)?;
+                    .map_err(|_| Error::Crypto)?;
 
                 Ok(Some(tag.into()))
             }
@@ -384,9 +369,14 @@ impl Cipher {
             _ => {
                 // Suppress unused variable warnings.
                 let (_, _, _) = (key, iv, buffer);
-                Err(Error)
+                Err(self.unsupported())
             }
         }
+    }
+
+    /// Create an unsupported cipher error.
+    fn unsupported(self) -> Error {
+        Error::UnsupportedCipher(self)
     }
 }
 
@@ -430,12 +420,13 @@ fn cbc_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
 where
     C: BlockEncryptMut + BlockCipher + KeyInit,
 {
-    let cipher = Encryptor::<C>::new_from_slices(key, iv).map_err(|_| Error)?;
+    let cipher = Encryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
 
     // Since the passed in buffer is already padded, using NoPadding here
     cipher
         .encrypt_padded_mut::<NoPadding>(buffer, buffer.len())
-        .map_err(|_| Error)?;
+        .map_err(|_| Error::Crypto)?;
+
     Ok(())
 }
 
@@ -444,12 +435,13 @@ fn cbc_decrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
 where
     C: BlockDecryptMut + BlockCipher + KeyInit,
 {
-    let cipher = Decryptor::<C>::new_from_slices(key, iv).map_err(|_| Error)?;
+    let cipher = Decryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
 
     // Since the passed in buffer is already padded, using NoPadding here
     cipher
         .decrypt_padded_mut::<NoPadding>(buffer)
-        .map_err(|_| Error)?;
+        .map_err(|_| Error::Crypto)?;
+
     Ok(())
 }
 
@@ -458,10 +450,11 @@ fn ctr_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
 where
     C: StreamCipherCore + KeyIvInit,
 {
-    let cipher = C::new_from_slices(key, iv).map_err(|_| Error)?;
+    let cipher = C::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
 
     cipher
         .try_apply_keystream_partial(buffer.into())
-        .map_err(|_| Error)?;
+        .map_err(|_| Error::Crypto)?;
+
     Ok(())
 }
