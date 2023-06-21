@@ -6,6 +6,7 @@ Pure Rust implementation of components of the Secure Shell ([SSH]) protocol.
 
 | Name           | crates.io                                                                                               | Docs                                                                                     | Description                                          |
 |----------------|---------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------|------------------------------------------------------|
+| `ssh‑cipher`   | [![crates.io](https://img.shields.io/crates/v/ssh-cipher.svg)](https://crates.io/crates/ssh-cipher)     | [![Documentation](https://docs.rs/ssh-cipher/badge.svg)](https://docs.rs/ssh-cipher) | SSH symmetric encryption ciphers 
 | `ssh‑encoding` | [![crates.io](https://img.shields.io/crates/v/ssh-encoding.svg)](https://crates.io/crates/ssh-encoding) | [![Documentation](https://docs.rs/ssh-encoding/badge.svg)](https://docs.rs/ssh-encoding) | Decoders and encoders for SSH protocol data types    |
 | `ssh‑key`      | [![crates.io](https://img.shields.io/crates/v/ssh-key.svg)](https://crates.io/crates/ssh-key)           | [![Documentation](https://docs.rs/ssh-key/badge.svg)](https://docs.rs/ssh-key)           | SSH key and certificate library with signing support |
 
