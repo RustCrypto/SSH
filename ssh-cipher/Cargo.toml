@@ -1,6 +1,6 @@
 [package]
 name = "ssh-cipher"
-version = "0.1.0-pre"
+version = "0.1.0-pre.0"
 description = """
 Pure Rust implementation of SSH symmetric encryption including support for the
 modern aes128-gcm@openssh.com/aes256-gcm@openssh.com and
