@@ -210,7 +210,7 @@ impl PublicKey {
         &self.comment
     }
 
-    /// Private key data.
+    /// Public key data.
     pub fn key_data(&self) -> &KeyData {
         &self.key_data
     }
