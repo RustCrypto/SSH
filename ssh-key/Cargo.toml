@@ -28,7 +28,7 @@ zeroize = { version = "1", default-features = false }
 bcrypt-pbkdf = { version = "0.10", optional = true, default-features = false, features = ["alloc"] }
 bigint = { package = "num-bigint-dig", version = "0.8", optional = true, default-features = false }
 dsa = { version = "0.6", optional = true, default-features = false }
-ed25519-dalek = { version = "=2.0.0-rc.2", optional = true, default-features = false }
+ed25519-dalek = { version = "=2.0.0-rc.3", optional = true, default-features = false }
 p256 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.6.4", optional = true, default-features = false }
