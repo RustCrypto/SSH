@@ -174,6 +174,7 @@ pub use sha2;
 
 #[cfg(feature = "alloc")]
 pub use crate::{
+    algorithm::AlgorithmName,
     certificate::Certificate,
     known_hosts::KnownHosts,
     mpint::Mpint,
