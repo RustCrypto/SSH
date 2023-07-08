@@ -229,6 +229,10 @@ pub enum Algorithm {
 
     /// FIDO/U2F key with Ed25519
     SkEd25519,
+
+    /// Other
+    #[cfg(feature = "alloc")]
+    Other(AlgorithmName),
 }
 
 impl Algorithm {
@@ -243,6 +247,8 @@ impl Algorithm {
     /// - `ssh-rsa`
     /// - `sk-ecdsa-sha2-nistp256@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519@openssh.com` (FIDO/U2F key)
+    ///
+    /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     pub fn new(id: &str) -> Result<Self> {
         Ok(id.parse()?)
     }
@@ -263,6 +269,8 @@ impl Algorithm {
     /// - `sk-ecdsa-sha2-nistp256-cert-v01@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519-cert-v01@openssh.com` (FIDO/U2F key)
     ///
+    /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
+    ///
     /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
     pub fn new_certificate(id: &str) -> Result<Self> {
         match id {
@@ -280,12 +288,15 @@ impl Algorithm {
             CERT_RSA => Ok(Algorithm::Rsa { hash: None }),
             CERT_SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             CERT_SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            #[cfg(feature = "alloc")]
+            _ => Ok(Algorithm::Other(AlgorithmName::from_certificate_str(id)?)),
+            #[cfg(not(feature = "alloc"))]
             _ => Err(Error::AlgorithmUnknown),
         }
     }
 
     /// Get the string identifier which corresponds to this algorithm.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Algorithm::Dsa => SSH_DSA,
             Algorithm::Ecdsa { curve } => match curve {
@@ -301,6 +312,8 @@ impl Algorithm {
             },
             Algorithm::SkEcdsaSha2NistP256 => SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => SK_SSH_ED25519,
+            #[cfg(feature = "alloc")]
+            Algorithm::Other(algorithm) => algorithm.as_str(),
         }
     }
 
@@ -311,7 +324,7 @@ impl Algorithm {
     /// See [PROTOCOL.certkeys] for more information.
     ///
     /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
-    pub fn as_certificate_str(self) -> &'static str {
+    pub fn as_certificate_str(&self) -> &str {
         match self {
             Algorithm::Dsa => CERT_DSA,
             Algorithm::Ecdsa { curve } => match curve {
@@ -323,6 +336,8 @@ impl Algorithm {
             Algorithm::Rsa { .. } => CERT_RSA,
             Algorithm::SkEcdsaSha2NistP256 => CERT_SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => CERT_SK_SSH_ED25519,
+            #[cfg(feature = "alloc")]
+            Algorithm::Other(algorithm) => algorithm.certificate_str(),
         }
     }
 
@@ -392,6 +407,9 @@ impl str::FromStr for Algorithm {
             SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
             SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            #[cfg(feature = "alloc")]
+            _ => Ok(Algorithm::Other(AlgorithmName::from_str(id)?)),
+            #[cfg(not(feature = "alloc"))]
             _ => Err(LabelError::new(id)),
         }
     }
