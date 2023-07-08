@@ -5,7 +5,7 @@ use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
-use super::{DsaPublicKey, RsaPublicKey};
+use super::{DsaPublicKey, OpaquePublicKey, RsaPublicKey};
 
 #[cfg(feature = "ecdsa")]
 use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
@@ -39,6 +39,10 @@ pub enum KeyData {
     ///
     /// [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
     SkEd25519(SkEd25519),
+
+    /// Opaque public key data.
+    #[cfg(feature = "alloc")]
+    Other(OpaquePublicKey),
 }
 
 impl KeyData {
@@ -55,6 +59,8 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Self::SkEcdsaSha2NistP256(_) => Algorithm::SkEcdsaSha2NistP256,
             Self::SkEd25519(_) => Algorithm::SkEd25519,
+            #[cfg(feature = "alloc")]
+            Self::Other(key) => key.algorithm(),
         }
     }
 
@@ -118,6 +124,15 @@ impl KeyData {
         }
     }
 
+    /// Get the custom, opaque public key if this key is the correct type.
+    #[cfg(feature = "alloc")]
+    pub fn other(&self) -> Option<&OpaquePublicKey> {
+        match self {
+            Self::Other(key) => Some(key),
+            _ => None,
+        }
+    }
+
     /// Is this key a DSA key?
     #[cfg(feature = "alloc")]
     pub fn is_dsa(&self) -> bool {
@@ -152,6 +167,12 @@ impl KeyData {
         matches!(self, Self::SkEd25519(_))
     }
 
+    /// Is this a key with a custom algorithm?
+    #[cfg(feature = "alloc")]
+    pub fn is_other(&self) -> bool {
+        matches!(self, Self::Other(_))
+    }
+
     /// Decode [`KeyData`] for the specified algorithm.
     pub(crate) fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
@@ -170,6 +191,8 @@ impl KeyData {
                 SkEcdsaSha2NistP256::decode(reader).map(Self::SkEcdsaSha2NistP256)
             }
             Algorithm::SkEd25519 => SkEd25519::decode(reader).map(Self::SkEd25519),
+            #[cfg(feature = "alloc")]
+            Algorithm::Other(_) => OpaquePublicKey::decode_as(reader, algorithm).map(Self::Other),
             #[allow(unreachable_patterns)]
             _ => Err(Error::AlgorithmUnknown),
         }
@@ -189,6 +212,8 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Self::SkEcdsaSha2NistP256(sk) => sk.encoded_len(),
             Self::SkEd25519(sk) => sk.encoded_len(),
+            #[cfg(feature = "alloc")]
+            Self::Other(other) => other.key.encoded_len(),
         }
     }
 
@@ -205,6 +230,8 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Self::SkEcdsaSha2NistP256(sk) => sk.encode(writer),
             Self::SkEd25519(sk) => sk.encode(writer),
+            #[cfg(feature = "alloc")]
+            Self::Other(other) => other.key.encode(writer),
         }
     }
 }

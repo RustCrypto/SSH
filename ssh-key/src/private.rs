@@ -111,6 +111,8 @@ mod ecdsa;
 mod ed25519;
 mod keypair;
 #[cfg(feature = "alloc")]
+mod opaque;
+#[cfg(feature = "alloc")]
 mod rsa;
 #[cfg(feature = "alloc")]
 mod sk;
@@ -124,6 +126,7 @@ pub use self::{
 pub use crate::{
     private::{
         dsa::{DsaKeypair, DsaPrivateKey},
+        opaque::{OpaqueKeypair, OpaqueKeypairBytes, OpaquePrivateKeyBytes},
         rsa::{RsaKeypair, RsaPrivateKey},
         sk::SkEd25519,
     },

@@ -42,6 +42,10 @@ const OPENSSH_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072");
 #[cfg(feature = "alloc")]
 const OPENSSH_RSA_4096_EXAMPLE: &str = include_str!("examples/id_rsa_4096");
 
+/// OpenSSH-formatted private key with a custom algorithm name
+#[cfg(feature = "alloc")]
+const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque");
+
 #[cfg(feature = "alloc")]
 #[test]
 fn decode_dsa_openssh() {
@@ -369,6 +373,30 @@ fn decode_rsa_4096_openssh() {
 
 #[cfg(all(feature = "alloc"))]
 #[test]
+fn decode_custom_algorithm_openssh() {
+    let key = PrivateKey::from_openssh(OPENSSH_OPAQUE_EXAMPLE).unwrap();
+    assert!(
+        matches!(key.algorithm(), Algorithm::Other(name) if name.as_str() == "name@example.com")
+    );
+    assert_eq!(Cipher::None, key.cipher());
+    assert_eq!(KdfAlg::None, key.kdf().algorithm());
+    assert!(key.kdf().is_none());
+
+    let opaque_keypair = key.key_data().other().unwrap();
+    assert_eq!(
+        &hex!("888f24ee17adfed0091e67e485fb9844cfed6072cac1d06390e4005f5015b44f"),
+        opaque_keypair.public.as_ref(),
+    );
+    assert_eq!(
+        &hex!("986c953b4b5efb3285ff207c1ca5ee39a59047bc488fbc3b1ef036efc7575c75"),
+        opaque_keypair.private.as_ref(),
+    );
+
+    assert_eq!(key.comment(), "comment@example.com");
+}
+
+#[cfg(all(feature = "alloc"))]
+#[test]
 fn encode_dsa_openssh() {
     encoding_test(OPENSSH_DSA_EXAMPLE)
 }
@@ -409,6 +437,12 @@ fn encode_rsa_4096_openssh() {
     encoding_test(OPENSSH_RSA_4096_EXAMPLE)
 }
 
+#[cfg(all(feature = "alloc"))]
+#[test]
+fn encode_custom_algorithm_openssh() {
+    encoding_test(OPENSSH_OPAQUE_EXAMPLE)
+}
+
 /// Common behavior of all encoding tests
 #[cfg(all(feature = "alloc"))]
 fn encoding_test(private_key: &str) {
@@ -420,7 +454,9 @@ fn encoding_test(private_key: &str) {
     assert_eq!(key, key2);
 
     #[cfg(feature = "std")]
-    encoding_integration_test(key)
+    if !matches!(key.algorithm(), Algorithm::Other(_)) {
+        encoding_integration_test(key)
+    }
 }
 
 /// Parse PEM encoded using `PrivateKey::to_openssh` using the `ssh-keygen` utility.

@@ -7,7 +7,7 @@ use subtle::{Choice, ConstantTimeEq};
 
 #[cfg(feature = "alloc")]
 use {
-    super::{DsaKeypair, RsaKeypair, SkEd25519},
+    super::{DsaKeypair, OpaqueKeypair, RsaKeypair, SkEd25519},
     alloc::vec::Vec,
 };
 
@@ -55,6 +55,10 @@ pub enum KeypairData {
     /// [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
     #[cfg(feature = "alloc")]
     SkEd25519(SkEd25519),
+
+    /// Opaque keypair.
+    #[cfg(feature = "alloc")]
+    Other(OpaqueKeypair),
 }
 
 impl KeypairData {
@@ -74,6 +78,8 @@ impl KeypairData {
             Self::SkEcdsaSha2NistP256(_) => Algorithm::SkEcdsaSha2NistP256,
             #[cfg(feature = "alloc")]
             Self::SkEd25519(_) => Algorithm::SkEd25519,
+            #[cfg(feature = "alloc")]
+            Self::Other(key) => key.algorithm(),
         })
     }
 
@@ -140,6 +146,15 @@ impl KeypairData {
         }
     }
 
+    /// Get the custom, opaque private key if this key is the correct type.
+    #[cfg(feature = "alloc")]
+    pub fn other(&self) -> Option<&OpaqueKeypair> {
+        match self {
+            Self::Other(key) => Some(key),
+            _ => None,
+        }
+    }
+
     /// Is this key a DSA key?
     #[cfg(feature = "alloc")]
     pub fn is_dsa(&self) -> bool {
@@ -187,6 +202,12 @@ impl KeypairData {
         matches!(self, Self::SkEd25519(_))
     }
 
+    /// Is this a key with a custom algorithm?
+    #[cfg(feature = "alloc")]
+    pub fn is_other(&self) -> bool {
+        matches!(self, Self::Other(_))
+    }
+
     /// Compute a deterministic "checkint" for this private key.
     ///
     /// This is a sort of primitive pseudo-MAC used by the OpenSSH key format.
@@ -206,6 +227,8 @@ impl KeypairData {
             Self::SkEcdsaSha2NistP256(sk) => sk.key_handle(),
             #[cfg(feature = "alloc")]
             Self::SkEd25519(sk) => sk.key_handle(),
+            #[cfg(feature = "alloc")]
+            Self::Other(key) => key.private.as_ref(),
         };
 
         let mut n = 0u32;
@@ -243,6 +266,8 @@ impl ConstantTimeEq for KeypairData {
                 // The key structs contain all public data.
                 Choice::from((a == b) as u8)
             }
+            #[cfg(feature = "alloc")]
+            (Self::Other(a), Self::Other(b)) => a.ct_eq(b),
             #[allow(unreachable_patterns)]
             _ => Choice::from(0),
         }
@@ -278,6 +303,10 @@ impl Decode for KeypairData {
             }
             #[cfg(feature = "alloc")]
             Algorithm::SkEd25519 => SkEd25519::decode(reader).map(Self::SkEd25519),
+            #[cfg(feature = "alloc")]
+            algorithm @ Algorithm::Other(_) => {
+                OpaqueKeypair::decode_as(reader, algorithm).map(Self::Other)
+            }
             #[allow(unreachable_patterns)]
             _ => Err(Error::AlgorithmUnknown),
         }
@@ -307,6 +336,8 @@ impl Encode for KeypairData {
             Self::SkEcdsaSha2NistP256(sk) => sk.encoded_len()?,
             #[cfg(feature = "alloc")]
             Self::SkEd25519(sk) => sk.encoded_len()?,
+            #[cfg(feature = "alloc")]
+            Self::Other(key) => key.encoded_len()?,
         };
 
         [alg_len, key_len].checked_sum()
@@ -331,6 +362,8 @@ impl Encode for KeypairData {
             Self::SkEcdsaSha2NistP256(sk) => sk.encode(writer)?,
             #[cfg(feature = "alloc")]
             Self::SkEd25519(sk) => sk.encode(writer)?,
+            #[cfg(feature = "alloc")]
+            Self::Other(key) => key.encode(writer)?,
         }
 
         Ok(())
@@ -357,6 +390,8 @@ impl TryFrom<&KeypairData> for public::KeyData {
             }
             #[cfg(feature = "alloc")]
             KeypairData::SkEd25519(sk) => public::KeyData::SkEd25519(sk.public().clone()),
+            #[cfg(feature = "alloc")]
+            KeypairData::Other(key) => public::KeyData::Other(key.into()),
         })
     }
 }
