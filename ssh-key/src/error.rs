@@ -4,7 +4,7 @@ use crate::Algorithm;
 use core::fmt;
 
 #[cfg(feature = "alloc")]
-use crate::certificate;
+use {crate::certificate, alloc::boxed::Box};
 
 /// Result type with `ssh-key`'s [`Error`] as the error type.
 pub type Result<T> = core::result::Result<T, Error>;
@@ -27,6 +27,14 @@ pub enum Error {
     /// a given usage pattern or context.
     AlgorithmUnsupported {
         /// Algorithm identifier.
+        //
+        // NOTE: with the `alloc` feature is enabled, `Algorithm` has a large `Algorithm::Other`
+        // variant (168 bytes), so we box it to keep the size of `Error` small.
+        #[cfg(feature = "alloc")]
+        algorithm: Box<Algorithm>,
+
+        /// Algorithm identifier.
+        #[cfg(not(feature = "alloc"))]
         algorithm: Algorithm,
     },
 

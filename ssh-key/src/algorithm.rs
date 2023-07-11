@@ -9,6 +9,7 @@ use encoding::{Label, LabelError};
 
 #[cfg(feature = "alloc")]
 use {
+    alloc::boxed::Box,
     alloc::vec::Vec,
     sha2::{Digest, Sha256, Sha512},
 };
@@ -254,7 +255,9 @@ impl Algorithm {
     /// Return an error indicating this algorithm is unsupported.
     #[allow(dead_code)]
     pub(crate) fn unsupported_error(self) -> Error {
-        Error::AlgorithmUnsupported { algorithm: self }
+        Error::AlgorithmUnsupported {
+            algorithm: Box::new(self),
+        }
     }
 }
 
