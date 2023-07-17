@@ -105,8 +105,8 @@ fn ecdsa_nistp256_sign_and_verify() {
     let algorithm = Algorithm::Ecdsa {
         curve: EcdsaCurve::NistP256,
     };
-    let ca_key = PrivateKey::random(&mut rng, algorithm).unwrap();
-    let subject_key = PrivateKey::random(&mut rng, algorithm).unwrap();
+    let ca_key = PrivateKey::random(&mut rng, algorithm.clone()).unwrap();
+    let subject_key = PrivateKey::random(&mut rng, algorithm.clone()).unwrap();
     let mut cert_builder = certificate::Builder::new_with_random_nonce(
         &mut rng,
         subject_key.public_key(),

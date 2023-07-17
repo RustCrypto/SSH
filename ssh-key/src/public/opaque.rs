@@ -42,7 +42,7 @@ impl OpaquePublicKey {
 
     /// Get the [`Algorithm`] for this public key type.
     pub fn algorithm(&self) -> Algorithm {
-        self.algorithm
+        self.algorithm.clone()
     }
 
     /// Decode [`OpaquePublicKey`] for the specified algorithm.

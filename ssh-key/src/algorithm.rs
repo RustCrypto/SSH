@@ -87,7 +87,7 @@ const SK_SSH_ED25519: &str = "sk-ssh-ed25519@openssh.com";
 ///
 /// This type provides a registry of supported digital signature algorithms
 /// used for SSH keys.
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Algorithm {
     /// Digital Signature Algorithm
