@@ -1,4 +1,4 @@
-use core::ops::Deref;
+use alloc::string::String;
 use core::str::{self, FromStr};
 use encoding::LabelError;
 
@@ -16,39 +16,6 @@ const MAX_ALGORITHM_NAME_LEN: usize = 64;
 /// algorithm name).
 const MAX_CERT_STR_LEN: usize = MAX_ALGORITHM_NAME_LEN + CERT_STR_SUFFIX.len();
 
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
-struct AsciiStr<const N: usize> {
-    inner: [u8; N],
-    len: usize,
-}
-
-impl<const N: usize> FromStr for AsciiStr<N> {
-    type Err = LabelError;
-
-    fn from_str(id: &str) -> Result<Self, LabelError> {
-        if id.len() > N || !id.is_ascii() {
-            return Err(LabelError::new(id));
-        }
-
-        let len = id.len();
-        let mut inner = [0u8; N];
-        inner[..len].copy_from_slice(id.as_bytes());
-
-        Ok(Self { inner, len })
-    }
-}
-
-impl<const N: usize> Deref for AsciiStr<N> {
-    type Target = str;
-    #[inline]
-    fn deref(&self) -> &str {
-        // This conversion should **not** fail, as `self.inner` can only ever be constructed from
-        // valid `&str`s.
-        str::from_utf8(&self.inner[..self.len])
-            .expect("AsciiStr can only be built from valid strings")
-    }
-}
-
 /// A string representing an additional algorithm name in the `name@domainname` format (see
 /// [RFC4251 § 6]).
 ///
@@ -62,17 +29,15 @@ impl<const N: usize> Deref for AsciiStr<N> {
 /// implement all of them here.
 ///
 /// [RFC4251 § 6]: https://www.rfc-editor.org/rfc/rfc4251.html#section-6
-//
-// NOTE: We use AsciiStr instead of String to allow Algorithm to implement Copy.
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct AlgorithmName {
     /// The string identifier which corresponds to this algorithm.
-    id: AsciiStr<MAX_ALGORITHM_NAME_LEN>,
+    id: String,
     /// The string identifier which corresponds to the OpenSSH certificate format.
     ///
     /// This is derived from the algorithm name by inserting `"-cert-v01"` immediately after the
     /// name preceding the at-symbol (`@`).
-    certificate_str: AsciiStr<MAX_CERT_STR_LEN>,
+    certificate_str: String,
 }
 
 impl AlgorithmName {
@@ -88,7 +53,9 @@ impl AlgorithmName {
 
     /// Create a new [`AlgorithmName`] from an OpenSSH certificate format string identifier.
     pub fn from_certificate_str(id: &str) -> Result<Self, LabelError> {
-        let certificate_str = AsciiStr::from_str(id)?;
+        if id.len() > MAX_CERT_STR_LEN || !id.is_ascii() {
+            return Err(LabelError::new(id));
+        }
 
         // Derive the algorithm name from the certificate format string identifier:
         let (name, domain) = id.split_once('@').ok_or_else(|| LabelError::new(id))?;
@@ -102,11 +69,11 @@ impl AlgorithmName {
             .strip_suffix(CERT_STR_SUFFIX)
             .ok_or_else(|| LabelError::new(id))?;
 
-        let algorithm_name = AsciiStr::from_str(&format!("{name}@{domain}"))?;
+        let algorithm_name = format!("{name}@{domain}");
 
         Ok(Self {
             id: algorithm_name,
-            certificate_str,
+            certificate_str: id.into(),
         })
     }
 }
@@ -115,7 +82,9 @@ impl FromStr for AlgorithmName {
     type Err = LabelError;
 
     fn from_str(id: &str) -> Result<Self, LabelError> {
-        let algorithm_name = AsciiStr::from_str(id)?;
+        if id.len() > MAX_ALGORITHM_NAME_LEN || !id.is_ascii() {
+            return Err(LabelError::new(id));
+        }
 
         // Derive the certificate format string identifier from the algorithm name:
         let (name, domain) = id.split_once('@').ok_or_else(|| LabelError::new(id))?;
@@ -125,10 +94,10 @@ impl FromStr for AlgorithmName {
             return Err(LabelError::new(id));
         }
 
-        let certificate_str = AsciiStr::from_str(&format!("{name}{CERT_STR_SUFFIX}@{domain}"))?;
+        let certificate_str = format!("{name}{CERT_STR_SUFFIX}@{domain}");
 
         Ok(Self {
-            id: algorithm_name,
+            id: id.into(),
             certificate_str,
         })
     }
