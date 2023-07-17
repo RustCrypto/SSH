@@ -53,18 +53,10 @@ impl AlgorithmName {
 
     /// Create a new [`AlgorithmName`] from an OpenSSH certificate format string identifier.
     pub fn from_certificate_str(id: &str) -> Result<Self, LabelError> {
-        if id.len() > MAX_CERT_STR_LEN || !id.is_ascii() {
-            return Err(LabelError::new(id));
-        }
+        validate_algorithm_id(id, MAX_CERT_STR_LEN)?;
 
         // Derive the algorithm name from the certificate format string identifier:
-        let (name, domain) = id.split_once('@').ok_or_else(|| LabelError::new(id))?;
-
-        // TODO: validate name and domain_name according to the criteria from RFC4251
-        if name.is_empty() || domain.is_empty() || domain.contains('@') {
-            return Err(LabelError::new(id));
-        }
-
+        let (name, domain) = split_algorithm_id(id)?;
         let name = name
             .strip_suffix(CERT_STR_SUFFIX)
             .ok_or_else(|| LabelError::new(id))?;
@@ -82,18 +74,10 @@ impl FromStr for AlgorithmName {
     type Err = LabelError;
 
     fn from_str(id: &str) -> Result<Self, LabelError> {
-        if id.len() > MAX_ALGORITHM_NAME_LEN || !id.is_ascii() {
-            return Err(LabelError::new(id));
-        }
+        validate_algorithm_id(id, MAX_ALGORITHM_NAME_LEN)?;
 
         // Derive the certificate format string identifier from the algorithm name:
-        let (name, domain) = id.split_once('@').ok_or_else(|| LabelError::new(id))?;
-
-        // TODO: validate name and domain_name according to the criteria from RFC4251
-        if name.is_empty() || domain.is_empty() || domain.contains('@') {
-            return Err(LabelError::new(id));
-        }
-
+        let (name, domain) = split_algorithm_id(id)?;
         let certificate_str = format!("{name}{CERT_STR_SUFFIX}@{domain}");
 
         Ok(Self {
@@ -101,4 +85,25 @@ impl FromStr for AlgorithmName {
             certificate_str,
         })
     }
+}
+
+/// Check if the length of `id` is at most `n`, and that `id` only consists of ASCII characters.
+fn validate_algorithm_id(id: &str, n: usize) -> Result<(), LabelError> {
+    if id.len() > n || !id.is_ascii() {
+        return Err(LabelError::new(id));
+    }
+
+    Ok(())
+}
+
+/// Split a `name@domainname` algorithm string identifier into `(name, domainname)`.
+fn split_algorithm_id(id: &str) -> Result<(&str, &str), LabelError> {
+    let (name, domain) = id.split_once('@').ok_or_else(|| LabelError::new(id))?;
+
+    // TODO: validate name and domain_name according to the criteria from RFC4251
+    if name.is_empty() || domain.is_empty() || domain.contains('@') {
+        return Err(LabelError::new(id));
+    }
+
+    Ok((name, domain))
 }
