@@ -9,6 +9,9 @@ use core::str;
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
+#[cfg(feature = "bytes")]
+use bytes::Bytes;
+
 #[cfg(feature = "pem")]
 use {
     crate::PEM_LINE_WIDTH,
@@ -247,5 +250,16 @@ impl Encode for Vec<String> {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(feature = "bytes")]
+impl Encode for Bytes {
+    fn encoded_len(&self) -> Result<usize, Error> {
+        self.as_ref().encoded_len()
+    }
+
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
+        self.as_ref().encode(writer)
     }
 }
