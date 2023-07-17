@@ -8,6 +8,9 @@ use crate::{reader::Reader, Error, Result};
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
+#[cfg(feature = "bytes")]
+use bytes::Bytes;
+
 #[cfg(feature = "pem")]
 use {crate::PEM_LINE_WIDTH, pem::PemLabel};
 
@@ -175,5 +178,21 @@ impl Decode for Vec<String> {
 
             Ok(entries)
         })
+    }
+}
+
+/// Decodes `Bytes` from `byte[n]` as described in [RFC4251 § 5]:
+///
+/// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
+/// > data is sometimes represented as an array of bytes, written
+/// > `byte[n]`, where n is the number of bytes in the array.
+///
+/// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+#[cfg(feature = "bytes")]
+impl Decode for Bytes {
+    type Error = Error;
+
+    fn decode(reader: &mut impl Reader) -> Result<Self> {
+        Vec::<u8>::decode(reader).map(Into::into)
     }
 }

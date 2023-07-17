@@ -16,6 +16,7 @@ rust-version = "1.60"
 
 [dependencies]
 base64 = { package = "base64ct", version = "1.4", optional = true }
+bytes = { version = "1", optional = true, default-features = false }
 pem = { package = "pem-rfc7468", version = "0.7", optional = true }
 sha2 = { version = "0.10", optional = true, default-features = false }
 
@@ -26,6 +27,7 @@ hex-literal = "0.4.1"
 alloc = ["base64?/alloc", "pem?/alloc"]
 std = ["alloc", "base64?/std", "pem?/std", "sha2?/std"]
 
+bytes = ["alloc", "dep:bytes"]
 pem = ["base64", "dep:pem"]
 
 [package.metadata.docs.rs]
