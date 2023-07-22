@@ -9,7 +9,7 @@ use encoding::{Label, LabelError};
 
 #[cfg(feature = "alloc")]
 use {
-    alloc::vec::Vec,
+    alloc::{borrow::ToOwned, string::String, vec::Vec},
     sha2::{Digest, Sha256, Sha512},
 };
 
@@ -179,7 +179,7 @@ impl Algorithm {
             CERT_SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             CERT_SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
             #[cfg(feature = "alloc")]
-            _ => Ok(Algorithm::Other(AlgorithmName::from_certificate_str(id)?)),
+            _ => Ok(Algorithm::Other(AlgorithmName::from_certificate_type(id)?)),
             #[cfg(not(feature = "alloc"))]
             _ => Err(Error::AlgorithmUnknown),
         }
@@ -214,7 +214,8 @@ impl Algorithm {
     /// See [PROTOCOL.certkeys] for more information.
     ///
     /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
-    pub fn as_certificate_str(&self) -> &str {
+    #[cfg(feature = "alloc")]
+    pub fn to_certificate_type(&self) -> String {
         match self {
             Algorithm::Dsa => CERT_DSA,
             Algorithm::Ecdsa { curve } => match curve {
@@ -226,9 +227,9 @@ impl Algorithm {
             Algorithm::Rsa { .. } => CERT_RSA,
             Algorithm::SkEcdsaSha2NistP256 => CERT_SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => CERT_SK_SSH_ED25519,
-            #[cfg(feature = "alloc")]
-            Algorithm::Other(algorithm) => algorithm.certificate_str(),
+            Algorithm::Other(algorithm) => return algorithm.certificate_type(),
         }
+        .to_owned()
     }
 
     /// Is the algorithm DSA?

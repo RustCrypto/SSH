@@ -176,7 +176,7 @@ impl Certificate {
         let mut cert = Certificate::decode(&mut reader)?;
 
         // Verify that the algorithm in the Base64-encoded data matches the text
-        if encapsulation.algorithm_id != cert.algorithm().as_certificate_str() {
+        if encapsulation.algorithm_id != cert.algorithm().to_certificate_type() {
             return Err(Error::AlgorithmUnknown);
         }
 
@@ -193,7 +193,11 @@ impl Certificate {
 
     /// Encode OpenSSH certificate to a [`String`].
     pub fn to_openssh(&self) -> Result<String> {
-        SshFormat::encode_string(self.algorithm().as_certificate_str(), self, self.comment())
+        SshFormat::encode_string(
+            &self.algorithm().to_certificate_type(),
+            self,
+            self.comment(),
+        )
     }
 
     /// Serialize OpenSSH certificate as raw bytes.
@@ -429,7 +433,7 @@ impl Certificate {
     /// Encode the portion of the certificate "to be signed" by the CA
     /// (or to be verified against an existing CA signature)
     fn encode_tbs(&self, writer: &mut impl Writer) -> encoding::Result<()> {
-        self.algorithm().as_certificate_str().encode(writer)?;
+        self.algorithm().to_certificate_type().encode(writer)?;
         self.nonce.encode(writer)?;
         self.public_key.encode_key_data(writer)?;
         self.serial.encode(writer)?;
@@ -473,7 +477,7 @@ impl Decode for Certificate {
 impl Encode for Certificate {
     fn encoded_len(&self) -> encoding::Result<usize> {
         [
-            self.algorithm().as_certificate_str().encoded_len()?,
+            self.algorithm().to_certificate_type().encoded_len()?,
             self.nonce.encoded_len()?,
             self.public_key.encoded_key_data_len()?,
             self.serial.encoded_len()?,
