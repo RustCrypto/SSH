@@ -12,11 +12,11 @@ fn additional_algorithm_name() {
 
     let name = AlgorithmName::from_str(NAME).unwrap();
     assert_eq!(name.as_str(), NAME);
-    assert_eq!(name.certificate_str(), CERT_STR);
+    assert_eq!(name.certificate_type(), CERT_STR);
 
-    let name = AlgorithmName::from_certificate_str(CERT_STR).unwrap();
+    let name = AlgorithmName::from_certificate_type(CERT_STR).unwrap();
     assert_eq!(name.as_str(), NAME);
-    assert_eq!(name.certificate_str(), CERT_STR);
+    assert_eq!(name.certificate_type(), CERT_STR);
 }
 
 #[test]
@@ -48,7 +48,7 @@ fn invalid_algorithm_name() {
 
     for name in INVALID_CERT_STRS {
         assert!(
-            AlgorithmName::from_certificate_str(&name).is_err(),
+            AlgorithmName::from_certificate_type(&name).is_err(),
             "{:?} should be an invalid certificate str",
             name
         );

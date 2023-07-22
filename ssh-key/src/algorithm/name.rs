@@ -33,26 +33,30 @@ const MAX_CERT_STR_LEN: usize = MAX_ALGORITHM_NAME_LEN + CERT_STR_SUFFIX.len();
 pub struct AlgorithmName {
     /// The string identifier which corresponds to this algorithm.
     id: String,
-    /// The string identifier which corresponds to the OpenSSH certificate format.
-    ///
-    /// This is derived from the algorithm name by inserting `"-cert-v01"` immediately after the
-    /// name preceding the at-symbol (`@`).
-    certificate_str: String,
 }
 
 impl AlgorithmName {
+    /// Create a new algorithm identifier.
+    pub fn new(id: impl Into<String>) -> Result<Self, LabelError> {
+        let id = id.into();
+        validate_algorithm_id(&id, MAX_ALGORITHM_NAME_LEN)?;
+        split_algorithm_id(&id)?;
+        Ok(Self { id })
+    }
+
     /// Get the string identifier which corresponds to this algorithm name.
     pub fn as_str(&self) -> &str {
         &self.id
     }
 
     /// Get the string identifier which corresponds to the OpenSSH certificate format.
-    pub fn certificate_str(&self) -> &str {
-        &self.certificate_str
+    pub fn certificate_type(&self) -> String {
+        let (name, domain) = split_algorithm_id(&self.id).expect("format checked in constructor");
+        format!("{name}{CERT_STR_SUFFIX}@{domain}")
     }
 
     /// Create a new [`AlgorithmName`] from an OpenSSH certificate format string identifier.
-    pub fn from_certificate_str(id: &str) -> Result<Self, LabelError> {
+    pub fn from_certificate_type(id: &str) -> Result<Self, LabelError> {
         validate_algorithm_id(id, MAX_CERT_STR_LEN)?;
 
         // Derive the algorithm name from the certificate format string identifier:
@@ -63,10 +67,7 @@ impl AlgorithmName {
 
         let algorithm_name = format!("{name}@{domain}");
 
-        Ok(Self {
-            id: algorithm_name,
-            certificate_str: id.into(),
-        })
+        Ok(Self { id: algorithm_name })
     }
 }
 
@@ -74,16 +75,7 @@ impl FromStr for AlgorithmName {
     type Err = LabelError;
 
     fn from_str(id: &str) -> Result<Self, LabelError> {
-        validate_algorithm_id(id, MAX_ALGORITHM_NAME_LEN)?;
-
-        // Derive the certificate format string identifier from the algorithm name:
-        let (name, domain) = split_algorithm_id(id)?;
-        let certificate_str = format!("{name}{CERT_STR_SUFFIX}@{domain}");
-
-        Ok(Self {
-            id: id.into(),
-            certificate_str,
-        })
+        Self::new(id)
     }
 }
 
