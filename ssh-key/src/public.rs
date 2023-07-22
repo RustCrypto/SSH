@@ -9,6 +9,8 @@ mod ecdsa;
 mod ed25519;
 mod key_data;
 #[cfg(feature = "alloc")]
+mod opaque;
+#[cfg(feature = "alloc")]
 mod rsa;
 mod sk;
 mod ssh_format;
@@ -16,7 +18,11 @@ mod ssh_format;
 pub use self::{ed25519::Ed25519PublicKey, key_data::KeyData, sk::SkEd25519};
 
 #[cfg(feature = "alloc")]
-pub use self::{dsa::DsaPublicKey, rsa::RsaPublicKey};
+pub use self::{
+    dsa::DsaPublicKey,
+    opaque::{OpaquePublicKey, OpaquePublicKeyBytes},
+    rsa::RsaPublicKey,
+};
 
 #[cfg(feature = "ecdsa")]
 pub use self::{ecdsa::EcdsaPublicKey, sk::SkEcdsaSha2NistP256};

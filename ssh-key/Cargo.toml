@@ -46,7 +46,7 @@ default = ["ecdsa", "rand_core", "std"]
 alloc = [
     "encoding/alloc",
     "signature/alloc",
-    "zeroize/alloc"
+    "zeroize/alloc",
 ]
 std = [
     "alloc",

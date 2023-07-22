@@ -131,7 +131,7 @@ impl Signature {
 
     /// Get the [`Algorithm`] associated with this signature.
     pub fn algorithm(&self) -> Algorithm {
-        self.algorithm
+        self.algorithm.clone()
     }
 
     /// Get the raw signature as bytes.
@@ -531,7 +531,7 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
                     _ => Err(Error::Crypto),
                 }
             }
-            _ => Err(signature.algorithm.unsupported_error()),
+            _ => Err(signature.algorithm.clone().unsupported_error()),
         }
     }
 }
@@ -561,7 +561,7 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
                     _ => Err(Error::Crypto),
                 }
             }
-            _ => Err(signature.algorithm.unsupported_error()),
+            _ => Err(signature.algorithm.clone().unsupported_error()),
         }
     }
 }

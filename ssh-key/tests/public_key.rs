@@ -40,6 +40,10 @@ const OPENSSH_SK_ECDSA_P256_EXAMPLE: &str = include_str!("examples/id_sk_ecdsa_p
 /// Security Key (FIDO/U2F) Ed25519 OpenSSH-formatted public key
 const OPENSSH_SK_ED25519_EXAMPLE: &str = include_str!("examples/id_sk_ed25519.pub");
 
+/// OpenSSH-formatted public key with a custom algorithm name
+#[cfg(feature = "alloc")]
+const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque.pub");
+
 #[cfg(feature = "alloc")]
 #[test]
 fn decode_dsa_openssh() {
@@ -300,6 +304,28 @@ fn decode_sk_ed25519_openssh() {
 
     assert_eq!(
         "SHA256:6WZVJ44bqhAWLVP4Ns0TDkoSQSsZo/h2K+mEvOaNFbw",
+        &key.fingerprint(Default::default()).to_string(),
+    );
+}
+
+#[cfg(all(feature = "alloc"))]
+#[test]
+fn decode_custom_algorithm_openssh() {
+    let key = PublicKey::from_openssh(OPENSSH_OPAQUE_EXAMPLE).unwrap();
+    assert!(
+        matches!(key.algorithm(), Algorithm::Other(name) if name.as_str() == "name@example.com")
+    );
+
+    let opaque_key = key.key_data().other().unwrap();
+    assert_eq!(
+        &hex!("888f24ee17adfed0091e67e485fb9844cfed6072cac1d06390e4005f5015b44f"),
+        opaque_key.as_ref(),
+    );
+
+    assert_eq!("comment@example.com", key.comment());
+
+    assert_eq!(
+        "SHA256:8GV7v5qOHG9invseKCx0NVwFocNL0MwdyRC9bfjTFGs",
         &key.fingerprint(Default::default()).to_string(),
     );
 }
