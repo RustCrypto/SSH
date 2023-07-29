@@ -16,6 +16,9 @@ use ssh_key::EcdsaCurve;
 #[cfg(all(feature = "ed25519", feature = "rsa"))]
 use std::str::FromStr;
 
+#[cfg(all(feature = "ed25519", feature = "std"))]
+use std::time::{Duration, SystemTime};
+
 /// Example Unix timestamp when a certificate was issued (2020-09-13 12:26:40 UTC).
 const ISSUED_AT: u64 = 1600000000;
 
@@ -182,4 +185,25 @@ R6qbyo6hPuCiV9cAAAAAAQID
 
     let ca_fingerprint = ca_key.fingerprint(Default::default());
     assert!(cert.validate_at(VALID_AT, &[ca_fingerprint]).is_ok());
+}
+
+#[cfg(all(feature = "ed25519", feature = "std"))]
+#[test]
+fn new_with_validity_times() {
+    let mut rng = ChaCha8Rng::from_seed(PRNG_SEED);
+    let subject_key = PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap();
+
+    // NOTE: use a random nonce, not an all-zero one!
+    let nonce = [0u8; certificate::Builder::RECOMMENDED_NONCE_SIZE];
+
+    let issued_at = SystemTime::now();
+    let expires_at = issued_at + Duration::from_secs(3600);
+
+    assert!(certificate::Builder::new_with_validity_times(
+        nonce,
+        subject_key.public_key(),
+        issued_at,
+        expires_at
+    )
+    .is_ok());
 }
