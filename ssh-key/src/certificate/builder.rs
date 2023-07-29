@@ -145,7 +145,7 @@ impl Builder {
         let valid_before =
             UnixTime::try_from(valid_before).map_err(|_| Field::ValidBefore.invalid_error())?;
 
-        Self::new(nonce, public_key, valid_before.into(), valid_after.into())
+        Self::new(nonce, public_key, valid_after.into(), valid_before.into())
     }
 
     /// Create a new certificate builder, generating a random nonce using the
