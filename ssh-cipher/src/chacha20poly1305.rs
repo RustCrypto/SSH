@@ -39,7 +39,7 @@ impl ChaCha20Poly1305 {
     ///
     /// [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
     pub fn new(key: &[u8], nonce: &[u8]) -> Result<Self> {
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         if key.len() != KEY_SIZE * 2 {
             return Err(Error::KeySize);
         }
