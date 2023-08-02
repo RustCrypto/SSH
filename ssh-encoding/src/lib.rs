@@ -7,7 +7,7 @@
 )]
 #![forbid(unsafe_code)]
 #![warn(
-    clippy::integer_arithmetic,
+    clippy::arithmetic_side_effects,
     clippy::panic,
     clippy::panic_in_result_fn,
     clippy::unwrap_used,

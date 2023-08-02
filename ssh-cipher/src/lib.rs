@@ -7,7 +7,7 @@
 )]
 #![forbid(unsafe_code)]
 #![warn(
-    clippy::integer_arithmetic,
+    clippy::arithmetic_side_effects,
     clippy::panic,
     clippy::panic_in_result_fn,
     clippy::unwrap_used,
@@ -201,7 +201,7 @@ impl Cipher {
 
     /// Compute the length of padding necessary to pad the given input to
     /// the block size.
-    #[allow(clippy::integer_arithmetic)]
+    #[allow(clippy::arithmetic_side_effects)]
     pub fn padding_len(self, input_size: usize) -> usize {
         match input_size % self.block_size() {
             0 => 0,

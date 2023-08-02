@@ -12,7 +12,7 @@ use core::fmt;
 const WIDTH: usize = 17;
 const HEIGHT: usize = 9;
 const VALUES: &[u8; 17] = b" .o+=*BOX@%&#/^SE";
-const NVALUES: usize = VALUES.len() - 1;
+const NVALUES: u8 = VALUES.len() as u8 - 1;
 
 type Field = [[u8; WIDTH]; HEIGHT];
 
@@ -25,7 +25,8 @@ pub(super) struct Randomart<'a> {
 
 impl<'a> Randomart<'a> {
     /// Create new "randomart" from the given fingerprint.
-    #[allow(clippy::integer_arithmetic)]
+    // TODO: Remove this when the pipeline toolchain is updated beyond 1.69
+    #[allow(clippy::arithmetic_side_effects)]
     pub(super) fn new(header: &'a str, fingerprint: Fingerprint) -> Self {
         let mut field = Field::default();
         let mut x = WIDTH / 2;
@@ -48,16 +49,16 @@ impl<'a> Randomart<'a> {
                 x = x.min(WIDTH.saturating_sub(1));
                 y = y.min(HEIGHT.saturating_sub(1));
 
-                if field[y][x] < NVALUES as u8 - 2 {
-                    field[y][x] += 1;
+                if field[y][x] < NVALUES - 2 {
+                    field[y][x] = field[y][x].saturating_add(1);
                 }
 
                 byte >>= 2;
             }
         }
 
-        field[HEIGHT / 2][WIDTH / 2] = NVALUES as u8 - 1;
-        field[y][x] = NVALUES as u8;
+        field[HEIGHT / 2][WIDTH / 2] = NVALUES - 1;
+        field[y][x] = NVALUES;
 
         Self {
             header,

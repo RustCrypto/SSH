@@ -414,7 +414,7 @@ impl Verifier<Signature> for public::SkEd25519 {
         let signature_bytes = &signature.as_bytes()[..signature_len];
         let flags_and_counter = &signature.as_bytes()[signature_len..];
 
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         let mut signed_data =
             Vec::with_capacity((2 * Sha256::output_size()) + SK_ED25519_SIGNATURE_TRAILER_SIZE);
         signed_data.extend(Sha256::digest(self.application()));
@@ -451,7 +451,7 @@ impl TryFrom<&p256::ecdsa::Signature> for Signature {
     fn try_from(signature: &p256::ecdsa::Signature) -> Result<Signature> {
         let (r, s) = signature.split_bytes();
 
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         let mut data = Vec::with_capacity(32 * 2 + 4 * 2 + 2);
 
         Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
@@ -473,7 +473,7 @@ impl TryFrom<&p384::ecdsa::Signature> for Signature {
     fn try_from(signature: &p384::ecdsa::Signature) -> Result<Signature> {
         let (r, s) = signature.split_bytes();
 
-        #[allow(clippy::integer_arithmetic)]
+        #[allow(clippy::arithmetic_side_effects)]
         let mut data = Vec::with_capacity(48 * 2 + 4 * 2 + 2);
 
         Mpint::from_positive_bytes(&r)?.encode(&mut data)?;

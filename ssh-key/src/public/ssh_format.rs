@@ -111,9 +111,7 @@ impl<'a> SshFormat<'a> {
 /// rather than this estimate.
 #[cfg(feature = "alloc")]
 fn base64_len_approx(input_len: usize) -> usize {
-    // TODO(tarcieri): checked arithmetic
-    #[allow(clippy::integer_arithmetic)]
-    ((((input_len * 4) / 3) + 3) & !3)
+    (((input_len.saturating_mul(4)) / 3).saturating_add(3)) & !3
 }
 
 /// Parse a segment of the public key.
