@@ -13,7 +13,7 @@ use {
 /// RSA public key.
 ///
 /// Described in [RFC4253 § 6.6](https://datatracker.ietf.org/doc/html/rfc4253#section-6.6).
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct RsaPublicKey {
     /// RSA public exponent.
     pub e: Mpint,

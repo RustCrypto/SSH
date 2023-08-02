@@ -20,7 +20,7 @@ pub type EcdsaNistP521PublicKey = sec1::EncodedPoint<U66>;
 /// `sec1` feature of this crate is enabled (which it is by default).
 ///
 /// Described in [FIPS 186-4](https://csrc.nist.gov/publications/detail/fips/186/4/final).
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum EcdsaPublicKey {
     /// NIST P-256 ECDSA public key.
     NistP256(EcdsaNistP256PublicKey),

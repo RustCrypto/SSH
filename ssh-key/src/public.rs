@@ -78,7 +78,7 @@ use std::{fs, path::Path};
 /// The serialization uses a binary encoding with binary formats like bincode
 /// and CBOR, and the OpenSSH string serialization when used with
 /// human-readable formats like JSON and TOML.
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct PublicKey {
     /// Key data.
     pub(crate) key_data: KeyData,

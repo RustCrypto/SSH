@@ -18,7 +18,7 @@ const DEFAULT_APPLICATION_STRING: &str = "ssh:";
 /// Security Key (FIDO/U2F) ECDSA/NIST P-256 public key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
 #[cfg(feature = "ecdsa")]
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Ord, Hash, PartialEq, PartialOrd)]
 pub struct SkEcdsaSha2NistP256 {
     /// Elliptic curve point representing a public key.
     ec_point: EcdsaNistP256PublicKey,
@@ -112,7 +112,7 @@ impl From<SkEcdsaSha2NistP256> for EcdsaNistP256PublicKey {
 
 /// Security Key (FIDO/U2F) Ed25519 public key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct SkEd25519 {
     /// Ed25519 public key.
     public_key: Ed25519PublicKey,

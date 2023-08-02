@@ -2,6 +2,7 @@
 
 use hex_literal::hex;
 use ssh_key::{Algorithm, PublicKey};
+use std::collections::HashSet;
 
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
@@ -377,4 +378,11 @@ fn encode_rsa_3072_openssh() {
 fn encode_rsa_4096_openssh() {
     let key = PublicKey::from_openssh(OPENSSH_RSA_4096_EXAMPLE).unwrap();
     assert_eq!(OPENSSH_RSA_4096_EXAMPLE.trim_end(), &key.to_string());
+}
+
+#[test]
+fn public_keys_are_hashable() {
+    let key = PublicKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
+    let set = HashSet::from([&key]);
+    assert_eq!(true, set.contains(&key));
 }
