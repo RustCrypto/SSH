@@ -752,7 +752,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-cipher"
-version = "0.1.0-pre.0"
+version = "0.2.0"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -768,7 +768,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.2.0-pre.0"
+version = "0.2.0"
 dependencies = [
  "base64ct",
  "bytes",
