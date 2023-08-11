@@ -3,6 +3,7 @@
 use crate::{Error, Result};
 use alloc::vec::Vec;
 use core::fmt;
+use core::hash::{Hash, Hasher};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
@@ -111,6 +112,12 @@ impl Eq for Mpint {}
 impl PartialEq for Mpint {
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).into()
+    }
+}
+
+impl Hash for Mpint {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.inner.hash(state)
     }
 }
 

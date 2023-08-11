@@ -6,7 +6,7 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 /// Digital Signature Algorithm (DSA) public key.
 ///
 /// Described in [FIPS 186-4 § 4.1](https://csrc.nist.gov/publications/detail/fips/186/4/final).
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct DsaPublicKey {
     /// Prime modulus.
     pub p: Mpint,

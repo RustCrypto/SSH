@@ -16,7 +16,7 @@ use encoding::{Decode, Encode, Reader, Writer};
 ///
 /// The encoded representation of an `OpaquePublicKey` is the encoded representation of its
 /// [`OpaquePublicKeyBytes`].
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OpaquePublicKey {
     /// The [`Algorithm`] of this public key.
     pub algorithm: Algorithm,
@@ -28,7 +28,7 @@ pub struct OpaquePublicKey {
 ///
 /// The encoded representation of an `OpaquePublicKeyBytes` consists of a 4-byte length prefix,
 /// followed by its byte representation.
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OpaquePublicKeyBytes(Vec<u8>);
 
 impl OpaquePublicKey {
