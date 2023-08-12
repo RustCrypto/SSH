@@ -1,12 +1,13 @@
 //! Digital Signature Algorithm (DSA) public keys.
 
 use crate::{Error, Mpint, Result};
+use core::hash::{Hash, Hasher};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Digital Signature Algorithm (DSA) public key.
 ///
 /// Described in [FIPS 186-4 § 4.1](https://csrc.nist.gov/publications/detail/fips/186/4/final).
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DsaPublicKey {
     /// Prime modulus.
     pub p: Mpint,
@@ -50,6 +51,16 @@ impl Encode for DsaPublicKey {
         self.q.encode(writer)?;
         self.g.encode(writer)?;
         self.y.encode(writer)
+    }
+}
+
+impl Hash for DsaPublicKey {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.p.as_bytes().hash(state);
+        self.q.as_bytes().hash(state);
+        self.g.as_bytes().hash(state);
+        self.y.as_bytes().hash(state);
     }
 }
 
