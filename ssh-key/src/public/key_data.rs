@@ -11,7 +11,7 @@ use super::{DsaPublicKey, OpaquePublicKey, RsaPublicKey};
 use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
 
 /// Public key data.
-#[derive(Clone, Debug, Hash, Ord, Eq, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum KeyData {
     /// Digital Signature Algorithm (DSA) public key data.

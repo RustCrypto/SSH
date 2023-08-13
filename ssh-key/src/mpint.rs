@@ -1,9 +1,8 @@
 //! Multiple precision integer
 
 use crate::{Error, Result};
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::fmt;
-use core::hash::{Hash, Hasher};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
@@ -42,7 +41,7 @@ use zeroize::Zeroizing;
 #[derive(Clone, PartialOrd, Ord)]
 pub struct Mpint {
     /// Inner big endian-serialized integer value
-    inner: Vec<u8>,
+    inner: Box<[u8]>,
 }
 
 impl Mpint {
@@ -69,7 +68,7 @@ impl Mpint {
         }
 
         inner.extend_from_slice(bytes);
-        inner.try_into()
+        inner.into_boxed_slice().try_into()
     }
 
     /// Get the big integer data encoded as big endian bytes.
@@ -115,17 +114,11 @@ impl PartialEq for Mpint {
     }
 }
 
-impl Hash for Mpint {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.inner.hash(state)
-    }
-}
-
 impl Decode for Mpint {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        Vec::decode(reader)?.try_into()
+        Vec::decode(reader)?.into_boxed_slice().try_into()
     }
 }
 
@@ -144,15 +137,15 @@ impl TryFrom<&[u8]> for Mpint {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        Vec::from(bytes).try_into()
+        Vec::from(bytes).into_boxed_slice().try_into()
     }
 }
 
-impl TryFrom<Vec<u8>> for Mpint {
+impl TryFrom<Box<[u8]>> for Mpint {
     type Error = Error;
 
-    fn try_from(bytes: Vec<u8>) -> Result<Self> {
-        match bytes.as_slice() {
+    fn try_from(bytes: Box<[u8]>) -> Result<Self> {
+        match &*bytes {
             // Unnecessary leading 0
             [0x00] => Err(Error::FormatEncoding),
             // Unnecessary leading 0

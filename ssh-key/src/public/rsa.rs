@@ -1,6 +1,7 @@
 //! Rivest–Shamir–Adleman (RSA) public keys.
 
 use crate::{Error, Mpint, Result};
+use core::hash::{Hash, Hasher};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
@@ -13,7 +14,7 @@ use {
 /// RSA public key.
 ///
 /// Described in [RFC4253 § 6.6](https://datatracker.ietf.org/doc/html/rfc4253#section-6.6).
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct RsaPublicKey {
     /// RSA public exponent.
     pub e: Mpint,
@@ -46,6 +47,14 @@ impl Encode for RsaPublicKey {
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.e.encode(writer)?;
         self.n.encode(writer)
+    }
+}
+
+impl Hash for RsaPublicKey {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.e.as_bytes().hash(state);
+        self.n.as_bytes().hash(state);
     }
 }
 
