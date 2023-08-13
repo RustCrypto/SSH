@@ -4,6 +4,64 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.6.0 (2023-08-13)
+### Added
+- Partial support for U2F signature verification ([#44])
+- Support for `aes256-gcm@openssh.com` encryption ([#75])
+- "randomart" public key fingerprint visualizations ([#77])
+- `PrivateKey::encrypt_with_cipher` ([#79])
+- Propagate `ssh_key::Error` through `signature::Error` ([#82])
+- `crypto` feature ([#83])
+- Support for AES-CBC, ChaCha20Poly1305, and TDES encryption ([#118])
+- Basic support for nonstandard SSH key algorithms ([#136])
+- Impl `Hash` for `PublicKey` and its parts ([#145], [#149])
+
+### Changed
+- Bump `signature` crate dependency to v2 ([#58])
+- Use `ssh_key::Error` as error type for `TryFrom<&[u8]>` impl on `Signature` ([#59])
+- Bump elliptic curve and password hash deps; MSRV 1.65 ([#66])
+  - `bcrypt-pbkdf` v0.10
+  - `dsa` v0.6
+  - `p256` v0.13
+  - `p384` v0.13
+  - `sec1` v0.7
+- Use `&mut impl CryptoRngCore` for RNGs ([#67])
+- Make `certificate::Builder::new` fallible ([#71])
+- Rename `MPInt` => `Mpint` ([#76])
+- Split `AlgorithmUnknown` and `AlgorithmUnsupported` ([#81])
+- Bump `rsa` dependency to v0.9 ([#107])
+- Extract symmetric encryption into `ssh-cipher` crate ([#125])
+- Bump `ed25519-dalek` dependency to v2 ([#146])
+- Bump `ssh-encoding` dependency to v0.2 ([#147])
+
+### Fixed
+- DSA signature encoding ([#115])
+- `certificate::Builder::new_with_validity_times` ([#143])
+
+[#44]: https://github.com/RustCrypto/SSH/pull/44
+[#58]: https://github.com/RustCrypto/SSH/pull/58
+[#59]: https://github.com/RustCrypto/SSH/pull/59
+[#66]: https://github.com/RustCrypto/SSH/pull/66
+[#67]: https://github.com/RustCrypto/SSH/pull/67
+[#71]: https://github.com/RustCrypto/SSH/pull/71
+[#75]: https://github.com/RustCrypto/SSH/pull/75
+[#76]: https://github.com/RustCrypto/SSH/pull/76
+[#77]: https://github.com/RustCrypto/SSH/pull/77
+[#79]: https://github.com/RustCrypto/SSH/pull/79
+[#81]: https://github.com/RustCrypto/SSH/pull/81
+[#82]: https://github.com/RustCrypto/SSH/pull/82
+[#83]: https://github.com/RustCrypto/SSH/pull/83
+[#107]: https://github.com/RustCrypto/SSH/pull/107
+[#115]: https://github.com/RustCrypto/SSH/pull/115
+[#118]: https://github.com/RustCrypto/SSH/pull/118
+[#125]: https://github.com/RustCrypto/SSH/pull/125
+[#136]: https://github.com/RustCrypto/SSH/pull/136
+[#143]: https://github.com/RustCrypto/SSH/pull/143
+[#145]: https://github.com/RustCrypto/SSH/pull/145
+[#146]: https://github.com/RustCrypto/SSH/pull/146
+[#147]: https://github.com/RustCrypto/SSH/pull/147
+[#149]: https://github.com/RustCrypto/SSH/pull/149
+
 ## 0.5.1 (2022-10-25)
 ### Changed
 - README.md improvements ([#41])
