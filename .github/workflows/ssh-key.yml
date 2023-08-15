@@ -48,11 +48,15 @@ jobs:
       - run: ${{ matrix.deps }}
       - run: cargo build --target ${{ matrix.target }} --release --all-features
 
-# TODO(tarcieri): re-enable when `ed25519-dalek` v2.0 is released
-#  minimal-versions:
-#    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
-#    with:
-#        working-directory: ${{ github.workflow }}
+  minimal-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo +nightly update -Z minimal-versions
+      - uses: dtolnay/rust-toolchain@1.65.0
+      - run: rm ../Cargo.toml
+      - run: cargo test --all-features --release
 
   no_std:
     runs-on: ubuntu-latest
