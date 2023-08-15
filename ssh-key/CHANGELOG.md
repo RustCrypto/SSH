@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.6.1 (2023-08-15)
+### Fixed
+- `minimal-versions` correctness for `sec1` dependency ([#154])
+
+[#154]: https://github.com/RustCrypto/SSH/pull/154
+
 ## 0.6.0 (2023-08-13)
 ### Added
 - Partial support for U2F signature verification ([#44])
