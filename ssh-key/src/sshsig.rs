@@ -10,7 +10,7 @@ use encoding::{
 use signature::Verifier;
 
 #[cfg(doc)]
-use crate::PublicKey;
+use crate::{PrivateKey, PublicKey};
 
 type Version = u32;
 
@@ -28,7 +28,7 @@ type Version = u32;
 ///
 /// # Usage
 ///
-/// See [`SshSig::sign`] and [`PublicKey::verify`] for usage information.
+/// See [`PrivateKey::sign`] and [`PublicKey::verify`] for usage information.
 ///
 /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -96,6 +96,8 @@ impl SshSig {
     }
 
     /// Sign the given message with the provided signing key.
+    ///
+    /// See also: [`PrivateKey::sign`].
     pub fn sign<S: SigningKey>(
         signing_key: &S,
         namespace: &str,
