@@ -275,6 +275,40 @@ impl PrivateKey {
     ///
     /// See [PROTOCOL.sshsig] for more information.
     ///
+    /// # Usage
+    ///
+    /// See also: [`PublicKey::verify`].
+    ///
+    #[cfg_attr(feature = "ed25519", doc = "```")]
+    #[cfg_attr(not(feature = "ed25519"), doc = "```ignore")]
+    /// # fn main() -> Result<(), ssh_key::Error> {
+    /// use ssh_key::{PrivateKey, HashAlg, SshSig};
+    ///
+    /// // Message to be signed.
+    /// let message = b"testing";
+    ///
+    /// // Example domain/namespace used for the message.
+    /// let namespace = "example";
+    ///
+    /// // Private key to use when computing the signature.
+    /// // WARNING: don't actually hardcode private keys in source code!!!
+    /// let encoded_private_key = r#"
+    /// -----BEGIN OPENSSH PRIVATE KEY-----
+    /// b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+    /// QyNTUxOQAAACCzPq7zfqLffKoBDe/eo04kH2XxtSmk9D7RQyf1xUqrYgAAAJgAIAxdACAM
+    /// XQAAAAtzc2gtZWQyNTUxOQAAACCzPq7zfqLffKoBDe/eo04kH2XxtSmk9D7RQyf1xUqrYg
+    /// AAAEC2BsIi0QwW2uFscKTUUXNHLsYX4FxlaSDSblbAj7WR7bM+rvN+ot98qgEN796jTiQf
+    /// ZfG1KaT0PtFDJ/XFSqtiAAAAEHVzZXJAZXhhbXBsZS5jb20BAgMEBQ==
+    /// -----END OPENSSH PRIVATE KEY-----
+    /// "#;
+    ///
+    /// let private_key = encoded_private_key.parse::<PrivateKey>()?;
+    /// let signature = private_key.sign(namespace, HashAlg::default(), message)?;
+    /// // assert!(private_key.public_key().verify(namespace, message, &signature).is_ok());
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
     #[cfg(feature = "alloc")]
     pub fn sign(&self, namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<SshSig> {
