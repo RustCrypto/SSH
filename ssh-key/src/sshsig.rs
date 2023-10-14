@@ -9,6 +9,9 @@ use encoding::{
 };
 use signature::Verifier;
 
+#[cfg(doc)]
+use crate::PublicKey;
+
 type Version = u32;
 
 /// `sshsig` provides a general-purpose signature format based on SSH keys and
@@ -22,6 +25,10 @@ type Version = u32;
 /// ```
 ///
 /// See [PROTOCOL.sshsig] for more information.
+///
+/// # Usage
+///
+/// See [`SshSig::sign`] and [`PublicKey::verify`] for usage information.
 ///
 /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
 #[derive(Clone, Debug, Eq, PartialEq)]

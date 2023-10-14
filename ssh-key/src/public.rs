@@ -170,6 +170,37 @@ impl PublicKey {
     ///
     /// See [PROTOCOL.sshsig] for more information.
     ///
+    /// # Usage
+    ///
+    #[cfg_attr(feature = "ed25519", doc = "```")]
+    #[cfg_attr(not(feature = "ed25519"), doc = "```ignore")]
+    /// # fn main() -> Result<(), ssh_key::Error> {
+    /// use ssh_key::{PublicKey, SshSig};
+    ///
+    /// // Message to be verified.
+    /// let message = b"testing";
+    ///
+    /// // Example domain/namespace used for the message.
+    /// let namespace = "example";
+    ///
+    /// // Public key which computed the signature.
+    /// let public_key_str = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILM+rvN+ot98qgEN796jTiQfZfG1KaT0PtFDJ/XFSqti user@example.com";
+    ///
+    /// // Example signature to be verified.
+    /// let signature_str = "-----BEGIN SSH SIGNATURE-----
+    /// U1NIU0lHAAAAAQAAADMAAAALc3NoLWVkMjU1MTkAAAAgsz6u836i33yqAQ3v3qNOJB9l8b
+    /// UppPQ+0UMn9cVKq2IAAAAHZXhhbXBsZQAAAAAAAAAGc2hhNTEyAAAAUwAAAAtzc2gtZWQy
+    /// NTUxOQAAAEBPEav+tMGNnox4MuzM7rlHyVBajCn8B0kAyiOWwPKprNsG3i6X+voz/WCSik
+    /// /FowYwqhgCABUJSvRX3AERVBUP
+    /// -----END SSH SIGNATURE-----";
+    ///
+    /// let public_key = public_key_str.parse::<PublicKey>()?;
+    /// let signature = signature_str.parse::<SshSig>()?;
+    /// public_key.verify(namespace, message, &signature)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
     #[cfg(feature = "alloc")]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
