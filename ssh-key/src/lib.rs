@@ -26,6 +26,7 @@
 //! - [`Fingerprint`]: public key fingerprints (i.e. hashes)
 //! - [`PrivateKey`]: SSH private keys (i.e. digital signature keys)
 //! - [`PublicKey`]: SSH public keys (i.e. signature verification keys)
+//! - [`SshSig`]: signatures with SSH keys ala `ssh-keygen -Y sign`/`ssh-keygen -Y verify`
 //!
 //! ### Parsing OpenSSH Public Keys
 //!
