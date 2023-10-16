@@ -1,6 +1,6 @@
 //! Signatures (e.g. CA signatures over SSH certificates)
 
-use crate::{private, public, Algorithm, Error, Mpint, PrivateKey, PublicKey, Result};
+use crate::{private, public, Algorithm, EcdsaCurve, Error, Mpint, PrivateKey, PublicKey, Result};
 use alloc::vec::Vec;
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
@@ -21,7 +21,6 @@ use {
 use crate::{
     private::{EcdsaKeypair, EcdsaPrivateKey},
     public::EcdsaPublicKey,
-    EcdsaCurve,
 };
 
 #[cfg(feature = "rsa")]
@@ -30,16 +29,16 @@ use {
     sha2::Sha512,
 };
 
-#[cfg(any(feature = "ed25519", feature = "rsa"))]
+#[cfg(any(feature = "ed25519", feature = "rsa", feature = "p256"))]
 use sha2::Sha256;
 
-#[cfg(any(feature = "dsa", feature = "ed25519"))]
+#[cfg(any(feature = "dsa", feature = "ed25519", feature = "p256"))]
 use sha2::Digest;
 
 const DSA_SIGNATURE_SIZE: usize = 40;
 const ED25519_SIGNATURE_SIZE: usize = 64;
-const SK_ED25519_SIGNATURE_TRAILER_SIZE: usize = 5; // flags(u8), counter(u32)
-const SK_ED25519_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + SK_ED25519_SIGNATURE_TRAILER_SIZE;
+const SK_SIGNATURE_TRAILER_SIZE: usize = 5; // flags(u8), counter(u32)
+const SK_ED25519_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + SK_SIGNATURE_TRAILER_SIZE;
 
 /// Trait for signing keys which produce a [`Signature`].
 ///
@@ -105,23 +104,10 @@ impl Signature {
         // Validate signature is well-formed per OpensSH encoding
         match algorithm {
             Algorithm::Dsa if data.len() == DSA_SIGNATURE_SIZE => (),
-            Algorithm::Ecdsa { curve } => {
-                let reader = &mut data.as_slice();
-
-                for _ in 0..2 {
-                    let component = Mpint::decode(reader)?;
-
-                    if component.as_positive_bytes().ok_or(Error::Crypto)?.len()
-                        != curve.field_size()
-                    {
-                        return Err(encoding::Error::Length.into());
-                    }
-                }
-
-                reader.finish(())?;
-            }
+            Algorithm::Ecdsa { curve } => ecdsa_sig_size(&data, curve, false)?,
             Algorithm::Ed25519 if data.len() == ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
+            Algorithm::SkEcdsaSha2NistP256 => ecdsa_sig_size(&data, EcdsaCurve::NistP256, true)?,
             Algorithm::Rsa { hash: Some(_) } => (),
             _ => return Err(encoding::Error::Length.into()),
         }
@@ -155,6 +141,26 @@ impl Signature {
     }
 }
 
+/// Returns Ok() if data holds an ecdsa signature with components of appropriate size
+/// according to curve.
+fn ecdsa_sig_size(data: &Vec<u8>, curve: EcdsaCurve, sk_trailer: bool) -> Result<()> {
+    let reader = &mut data.as_slice();
+
+    for _ in 0..2 {
+        let component = Mpint::decode(reader)?;
+
+        if component.as_positive_bytes().ok_or(Error::Crypto)?.len() != curve.field_size() {
+            return Err(encoding::Error::Length.into());
+        }
+    }
+    if sk_trailer {
+        reader.drain(5)?;
+    }
+    reader
+        .finish(())
+        .map_err(|_| encoding::Error::Length.into())
+}
+
 impl AsRef<[u8]> for Signature {
     fn as_ref(&self) -> &[u8] {
         self.as_bytes()
@@ -168,14 +174,13 @@ impl Decode for Signature {
         let algorithm = Algorithm::decode(reader)?;
         let mut data = Vec::decode(reader)?;
 
-        if algorithm == Algorithm::SkEd25519 {
+        if algorithm == Algorithm::SkEd25519 || algorithm == Algorithm::SkEcdsaSha2NistP256 {
             let flags = u8::decode(reader)?;
             let counter = u32::decode(reader)?;
 
             data.push(flags);
             data.extend(counter.to_be_bytes());
         }
-
         Self::new(algorithm, data)
     }
 }
@@ -200,7 +205,7 @@ impl Encode for Signature {
             let signature_length = self
                 .as_bytes()
                 .len()
-                .checked_sub(SK_ED25519_SIGNATURE_TRAILER_SIZE)
+                .checked_sub(SK_SIGNATURE_TRAILER_SIZE)
                 .ok_or(encoding::Error::Length)?;
             self.as_bytes()[..signature_length].encode(writer)?;
             writer.write(&self.as_bytes()[signature_length..])?;
@@ -304,6 +309,8 @@ impl Verifier<Signature> for public::KeyData {
             Self::Ed25519(pk) => pk.verify(message, signature),
             #[cfg(feature = "ed25519")]
             Self::SkEd25519(pk) => pk.verify(message, signature),
+            #[cfg(feature = "p256")]
+            Self::SkEcdsaSha2NistP256(pk) => pk.verify(message, signature),
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
             #[allow(unreachable_patterns)]
@@ -406,24 +413,50 @@ impl Verifier<Signature> for Ed25519PublicKey {
 #[cfg(feature = "ed25519")]
 impl Verifier<Signature> for public::SkEd25519 {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
-        let signature_len = signature
-            .as_bytes()
-            .len()
-            .checked_sub(SK_ED25519_SIGNATURE_TRAILER_SIZE)
-            .ok_or(Error::Encoding(encoding::Error::Length))?;
-        let signature_bytes = &signature.as_bytes()[..signature_len];
-        let flags_and_counter = &signature.as_bytes()[signature_len..];
-
-        #[allow(clippy::arithmetic_side_effects)]
-        let mut signed_data =
-            Vec::with_capacity((2 * Sha256::output_size()) + SK_ED25519_SIGNATURE_TRAILER_SIZE);
-        signed_data.extend(Sha256::digest(self.application()));
-        signed_data.extend(flags_and_counter);
-        signed_data.extend(Sha256::digest(message));
-
-        let signature = ed25519_dalek::Signature::try_from(signature_bytes)?;
-        ed25519_dalek::VerifyingKey::try_from(self.public_key())?.verify(&signed_data, &signature)
+        let (signature, flags_and_counter) = split_sk_signature(signature)?;
+        let signature = ed25519_dalek::Signature::try_from(signature)?;
+        ed25519_dalek::VerifyingKey::try_from(self.public_key())?.verify(
+            &make_sk_signed_data(self.application(), flags_and_counter, message),
+            &signature,
+        )
     }
+}
+
+#[cfg(feature = "p256")]
+impl Verifier<Signature> for public::SkEcdsaSha2NistP256 {
+    fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
+        let (signature_bytes, flags_and_counter) = split_sk_signature(signature)?;
+        let signature = p256_signature_from_openssh_bytes(signature_bytes)?;
+        p256::ecdsa::VerifyingKey::from_encoded_point(self.ec_point())?.verify(
+            &make_sk_signed_data(self.application(), flags_and_counter, message),
+            &signature,
+        )
+    }
+}
+
+#[cfg(any(feature = "p256", feature = "ed25519"))]
+fn make_sk_signed_data(application: &str, flags_and_counter: &[u8], message: &[u8]) -> Vec<u8> {
+    const SHA256_OUTPUT_LENGTH: usize = 32;
+    const SIGNED_SK_DATA_LENGTH: usize = 2 * SHA256_OUTPUT_LENGTH + SK_SIGNATURE_TRAILER_SIZE;
+
+    let mut signed_data = Vec::with_capacity(SIGNED_SK_DATA_LENGTH);
+    signed_data.extend(Sha256::digest(application));
+    signed_data.extend(flags_and_counter);
+    signed_data.extend(Sha256::digest(message));
+    signed_data
+}
+
+#[cfg(any(feature = "p256", feature = "ed25519"))]
+fn split_sk_signature(signature: &Signature) -> Result<(&[u8], &[u8])> {
+    let signature_bytes = signature.as_bytes();
+    let signature_len = signature_bytes
+        .len()
+        .checked_sub(SK_SIGNATURE_TRAILER_SIZE)
+        .ok_or(Error::Encoding(encoding::Error::Length))?;
+    Ok((
+        &signature_bytes[..signature_len],
+        &signature_bytes[signature_len..],
+    ))
 }
 
 #[cfg(feature = "p256")]
@@ -511,28 +544,30 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
     type Error = Error;
 
     fn try_from(signature: &Signature) -> Result<p256::ecdsa::Signature> {
-        const FIELD_SIZE: usize = 32;
-
         match signature.algorithm {
             Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP256,
-            } => {
-                let reader = &mut signature.as_bytes();
-                let r = Mpint::decode(reader)?;
-                let s = Mpint::decode(reader)?;
-
-                match (r.as_positive_bytes(), s.as_positive_bytes()) {
-                    (Some(r), Some(s)) if r.len() == FIELD_SIZE && s.len() == FIELD_SIZE => {
-                        Ok(p256::ecdsa::Signature::from_scalars(
-                            *p256::FieldBytes::from_slice(r),
-                            *p256::FieldBytes::from_slice(s),
-                        )?)
-                    }
-                    _ => Err(Error::Crypto),
-                }
-            }
+            } => p256_signature_from_openssh_bytes(signature.as_bytes()),
             _ => Err(signature.algorithm.clone().unsupported_error()),
         }
+    }
+}
+#[cfg(feature = "p256")]
+fn p256_signature_from_openssh_bytes(mut signature_bytes: &[u8]) -> Result<p256::ecdsa::Signature> {
+    const FIELD_SIZE: usize = 32;
+
+    let reader = &mut signature_bytes;
+    let r = Mpint::decode(reader)?;
+    let s = Mpint::decode(reader)?;
+
+    match (r.as_positive_bytes(), s.as_positive_bytes()) {
+        (Some(r), Some(s)) if r.len() == FIELD_SIZE && s.len() == FIELD_SIZE => {
+            Ok(p256::ecdsa::Signature::from_scalars(
+                *p256::FieldBytes::from_slice(r),
+                *p256::FieldBytes::from_slice(s),
+            )?)
+        }
+        _ => Err(Error::Crypto),
     }
 }
 

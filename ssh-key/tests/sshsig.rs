@@ -51,6 +51,9 @@ const ED25519_SIGNATURE_BYTES: [u8; 64] = hex!(
 /// SkEd25519 OpenSSH-formatted public key.
 const SK_ED25519_PUBLIC_KEY: &str = include_str!("examples/id_sk_ed25519_2.pub");
 
+#[cfg(feature = "p256")]
+const SK_ECDSA_P256_PUBLIC_KEY: &str = include_str!("examples/id_sk_ecdsa_p256_2.pub");
+
 /// `sshsig`-encoded signature.
 const SK_ED25519_SIGNATURE: &str = include_str!("examples/sshsig_sk_ed25519");
 
@@ -75,6 +78,14 @@ const MSG_EXAMPLE: &[u8] = b"testing";
 
 /// Example domain/namespace used for the message.
 const NAMESPACE_EXAMPLE: &str = "example";
+
+#[cfg(feature = "p256")]
+const SK_ECDSA_SIGNATURE_OPENSSH_WIRE: [u8; 120] = hex!(
+    "00000022736b2d65636473612d736861322d6e69737470323536406f70656e73"
+    "73682e636f6d00000049000000201b35a1c6469a43a3d09d490d6ff8ca1bc248"
+    "6a2edeb8aa7d119e4c70b9c1811000000021009724a2a4449a90357485ed1df0"
+    "161274d20083342b02756794bc3f068fcdc15e01000000ec"
+);
 
 /// An ssh-agent signature response signing MSG_EXAMPLE with DSA_PRIVATE_KEY
 #[cfg(feature = "dsa")]
@@ -174,6 +185,22 @@ fn sign_dsa() {
         verifying_key.verify(NAMESPACE_EXAMPLE, MSG_EXAMPLE, &signature),
         Ok(())
     );
+}
+
+#[test]
+#[cfg(feature = "p256")]
+fn verify_sk_ecdsa_openssh_wire_format() {
+    let signature = Signature::decode(&mut SK_ECDSA_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let verifying_key = SK_ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+    verifying_key
+        .key_data()
+        .verify(MSG_EXAMPLE, &signature)
+        .expect("failed to validate valid signature");
+
+    verifying_key
+        .key_data()
+        .verify(b"Bogus!", &signature)
+        .expect_err("good signature from bogus data");
 }
 
 #[test]
