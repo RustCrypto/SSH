@@ -684,6 +684,13 @@ mod tests {
     #[cfg(feature = "ed25519")]
     const EXAMPLE_MSG: &[u8] = b"Hello, world!";
 
+    #[cfg(feature = "p256")]
+    #[test]
+    fn convert_ecdsa_sha2_p256() {
+        let p256_signature = p256::ecdsa::Signature::try_from(hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001").as_ref()).unwrap();
+        let _ssh_signature = Signature::try_from(p256_signature).unwrap();
+    }
+
     #[test]
     fn decode_dsa() {
         let signature = Signature::try_from(DSA_SIGNATURE).unwrap();

@@ -57,12 +57,16 @@ impl Mpint {
     /// Create a new multiple precision integer from the given big endian
     /// encoded byte slice representing a positive integer.
     ///
-    /// The integer should not start with any leading zeroes.
-    pub fn from_positive_bytes(bytes: &[u8]) -> Result<Self> {
+    /// The input may begin with leading zeros, which will be stripped when
+    /// converted to [`Mpint`] encoding.
+    pub fn from_positive_bytes(mut bytes: &[u8]) -> Result<Self> {
         let mut inner = Vec::with_capacity(bytes.len());
 
-        match bytes.first().cloned() {
-            Some(0) => return Err(Error::FormatEncoding),
+        while bytes.first().copied() == Some(0) {
+            bytes = &bytes[1..];
+        }
+
+        match bytes.first().copied() {
             Some(n) if n >= 0x80 => inner.push(0),
             _ => (),
         }
@@ -260,6 +264,21 @@ mod tests {
 
         // Leading zero stripped
         assert_eq!(&hex!("80"), n.as_positive_bytes().unwrap())
+    }
+    #[test]
+    fn from_positive_bytes_strips_leading_zeroes() {
+        assert_eq!(
+            Mpint::from_positive_bytes(&hex!("00")).unwrap().as_ref(),
+            b""
+        );
+        assert_eq!(
+            Mpint::from_positive_bytes(&hex!("00 00")).unwrap().as_ref(),
+            b""
+        );
+        assert_eq!(
+            Mpint::from_positive_bytes(&hex!("00 01")).unwrap().as_ref(),
+            b"\x01"
+        );
     }
 
     // TODO(tarcieri): drop support for negative numbers?
