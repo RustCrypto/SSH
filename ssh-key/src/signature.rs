@@ -154,7 +154,7 @@ fn ecdsa_sig_size(data: &Vec<u8>, curve: EcdsaCurve, sk_trailer: bool) -> Result
         }
     }
     if sk_trailer {
-        reader.drain(5)?;
+        reader.drain(SK_SIGNATURE_TRAILER_SIZE)?;
     }
     reader
         .finish(())
