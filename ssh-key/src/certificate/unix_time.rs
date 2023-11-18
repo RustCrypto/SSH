@@ -8,13 +8,8 @@ use encoding::{Decode, Encode, Reader, Writer};
 #[cfg(feature = "std")]
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-/// Maximum allowed value for a Unix timestamp:
-///
-/// 9999-12-31 23:59:59 UTC
-///
-/// This is a sanity limit intended to catch nonsense values which are
-/// excessively far in the future. Otherwise the limit is `i64::MAX`.
-pub const MAX_SECS: u64 = 253402300799;
+/// Maximum allowed value for a Unix timestamp.
+pub const MAX_SECS: u64 = i64::MAX as u64;
 
 /// Unix timestamps as used in OpenSSH certificates.
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
