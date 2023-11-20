@@ -459,125 +459,62 @@ fn split_sk_signature(signature: &Signature) -> Result<(&[u8], &[u8])> {
     ))
 }
 
-#[cfg(feature = "p256")]
-impl TryFrom<p256::ecdsa::Signature> for Signature {
-    type Error = Error;
+macro_rules! impl_signature_for_curve {
+    ($krate:ident, $feature:expr, $curve:ident, $size:expr) => {
+        #[cfg(feature = $feature)]
+        impl TryFrom<$krate::ecdsa::Signature> for Signature {
+            type Error = Error;
 
-    fn try_from(signature: p256::ecdsa::Signature) -> Result<Signature> {
-        Signature::try_from(&signature)
-    }
+            fn try_from(signature: $krate::ecdsa::Signature) -> Result<Signature> {
+                Signature::try_from(&signature)
+            }
+        }
+
+        #[cfg(feature = $feature)]
+        impl TryFrom<&$krate::ecdsa::Signature> for Signature {
+            type Error = Error;
+
+            fn try_from(signature: &$krate::ecdsa::Signature) -> Result<Signature> {
+                let (r, s) = signature.split_bytes();
+
+                #[allow(clippy::arithmetic_side_effects)]
+                let mut data = Vec::with_capacity($size * 2 + 4 * 2 + 2);
+
+                Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
+                Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
+
+                Ok(Signature {
+                    algorithm: Algorithm::Ecdsa {
+                        curve: EcdsaCurve::$curve,
+                    },
+                    data,
+                })
+            }
+        }
+
+        #[cfg(feature = $feature)]
+        impl TryFrom<Signature> for $krate::ecdsa::Signature {
+            type Error = Error;
+
+            fn try_from(signature: Signature) -> Result<$krate::ecdsa::Signature> {
+                $krate::ecdsa::Signature::try_from(&signature)
+            }
+        }
+
+        #[cfg(feature = $feature)]
+        impl Signer<Signature> for EcdsaPrivateKey<$size> {
+            fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+                let signing_key = $krate::ecdsa::SigningKey::from_slice(self.as_ref())?;
+                let signature: $krate::ecdsa::Signature = signing_key.try_sign(message)?;
+                Ok(signature.try_into()?)
+            }
+        }
+    };
 }
 
-#[cfg(feature = "p384")]
-impl TryFrom<p384::ecdsa::Signature> for Signature {
-    type Error = Error;
-
-    fn try_from(signature: p384::ecdsa::Signature) -> Result<Signature> {
-        Signature::try_from(&signature)
-    }
-}
-
-#[cfg(feature = "p521")]
-impl TryFrom<p521::ecdsa::Signature> for Signature {
-    type Error = Error;
-
-    fn try_from(signature: p521::ecdsa::Signature) -> Result<Signature> {
-        Signature::try_from(&signature)
-    }
-}
-
-#[cfg(feature = "p256")]
-impl TryFrom<&p256::ecdsa::Signature> for Signature {
-    type Error = Error;
-
-    fn try_from(signature: &p256::ecdsa::Signature) -> Result<Signature> {
-        let (r, s) = signature.split_bytes();
-
-        #[allow(clippy::arithmetic_side_effects)]
-        let mut data = Vec::with_capacity(32 * 2 + 4 * 2 + 2);
-
-        Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
-        Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
-
-        Ok(Signature {
-            algorithm: Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP256,
-            },
-            data,
-        })
-    }
-}
-
-#[cfg(feature = "p384")]
-impl TryFrom<&p384::ecdsa::Signature> for Signature {
-    type Error = Error;
-
-    fn try_from(signature: &p384::ecdsa::Signature) -> Result<Signature> {
-        let (r, s) = signature.split_bytes();
-
-        #[allow(clippy::arithmetic_side_effects)]
-        let mut data = Vec::with_capacity(48 * 2 + 4 * 2 + 2);
-
-        Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
-        Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
-
-        Ok(Signature {
-            algorithm: Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP384,
-            },
-            data,
-        })
-    }
-}
-
-#[cfg(feature = "p521")]
-impl TryFrom<&p521::ecdsa::Signature> for Signature {
-    type Error = Error;
-
-    fn try_from(signature: &p521::ecdsa::Signature) -> Result<Signature> {
-        let (r, s) = signature.split_bytes();
-
-        #[allow(clippy::arithmetic_side_effects)]
-        let mut data = Vec::with_capacity(48 * 2 + 4 * 2 + 2);
-
-        Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
-        Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
-
-        Ok(Signature {
-            algorithm: Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP521,
-            },
-            data,
-        })
-    }
-}
-
-#[cfg(feature = "p256")]
-impl TryFrom<Signature> for p256::ecdsa::Signature {
-    type Error = Error;
-
-    fn try_from(signature: Signature) -> Result<p256::ecdsa::Signature> {
-        p256::ecdsa::Signature::try_from(&signature)
-    }
-}
-
-#[cfg(feature = "p384")]
-impl TryFrom<Signature> for p384::ecdsa::Signature {
-    type Error = Error;
-
-    fn try_from(signature: Signature) -> Result<p384::ecdsa::Signature> {
-        p384::ecdsa::Signature::try_from(&signature)
-    }
-}
-
-#[cfg(feature = "p521")]
-impl TryFrom<Signature> for p521::ecdsa::Signature {
-    type Error = Error;
-
-    fn try_from(signature: Signature) -> Result<p521::ecdsa::Signature> {
-        p521::ecdsa::Signature::try_from(&signature)
-    }
-}
+impl_signature_for_curve!(p256, "p256", NistP256, 32);
+impl_signature_for_curve!(p384, "p384", NistP384, 48);
+impl_signature_for_curve!(p521, "p521", NistP521, 66);
 
 #[cfg(feature = "p256")]
 impl TryFrom<&Signature> for p256::ecdsa::Signature {
@@ -684,33 +621,6 @@ impl Signer<Signature> for EcdsaKeypair {
             #[cfg(not(all(feature = "p256", feature = "p384", feature = "p521")))]
             _ => Err(self.algorithm().unsupported_error().into()),
         }
-    }
-}
-
-#[cfg(feature = "p256")]
-impl Signer<Signature> for EcdsaPrivateKey<32> {
-    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let signing_key = p256::ecdsa::SigningKey::from_slice(self.as_ref())?;
-        let signature: p256::ecdsa::Signature = signing_key.try_sign(message)?;
-        Ok(signature.try_into()?)
-    }
-}
-
-#[cfg(feature = "p384")]
-impl Signer<Signature> for EcdsaPrivateKey<48> {
-    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let signing_key = p384::ecdsa::SigningKey::from_slice(self.as_ref())?;
-        let signature: p384::ecdsa::Signature = signing_key.try_sign(message)?;
-        Ok(signature.try_into()?)
-    }
-}
-
-#[cfg(feature = "p521")]
-impl Signer<Signature> for EcdsaPrivateKey<66> {
-    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let signing_key = p521::ecdsa::SigningKey::from_slice(self.as_ref())?;
-        let signature: p521::ecdsa::Signature = signing_key.try_sign(message)?;
-        Ok(signature.try_into()?)
     }
 }
 

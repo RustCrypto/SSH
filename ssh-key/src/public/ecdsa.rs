@@ -155,113 +155,48 @@ impl fmt::UpperHex for EcdsaPublicKey {
     }
 }
 
-#[cfg(feature = "p256")]
-impl TryFrom<EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
-    type Error = Error;
+macro_rules! impl_ecdsa_for_curve {
+    ($krate:ident, $feature:expr, $curve:ident) => {
+        #[cfg(feature = $feature)]
+        impl TryFrom<EcdsaPublicKey> for $krate::ecdsa::VerifyingKey {
+            type Error = Error;
 
-    fn try_from(key: EcdsaPublicKey) -> Result<p256::ecdsa::VerifyingKey> {
-        p256::ecdsa::VerifyingKey::try_from(&key)
-    }
-}
-
-#[cfg(feature = "p384")]
-impl TryFrom<EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
-    type Error = Error;
-
-    fn try_from(key: EcdsaPublicKey) -> Result<p384::ecdsa::VerifyingKey> {
-        p384::ecdsa::VerifyingKey::try_from(&key)
-    }
-}
-
-#[cfg(feature = "p521")]
-impl TryFrom<EcdsaPublicKey> for p521::ecdsa::VerifyingKey {
-    type Error = Error;
-
-    fn try_from(key: EcdsaPublicKey) -> Result<p521::ecdsa::VerifyingKey> {
-        p521::ecdsa::VerifyingKey::try_from(&key)
-    }
-}
-
-#[cfg(feature = "p256")]
-impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
-    type Error = Error;
-
-    fn try_from(public_key: &EcdsaPublicKey) -> Result<p256::ecdsa::VerifyingKey> {
-        match public_key {
-            EcdsaPublicKey::NistP256(key) => {
-                p256::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
+            fn try_from(key: EcdsaPublicKey) -> Result<$krate::ecdsa::VerifyingKey> {
+                $krate::ecdsa::VerifyingKey::try_from(&key)
             }
-            _ => Err(Error::AlgorithmUnknown),
         }
-    }
-}
 
-#[cfg(feature = "p384")]
-impl TryFrom<&EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
-    type Error = Error;
+        #[cfg(feature = $feature)]
+        impl TryFrom<&EcdsaPublicKey> for $krate::ecdsa::VerifyingKey {
+            type Error = Error;
 
-    fn try_from(public_key: &EcdsaPublicKey) -> Result<p384::ecdsa::VerifyingKey> {
-        match public_key {
-            EcdsaPublicKey::NistP384(key) => {
-                p384::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
+            fn try_from(public_key: &EcdsaPublicKey) -> Result<$krate::ecdsa::VerifyingKey> {
+                match public_key {
+                    EcdsaPublicKey::$curve(key) => {
+                        $krate::ecdsa::VerifyingKey::from_encoded_point(key)
+                            .map_err(|_| Error::Crypto)
+                    }
+                    _ => Err(Error::AlgorithmUnknown),
+                }
             }
-            _ => Err(Error::AlgorithmUnknown),
         }
-    }
-}
 
-#[cfg(feature = "p521")]
-impl TryFrom<&EcdsaPublicKey> for p521::ecdsa::VerifyingKey {
-    type Error = Error;
-
-    fn try_from(public_key: &EcdsaPublicKey) -> Result<p521::ecdsa::VerifyingKey> {
-        match public_key {
-            EcdsaPublicKey::NistP521(key) => {
-                p521::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
+        #[cfg(feature = $feature)]
+        impl From<$krate::ecdsa::VerifyingKey> for EcdsaPublicKey {
+            fn from(key: $krate::ecdsa::VerifyingKey) -> EcdsaPublicKey {
+                EcdsaPublicKey::from(&key)
             }
-            _ => Err(Error::AlgorithmUnknown),
         }
-    }
+
+        #[cfg(feature = $feature)]
+        impl From<&$krate::ecdsa::VerifyingKey> for EcdsaPublicKey {
+            fn from(key: &$krate::ecdsa::VerifyingKey) -> EcdsaPublicKey {
+                EcdsaPublicKey::$curve(key.to_encoded_point(false))
+            }
+        }
+    };
 }
 
-#[cfg(feature = "p256")]
-impl From<p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
-    fn from(key: p256::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-        EcdsaPublicKey::from(&key)
-    }
-}
-
-#[cfg(feature = "p256")]
-impl From<&p256::ecdsa::VerifyingKey> for EcdsaPublicKey {
-    fn from(key: &p256::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-        EcdsaPublicKey::NistP256(key.to_encoded_point(false))
-    }
-}
-
-#[cfg(feature = "p384")]
-impl From<p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
-    fn from(key: p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-        EcdsaPublicKey::from(&key)
-    }
-}
-
-#[cfg(feature = "p384")]
-impl From<&p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
-    fn from(key: &p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-        EcdsaPublicKey::NistP384(key.to_encoded_point(false))
-    }
-}
-
-#[cfg(feature = "p521")]
-impl From<p521::ecdsa::VerifyingKey> for EcdsaPublicKey {
-    fn from(key: p521::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-        EcdsaPublicKey::from(&key)
-    }
-}
-
-#[cfg(feature = "p521")]
-impl From<&p521::ecdsa::VerifyingKey> for EcdsaPublicKey {
-    fn from(key: &p521::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-        EcdsaPublicKey::NistP521(key.to_encoded_point(false))
-    }
-}
+impl_ecdsa_for_curve!(p256, "p256", NistP256);
+impl_ecdsa_for_curve!(p384, "p384", NistP384);
+impl_ecdsa_for_curve!(p521, "p521", NistP521);
