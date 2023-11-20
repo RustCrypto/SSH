@@ -49,14 +49,10 @@ jobs:
       - run: cargo build --target ${{ matrix.target }} --release --all-features
 
   minimal-versions:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-      - run: cargo +nightly update -Z minimal-versions
-      - uses: dtolnay/rust-toolchain@1.65.0
-      - run: rm ../Cargo.toml
-      - run: cargo test --all-features --release
+    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
+    with:
+      stable-cmd: cargo test --all-features --release
+      working-directory: ${{ github.workflow }}
 
   no_std:
     runs-on: ubuntu-latest
@@ -75,7 +71,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
       - uses: RustCrypto/actions/cargo-hack-install@master
-      - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features crypto,default,getrandom,std --release
+      - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features crypto,default,getrandom,p521,std --release
 
   test:
     runs-on: ubuntu-latest
