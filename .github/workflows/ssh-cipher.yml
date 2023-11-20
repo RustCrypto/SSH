@@ -21,7 +21,8 @@ jobs:
   minimal-versions:
     uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
     with:
-        working-directory: ${{ github.workflow }}
+      stable-cmd: cargo test --all-features --release
+      working-directory: ${{ github.workflow }}
 
   no_std:
     runs-on: ubuntu-latest
