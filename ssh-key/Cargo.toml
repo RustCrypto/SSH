@@ -31,6 +31,7 @@ dsa = { version = "0.6", optional = true, default-features = false }
 ed25519-dalek = { version = "2", optional = true, default-features = false }
 p256 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.13", optional = true, default-features = false, features = ["ecdsa"] }
+p521 = { version = "0.13.3", optional = true, default-features = false, features = ["ecdsa", "getrandom"] } # TODO(tarcieri): RFC6979
 rand_core = { version = "0.6.4", optional = true, default-features = false }
 rsa = { version = "0.9", optional = true, default-features = false, features = ["sha2"] }
 sec1 = { version = "0.7.3", optional = true, default-features = false, features = ["point"] }
@@ -53,12 +54,13 @@ std = [
     "encoding/std",
     "p256?/std",
     "p384?/std",
+    "p521?/std",
     "rsa?/std",
     "sec1?/std",
     "signature/std"
 ]
 
-crypto = ["ed25519", "p256", "p384", "rsa"] # NOTE: `dsa` is obsolete/weak
+crypto = ["ed25519", "p256", "p384", "p521", "rsa"] # NOTE: `dsa` is obsolete/weak
 dsa = ["dep:bigint", "dep:dsa", "dep:sha1", "alloc", "signature/rand_core"]
 ecdsa = ["dep:sec1"]
 ed25519 = ["dep:ed25519-dalek", "rand_core"]
@@ -74,6 +76,7 @@ encryption = [
 getrandom = ["rand_core/getrandom"]
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
+p521 = ["dep:p521", "ecdsa"]
 rsa = ["dep:bigint", "dep:rsa", "alloc", "rand_core"]
 tdes = ["cipher/tdes", "encryption"]
 

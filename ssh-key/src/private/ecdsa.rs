@@ -141,6 +141,16 @@ impl From<p384::SecretKey> for EcdsaPrivateKey<48> {
     }
 }
 
+#[cfg(feature = "p521")]
+impl From<p521::SecretKey> for EcdsaPrivateKey<66> {
+    fn from(sk: p521::SecretKey) -> EcdsaPrivateKey<66> {
+        // TODO(tarcieri): clean this up when migrating to hybrid-array
+        let mut bytes = [0u8; 66];
+        bytes.copy_from_slice(&sk.to_bytes());
+        EcdsaPrivateKey { bytes }
+    }
+}
+
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private/public keypair.
 #[derive(Clone, Debug)]
 pub enum EcdsaKeypair {
@@ -196,6 +206,16 @@ impl EcdsaKeypair {
                     public: public.into(),
                 })
             }
+            #[cfg(feature = "p521")]
+            EcdsaCurve::NistP521 => {
+                let private = p521::SecretKey::random(rng);
+                let public = private.public_key();
+                Ok(EcdsaKeypair::NistP521 {
+                    private: private.into(),
+                    public: public.into(),
+                })
+            }
+            #[cfg(not(all(feature = "p256", feature = "p384", feature = "p521")))]
             _ => Err(Error::AlgorithmUnknown),
         }
     }

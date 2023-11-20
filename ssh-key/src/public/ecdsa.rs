@@ -173,6 +173,15 @@ impl TryFrom<EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
     }
 }
 
+#[cfg(feature = "p521")]
+impl TryFrom<EcdsaPublicKey> for p521::ecdsa::VerifyingKey {
+    type Error = Error;
+
+    fn try_from(key: EcdsaPublicKey) -> Result<p521::ecdsa::VerifyingKey> {
+        p521::ecdsa::VerifyingKey::try_from(&key)
+    }
+}
+
 #[cfg(feature = "p256")]
 impl TryFrom<&EcdsaPublicKey> for p256::ecdsa::VerifyingKey {
     type Error = Error;
@@ -195,6 +204,20 @@ impl TryFrom<&EcdsaPublicKey> for p384::ecdsa::VerifyingKey {
         match public_key {
             EcdsaPublicKey::NistP384(key) => {
                 p384::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
+            }
+            _ => Err(Error::AlgorithmUnknown),
+        }
+    }
+}
+
+#[cfg(feature = "p521")]
+impl TryFrom<&EcdsaPublicKey> for p521::ecdsa::VerifyingKey {
+    type Error = Error;
+
+    fn try_from(public_key: &EcdsaPublicKey) -> Result<p521::ecdsa::VerifyingKey> {
+        match public_key {
+            EcdsaPublicKey::NistP521(key) => {
+                p521::ecdsa::VerifyingKey::from_encoded_point(key).map_err(|_| Error::Crypto)
             }
             _ => Err(Error::AlgorithmUnknown),
         }
@@ -226,5 +249,19 @@ impl From<p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
 impl From<&p384::ecdsa::VerifyingKey> for EcdsaPublicKey {
     fn from(key: &p384::ecdsa::VerifyingKey) -> EcdsaPublicKey {
         EcdsaPublicKey::NistP384(key.to_encoded_point(false))
+    }
+}
+
+#[cfg(feature = "p521")]
+impl From<p521::ecdsa::VerifyingKey> for EcdsaPublicKey {
+    fn from(key: p521::ecdsa::VerifyingKey) -> EcdsaPublicKey {
+        EcdsaPublicKey::from(&key)
+    }
+}
+
+#[cfg(feature = "p521")]
+impl From<&p521::ecdsa::VerifyingKey> for EcdsaPublicKey {
+    fn from(key: &p521::ecdsa::VerifyingKey) -> EcdsaPublicKey {
+        EcdsaPublicKey::NistP521(key.to_encoded_point(false))
     }
 }
