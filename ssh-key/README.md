@@ -71,7 +71,7 @@ respective SSH key algorithm.
 | `ssh‑dsa`                            | ✅     | ✅     | ✅   | ✅     | ✅️   | ✅️     | `dsa`     | `alloc` ️ |
 | `ssh‑ed25519`                        | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `ed25519` | heapless |
 | `ssh‑rsa`                            | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `rsa`     | `alloc`  |
-| `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc`  |
+| `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️     | ⛔        | `alloc`  |
 | `sk‑ssh‑ed25519@openssh.com`         | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc`  |
 
 By default *no algorithms are enabled* and you will get an
