@@ -67,12 +67,12 @@ respective SSH key algorithm.
 |--------------------------------------|--------|--------|------|--------|------|--------|-----------|----------|
 | `ecdsa‑sha2‑nistp256`                | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅️     | `p256`    | heapless |
 | `ecdsa‑sha2‑nistp384`                | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅️     | `p384`    | heapless |
-| `ecdsa‑sha2‑nistp521`                | ✅     | ✅     | ✅   | ⛔️     | ⛔ ️  | ⛔️     | ⛔        | heapless |
+| `ecdsa‑sha2‑nistp521`                | ✅     | ✅     | ✅   | ✅️️     | ✅️ ️  | ✅️️     | `p521`    | heapless |
 | `ssh‑dsa`                            | ✅     | ✅     | ✅   | ✅     | ✅️   | ✅️     | `dsa`     | `alloc` ️ |
 | `ssh‑ed25519`                        | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `ed25519` | heapless |
 | `ssh‑rsa`                            | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `rsa`     | `alloc`  |
 | `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️     | ⛔        | `alloc`  |
-| `sk‑ssh‑ed25519@openssh.com`         | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ⛔️     | ⛔        | `alloc`  |
+| `sk‑ssh‑ed25519@openssh.com`         | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️️     | `ed25519` | `alloc`  |
 
 By default *no algorithms are enabled* and you will get an
 `Error::AlgorithmUnsupported` error if you try to use them.
