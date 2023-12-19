@@ -7,6 +7,9 @@ use std::collections::HashSet;
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
 
+#[cfg(feature = "std")]
+use std::{fs, path::PathBuf};
+
 /// DSA OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
 const OPENSSH_DSA_EXAMPLE: &str = include_str!("examples/id_dsa_1024.pub");
@@ -44,6 +47,12 @@ const OPENSSH_SK_ED25519_EXAMPLE: &str = include_str!("examples/id_sk_ed25519.pu
 /// OpenSSH-formatted public key with a custom algorithm name
 #[cfg(feature = "alloc")]
 const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque.pub");
+
+/// Get a path into the `tests/scratch` directory.
+#[cfg(feature = "std")]
+pub fn scratch_path(filename: &str) -> PathBuf {
+    PathBuf::from(&format!("tests/scratch/{}.pub", filename))
+}
 
 #[cfg(feature = "alloc")]
 #[test]
@@ -385,4 +394,21 @@ fn public_keys_are_hashable() {
     let key = PublicKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let set = HashSet::from([&key]);
     assert_eq!(true, set.contains(&key));
+}
+
+#[cfg(feature = "std")]
+#[test]
+fn write_openssh_file() {
+    let example_key = OPENSSH_ED25519_EXAMPLE;
+    let key = PublicKey::from_openssh(example_key).unwrap();
+
+    let fingerprint = key
+        .fingerprint(Default::default())
+        .to_string()
+        .replace(':', "-")
+        .replace('/', "_");
+
+    let path = scratch_path(&fingerprint);
+    key.write_openssh_file(&path).unwrap();
+    assert_eq!(example_key, fs::read_to_string(&path).unwrap());
 }

@@ -12,7 +12,7 @@ use ssh_key::LineEnding;
 #[cfg(all(feature = "std"))]
 use {
     ssh_key::PublicKey,
-    std::{io, process},
+    std::{io, path::PathBuf, process},
 };
 
 /// DSA OpenSSH-formatted public key
@@ -45,6 +45,12 @@ const OPENSSH_RSA_4096_EXAMPLE: &str = include_str!("examples/id_rsa_4096");
 /// OpenSSH-formatted private key with a custom algorithm name
 #[cfg(feature = "alloc")]
 const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque");
+
+/// Get a path into the `tests/scratch` directory.
+#[cfg(feature = "std")]
+pub fn scratch_path(filename: &str) -> PathBuf {
+    PathBuf::from(&format!("tests/scratch/{}", filename))
+}
 
 #[cfg(feature = "alloc")]
 #[test]
@@ -468,7 +474,7 @@ fn encoding_integration_test(private_key: PrivateKey) {
         .replace(':', "-")
         .replace('/', "_");
 
-    let path = std::path::PathBuf::from(&format!("tests/scratch/{}", fingerprint));
+    let path = scratch_path(&fingerprint);
 
     private_key
         .write_openssh_file(&path, LineEnding::LF)
