@@ -232,7 +232,9 @@ impl PublicKey {
     /// Write public key as an OpenSSH-formatted file.
     #[cfg(feature = "std")]
     pub fn write_openssh_file(&self, path: &Path) -> Result<()> {
-        let encoded = self.to_openssh()?;
+        let mut encoded = self.to_openssh()?;
+        encoded.push('\n'); // TODO(tarcieri): OS-specific line endings?
+
         fs::write(path, encoded.as_bytes())?;
         Ok(())
     }
