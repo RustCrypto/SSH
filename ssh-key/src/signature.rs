@@ -109,6 +109,7 @@ impl Signature {
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEcdsaSha2NistP256 => ecdsa_sig_size(&data, EcdsaCurve::NistP256, true)?,
             Algorithm::Rsa { hash: Some(_) } => (),
+            Algorithm::Other(_) if data.len() > 0 => (),
             _ => return Err(encoding::Error::Length.into()),
         }
 
