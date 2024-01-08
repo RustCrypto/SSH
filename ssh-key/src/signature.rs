@@ -13,6 +13,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
     bigint::BigUint,
+    core::iter,
     sha1::Sha1,
     signature::{DigestSigner, DigestVerifier},
 };
@@ -323,6 +324,16 @@ impl Verifier<Signature> for public::KeyData {
 #[cfg(feature = "dsa")]
 impl Signer<Signature> for DsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+        fn to_be_bytes_padded(v: &BigUint, len: usize) -> Vec<u8> {
+            let mut bytes = v.to_bytes_le();
+            let pad_len = len.saturating_sub(bytes.len());
+            if pad_len > 0 {
+                bytes.extend(iter::repeat(0).take(pad_len));
+            }
+            bytes.reverse();
+            bytes
+        }
+
         let signature = dsa::SigningKey::try_from(self)?
             .try_sign_digest(Sha1::new_with_prefix(message))
             .map_err(|_| signature::Error::new())?;
@@ -331,8 +342,10 @@ impl Signer<Signature> for DsaKeypair {
         // specifies two raw 80 bit integer but the dsa::SigningKey serialization
         // encodes to a der format.
         let mut buf: Vec<u8> = Vec::new();
-        buf.append(&mut signature.r().to_bytes_be());
-        buf.append(&mut signature.s().to_bytes_be());
+        let mut r = to_be_bytes_padded(signature.r(), DSA_SIGNATURE_SIZE / 2);
+        let mut s = to_be_bytes_padded(signature.s(), DSA_SIGNATURE_SIZE / 2);
+        buf.append(&mut r);
+        buf.append(&mut s);
 
         if buf.len() != DSA_SIGNATURE_SIZE {
             return Err(signature::Error::new());
