@@ -13,6 +13,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
     bigint::BigUint,
+    core::iter,
     sha1::Sha1,
     signature::{DigestSigner, DigestVerifier},
 };
@@ -323,6 +324,16 @@ impl Verifier<Signature> for public::KeyData {
 #[cfg(feature = "dsa")]
 impl Signer<Signature> for DsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+        fn to_be_bytes_padded(v: &BigUint, len: usize) -> Vec<u8> {
+            let mut bytes = v.to_bytes_le();
+            let pad_len = len.saturating_sub(bytes.len());
+            if pad_len > 0 {
+                bytes.extend(iter::repeat(0).take(pad_len));
+            }
+            bytes.reverse();
+            bytes
+        }
+
         let signature = dsa::SigningKey::try_from(self)?
             .try_sign_digest(Sha1::new_with_prefix(message))
             .map_err(|_| signature::Error::new())?;
@@ -331,8 +342,10 @@ impl Signer<Signature> for DsaKeypair {
         // specifies two raw 80 bit integer but the dsa::SigningKey serialization
         // encodes to a der format.
         let mut buf: Vec<u8> = Vec::new();
-        buf.append(&mut signature.r().to_bytes_be());
-        buf.append(&mut signature.s().to_bytes_be());
+        let mut r = to_be_bytes_padded(signature.r(), DSA_SIGNATURE_SIZE / 2);
+        let mut s = to_be_bytes_padded(signature.s(), DSA_SIGNATURE_SIZE / 2);
+        buf.append(&mut r);
+        buf.append(&mut s);
 
         if buf.len() != DSA_SIGNATURE_SIZE {
             return Err(signature::Error::new());
@@ -801,6 +814,78 @@ mod tests {
         let mut result = Vec::new();
         signature.encode(&mut result).unwrap();
         assert_eq!(SK_ED25519_SIGNATURE, &result);
+    }
+
+    #[cfg(feature = "dsa")]
+    #[test]
+    fn try_sign_and_verify_dsa() {
+        use super::{DsaKeypair, DSA_SIGNATURE_SIZE};
+        use encoding::Decode as _;
+        use signature::{Signer as _, Verifier as _};
+
+        fn check_signature_component_lens(
+            keypair: &DsaKeypair,
+            data: &[u8],
+            r_len: usize,
+            s_len: usize,
+        ) {
+            use sha1::{Digest as _, Sha1};
+            use signature::DigestSigner as _;
+
+            let signature = dsa::SigningKey::try_from(keypair)
+                .expect("valid DSA signing key")
+                .try_sign_digest(Sha1::new_with_prefix(data))
+                .expect("valid DSA signature");
+
+            let r = signature.r().to_bytes_be();
+            assert_eq!(
+                r.len(),
+                r_len,
+                "dsa signature component `r` has len {} != {}",
+                r.len(),
+                r_len
+            );
+            let s = signature.s().to_bytes_be();
+            assert_eq!(
+                s.len(),
+                s_len,
+                "dsa signature component `s` has len {} != {}",
+                s.len(),
+                s_len
+            );
+        }
+
+        let keypair = hex!("0000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf277161980000001500ced95f1c7bbb39be4987837ad1f71be31bb7b0d9");
+        let keypair = DsaKeypair::decode(&mut &keypair[..]).expect("properly encoded DSA keypair");
+
+        let data = hex!("F0000040713d5f6fffe0000e6421ab0b3a69774d3da02fd72b107d6b32b6dad7c1660bbf507bf3eac3304cc5058f7e6f81b04239b8471459b1f3b387e2626f7eb8f6bcdd3200000006626c616465320000000e7373682d636f6e6e656374696f6e00000009686f73746261736564000000077373682d647373000001b2000000077373682d6473730000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf2771619800000015746f6d61746f7373682e6c6f63616c646f6d61696e00000009746f6d61746f737368");
+        check_signature_component_lens(
+            &keypair,
+            &data,
+            DSA_SIGNATURE_SIZE / 2,
+            DSA_SIGNATURE_SIZE / 2,
+        );
+        let signature = keypair.try_sign(&data[..]).expect("dsa try_sign is ok");
+        keypair
+            .public
+            .verify(&data[..], &signature)
+            .expect("dsa verify is ok");
+
+        let data = hex!("00000040713d5f6fffe0000e6421ab0b3a69774d3da02fd72b107d6b32b6dad7c1660bbf507bf3eac3304cc5058f7e6f81b04239b8471459b1f3b387e2626f7eb8f6bcdd3200000006626c616465320000000e7373682d636f6e6e656374696f6e00000009686f73746261736564000000077373682d647373000001b2000000077373682d6473730000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf2771619800000015746f6d61746f7373682e6c6f63616c646f6d61696e00000009746f6d61746f737368");
+        // verify that this data produces signature with `r` integer component that is less than 160 bits/20 bytes.
+        check_signature_component_lens(
+            &keypair,
+            &data,
+            DSA_SIGNATURE_SIZE / 2 - 1,
+            DSA_SIGNATURE_SIZE / 2,
+        );
+        let signature = keypair
+            .try_sign(&data[..])
+            .expect("dsa try_sign for r.len() == 19 is ok");
+        keypair
+            .public
+            .verify(&data[..], &signature)
+            .expect("dsa verify is ok");
     }
 
     #[cfg(feature = "ed25519")]
