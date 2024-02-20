@@ -15,20 +15,20 @@ categories = ["cryptography", "no-std"]
 keywords = ["crypto", "encryption", "openssh", "ssh"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.72"
 
 [dependencies]
-cipher = "0.4"
+cipher = "0.5.0-pre.4"
 encoding = { package = "ssh-encoding", version = "0.2", path = "../ssh-encoding" }
 
 # optional dependencies
-aes = { version = "0.8", optional = true, default-features = false }
-aes-gcm = { version = "0.10", optional = true, default-features = false, features = ["aes"] }
-cbc = { version = "0.1", optional = true }
-ctr = { version = "0.9", optional = true, default-features = false }
-chacha20 = { version = "0.9", optional = true, default-features = false }
-des = { version = "0.8", optional = true, default-features = false }
-poly1305 = { version = "0.8", optional = true, default-features = false }
+aes = { version = "=0.9.0-pre", optional = true, default-features = false }
+aes-gcm = { version = "=0.11.0-pre", optional = true, default-features = false, features = ["aes"] }
+cbc = { version = "=0.2.0-pre", optional = true }
+ctr = { version = "=0.10.0-pre", optional = true, default-features = false }
+chacha20 = { version = "=0.10.0-pre", optional = true, default-features = false }
+des = { version = "=0.9.0-pre.0", optional = true, default-features = false }
+poly1305 = { version = "=0.9.0-pre", optional = true, default-features = false }
 subtle = { version = "2", optional = true, default-features = false }
 
 [features]
