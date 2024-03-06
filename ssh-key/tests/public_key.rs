@@ -1,6 +1,8 @@
 //! SSH public key tests.
 
 use hex_literal::hex;
+#[cfg(feature = "alloc")]
+use ssh_key::public::{Ed25519PublicKey, SkEd25519};
 use ssh_key::{Algorithm, PublicKey};
 use std::collections::HashSet;
 #[cfg(all(feature = "ecdsa", feature = "alloc"))]
@@ -337,6 +339,24 @@ fn decode_sk_ed25519_openssh() {
         "SHA256:6WZVJ44bqhAWLVP4Ns0TDkoSQSsZo/h2K+mEvOaNFbw",
         &key.fingerprint(Default::default()).to_string(),
     );
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn new_sk_ed25519_openssh() {
+    const EXAMPLE_PUBKEY: Ed25519PublicKey = Ed25519PublicKey {
+        0: [
+            0x21, 0x68, 0xfe, 0x4e, 0x4b, 0x53, 0xcf, 0x3a, 0xde, 0xee, 0xba, 0x60, 0x2f, 0x5e,
+            0x50, 0xed, 0xb5, 0xef, 0x44, 0x1d, 0xba, 0x88, 0x4f, 0x51, 0x19, 0x10, 0x9d, 0xb2,
+            0xda, 0xfd, 0xd7, 0x33,
+        ],
+    };
+
+    let sk_key = SkEd25519::new(EXAMPLE_PUBKEY, "ssh:".to_string());
+    let key = PublicKey::from_openssh(OPENSSH_SK_ED25519_EXAMPLE).unwrap();
+
+    let ed25519_key = key.key_data().sk_ed25519().unwrap();
+    assert_eq!(&sk_key, ed25519_key);
 }
 
 #[cfg(all(feature = "alloc"))]

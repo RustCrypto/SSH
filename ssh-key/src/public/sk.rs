@@ -132,6 +132,15 @@ pub struct SkEd25519 {
 }
 
 impl SkEd25519 {
+    /// Construct new instance of SkEd25519.
+    #[cfg(feature = "alloc")]
+    pub fn new(public_key: Ed25519PublicKey, application: impl Into<String>) -> Self {
+        SkEd25519 {
+            public_key,
+            application: application.into(),
+        }
+    }
+
     /// Get the Ed25519 private key for this security key.
     pub fn public_key(&self) -> &Ed25519PublicKey {
         &self.public_key
