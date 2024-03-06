@@ -26,6 +26,29 @@ pub struct SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl SkEcdsaSha2NistP256 {
+    /// Construct new instance of SkEcdsaSha2NistP256.
+    #[cfg(feature = "alloc")]
+    pub fn new(
+        public: public::SkEcdsaSha2NistP256,
+        flags: u8,
+        key_handle: impl Into<Vec<u8>>,
+    ) -> Result<Self> {
+        let key_handle = key_handle.into();
+
+        if key_handle.len() <= 255 {
+            Ok(SkEcdsaSha2NistP256 {
+                public,
+                flags,
+                key_handle,
+                reserved: Vec::<u8>::new(),
+            })
+        } else {
+            Err(Error::TooLong {
+                bad_len: key_handle.len(),
+            })
+        }
+    }
+
     /// Get the ECDSA/NIST P-256 public key.
     pub fn public(&self) -> &public::SkEcdsaSha2NistP256 {
         &self.public
