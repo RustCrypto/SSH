@@ -30,6 +30,15 @@ pub struct SkEcdsaSha2NistP256 {
 
 #[cfg(feature = "ecdsa")]
 impl SkEcdsaSha2NistP256 {
+    /// Construct new instance of SkEcdsaSha2NistP256.
+    #[cfg(feature = "alloc")]
+    pub fn new(ec_point: EcdsaNistP256PublicKey, application: impl Into<String>) -> Self {
+        SkEcdsaSha2NistP256 {
+            ec_point,
+            application: application.into(),
+        }
+    }
+
     /// Get the elliptic curve point for this Security Key.
     pub fn ec_point(&self) -> &EcdsaNistP256PublicKey {
         &self.ec_point
