@@ -560,7 +560,7 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
 
         match signature.algorithm {
             Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP256,
+                curve: EcdsaCurve::NistP384,
             } => {
                 let reader = &mut signature.as_bytes();
                 let r = Mpint::decode(reader)?;
@@ -586,11 +586,11 @@ impl TryFrom<&Signature> for p521::ecdsa::Signature {
     type Error = Error;
 
     fn try_from(signature: &Signature) -> Result<p521::ecdsa::Signature> {
-        const FIELD_SIZE: usize = 48;
+        const FIELD_SIZE: usize = 66;
 
         match signature.algorithm {
             Algorithm::Ecdsa {
-                curve: EcdsaCurve::NistP256,
+                curve: EcdsaCurve::NistP521,
             } => {
                 let reader = &mut signature.as_bytes();
                 let r = Mpint::decode(reader)?;
