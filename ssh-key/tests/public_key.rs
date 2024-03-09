@@ -1,8 +1,12 @@
 //! SSH public key tests.
 
 use hex_literal::hex;
+#[cfg(feature = "alloc")]
+use ssh_key::public::{Ed25519PublicKey, SkEd25519};
 use ssh_key::{Algorithm, PublicKey};
 use std::collections::HashSet;
+#[cfg(all(feature = "ecdsa", feature = "alloc"))]
+use {sec1::consts::U32, ssh_key::public::SkEcdsaSha2NistP256};
 
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
@@ -296,6 +300,25 @@ fn decode_sk_ecdsa_p256_openssh() {
     );
 }
 
+#[cfg(all(feature = "ecdsa", feature = "alloc"))]
+#[test]
+fn new_sk_ecdsa_p256() {
+    const EXAMPLE_EC_POINT: [u8; 65] = [
+        0x04, 0x81, 0x0b, 0x40, 0x9d, 0x83, 0x82, 0xf6, 0x97, 0xd7, 0x24, 0x25, 0x28, 0x5a, 0x24,
+        0x7d, 0x63, 0x36, 0xb2, 0xeb, 0x9a, 0x08, 0x52, 0x36, 0xaa, 0x9d, 0x1e, 0x26, 0x87, 0x47,
+        0xca, 0x0e, 0x8e, 0xe2, 0x27, 0xf1, 0x73, 0x75, 0xe9, 0x44, 0xa7, 0x75, 0x39, 0x2f, 0x1d,
+        0x35, 0x84, 0x2d, 0x13, 0xf6, 0x23, 0x75, 0x74, 0xab, 0x03, 0xe0, 0x0e, 0x9c, 0xc1, 0x79,
+        0x9e, 0xcd, 0x8d, 0x93, 0x1e,
+    ];
+
+    let ec_point = sec1::EncodedPoint::<U32>::from_bytes(&EXAMPLE_EC_POINT).unwrap();
+    let sk_key = SkEcdsaSha2NistP256::new(ec_point, "ssh:".to_string());
+    let key = PublicKey::from_openssh(OPENSSH_SK_ECDSA_P256_EXAMPLE).unwrap();
+
+    let ecdsa_key = key.key_data().sk_ecdsa_p256().unwrap();
+    assert_eq!(&sk_key, ecdsa_key);
+}
+
 #[test]
 fn decode_sk_ed25519_openssh() {
     let key = PublicKey::from_openssh(OPENSSH_SK_ED25519_EXAMPLE).unwrap();
@@ -316,6 +339,24 @@ fn decode_sk_ed25519_openssh() {
         "SHA256:6WZVJ44bqhAWLVP4Ns0TDkoSQSsZo/h2K+mEvOaNFbw",
         &key.fingerprint(Default::default()).to_string(),
     );
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn new_sk_ed25519_openssh() {
+    const EXAMPLE_PUBKEY: Ed25519PublicKey = Ed25519PublicKey {
+        0: [
+            0x21, 0x68, 0xfe, 0x4e, 0x4b, 0x53, 0xcf, 0x3a, 0xde, 0xee, 0xba, 0x60, 0x2f, 0x5e,
+            0x50, 0xed, 0xb5, 0xef, 0x44, 0x1d, 0xba, 0x88, 0x4f, 0x51, 0x19, 0x10, 0x9d, 0xb2,
+            0xda, 0xfd, 0xd7, 0x33,
+        ],
+    };
+
+    let sk_key = SkEd25519::new(EXAMPLE_PUBKEY, "ssh:".to_string());
+    let key = PublicKey::from_openssh(OPENSSH_SK_ED25519_EXAMPLE).unwrap();
+
+    let ed25519_key = key.key_data().sk_ed25519().unwrap();
+    assert_eq!(&sk_key, ed25519_key);
 }
 
 #[cfg(all(feature = "alloc"))]
