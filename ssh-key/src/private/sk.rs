@@ -43,9 +43,7 @@ impl SkEcdsaSha2NistP256 {
                 reserved: Vec::<u8>::new(),
             })
         } else {
-            Err(Error::TooLong {
-                bad_len: key_handle.len(),
-            })
+            Err(encoding::Error::Length.into())
         }
     }
 
@@ -136,9 +134,7 @@ impl SkEd25519 {
                 reserved: Vec::<u8>::new(),
             })
         } else {
-            Err(Error::TooLong {
-                bad_len: key_handle.len(),
-            })
+            Err(encoding::Error::Length.into())
         }
     }
 
