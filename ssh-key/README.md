@@ -33,15 +33,16 @@ respective SSH key algorithm.
 
 - [x] Constant-time Base64 decoder/encoder using `base64ct`/`pem-rfc7468` crates
 - [x] OpenSSH-compatible decoder/encoders for the following formats:
-  - [x] OpenSSH public keys
-  - [x] OpenSSH private keys (i.e. `BEGIN OPENSSH PRIVATE KEY`)
-  - [x] OpenSSH certificates
-  - [x] OpenSSH signatures (a.k.a. "sshsig")
+  - [x] SSH public keys
+  - [x] SSH private keys (i.e. `BEGIN OPENSSH PRIVATE KEY`)
+  - [x] SSH certificates
+  - [x] SSH signatures (a.k.a. "sshsig")
 - [x] OpenSSH certificate support
   - [x] Certificate validation
   - [x] Certificate authority (CA) support i.e. cert builder/signer
 - [x] Private key encryption/decryption (`bcrypt-pbkdf` + `aes256-ctr` only)
-- [x] Private key generation support: DSA, Ed25519, ECDSA (P-256+P-384), and RSA
+- [x] Private key generation support: DSA, Ed25519, ECDSA (P-256/P-384/P-521),
+      and RSA
 - [x] FIDO/U2F key support (`sk-*`) as specified in [PROTOCOL.u2f]
 - [x] Fingerprint support
   - [x] "randomart" fingerprint visualizations
@@ -53,7 +54,6 @@ respective SSH key algorithm.
 
 #### TODO
 
-- [ ] ECDSA/P-521 support
 - [ ] FIDO/U2F signature support
 - [ ] Legacy (pre-OpenSSH) SSH key format support
   - [ ] PKCS#1
