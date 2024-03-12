@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.6.5 (2024-03-12)
+### Added
+- `Sk*` constructors ([#201], [#204])
+
+### Changed
+- Simplify DSA signature encoding ([#193])
+
+### Fixed
+- Correct erroneous signature constants ([#202])
+
+[#193]: https://github.com/RustCrypto/SSH/pull/193
+[#201]: https://github.com/RustCrypto/SSH/pull/201
+[#202]: https://github.com/RustCrypto/SSH/pull/202
+[#204]: https://github.com/RustCrypto/SSH/pull/204
+
 ## 0.6.4 (2024-01-11)
 ### Added
 - `Algorithm::Other` signature support ([#189])
