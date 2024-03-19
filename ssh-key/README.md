@@ -33,13 +33,13 @@ respective SSH key algorithm.
 
 - [x] Constant-time Base64 decoder/encoder using `base64ct`/`pem-rfc7468` crates
 - [x] OpenSSH-compatible decoder/encoders for the following formats:
-  - [x] SSH public keys
-  - [x] SSH private keys (i.e. `BEGIN OPENSSH PRIVATE KEY`)
-  - [x] SSH certificates
-  - [x] SSH signatures (a.k.a. "sshsig")
+  - [x] OpenSSH public keys
+  - [x] OpenSSH private keys (i.e. `BEGIN OPENSSH PRIVATE KEY`)
+  - [x] OpenSSH certificates
+  - [x] OpenSSH signatures (a.k.a. "sshsig")
 - [x] OpenSSH certificate support
-  - [x] Certificate validation
-  - [x] Certificate authority (CA) support i.e. cert builder/signer
+  - [x] OpenSSH certificate validation
+  - [x] OpenSSH certificate authority (CA) support i.e. cert builder/signer
 - [x] Private key encryption/decryption (`bcrypt-pbkdf` + `aes256-ctr` only)
 - [x] Private key generation support: DSA, Ed25519, ECDSA (P-256/P-384/P-521),
       and RSA
@@ -56,10 +56,10 @@ respective SSH key algorithm.
 
 - [ ] FIDO/U2F signature support
 - [ ] Legacy (pre-OpenSSH) SSH key format support
-  - [ ] PKCS#1
-  - [ ] PKCS#8
-  - [ ] [RFC4716] public keys
-  - [ ] SEC1
+  - [ ] PKCS#1 SSH private keys (i.e. RSA-only)
+  - [ ] PKCS#8 SSH private keys
+  - [ ] [RFC4716] SSH public keys
+  - [ ] SEC1 SSH public keys
 
 ### Supported Signature Algorithms
 
@@ -74,7 +74,7 @@ respective SSH key algorithm.
 | `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️     | ⛔        | `alloc`  |
 | `sk‑ssh‑ed25519@openssh.com`         | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️️     | `ed25519` | `alloc`  |
 
-By default *no algorithms are enabled* and you will get an
+By default *no SSH signature algorithms are enabled* and you will get an
 `Error::AlgorithmUnsupported` error if you try to use them.
 
 Enable the `crypto` feature or the "Feature" for specific algorithms in the
