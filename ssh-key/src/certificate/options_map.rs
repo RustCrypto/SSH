@@ -42,8 +42,11 @@ impl Decode for OptionsMap {
 
             while !reader.is_finished() {
                 let name = String::decode(reader)?;
-                // strings are double-length encoded.
+
+                // values can be anything, there's length encoding for whatever it is
                 let data_vec = Vec::decode(reader)?;
+
+                // the actual data is _usually_ a string
                 let data = if data_vec.is_empty() {
                     String::new()
                 } else {
@@ -71,7 +74,20 @@ impl Encode for OptionsMap {
     fn encoded_len(&self) -> encoding::Result<usize> {
         self.iter()
             .try_fold(4, |acc, (name, data)| {
-                [acc, 4, name.len(), 4, data.len()].checked_sum()
+                [
+                    acc,
+                    // length encoding
+                    4,
+                    // length of name
+                    name.len(),
+                    // length encoding of value (unknown format)
+                    4,
+                    // length encoding of string value
+                    4,
+                    // length of value
+                    data.len(),
+                ]
+                .checked_sum()
             })
             .map_err(Into::into)
     }
@@ -84,6 +100,13 @@ impl Encode for OptionsMap {
 
         for (name, data) in self.iter() {
             name.encode(writer)?;
+
+            // first, encode total length of the composite type...
+            data.len()
+                .checked_add(4)
+                .ok_or(encoding::Error::Overflow)?
+                .encode(writer)?;
+            // then encode the actual type
             data.encode(writer)?;
         }
 
