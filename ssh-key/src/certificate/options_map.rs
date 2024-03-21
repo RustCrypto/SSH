@@ -42,7 +42,13 @@ impl Decode for OptionsMap {
 
             while !reader.is_finished() {
                 let name = String::decode(reader)?;
-                let data = String::decode(reader)?;
+                // strings are double-length encoded.
+                let data_vec = Vec::decode(reader)?;
+                let data = if data_vec.is_empty() {
+                    String::new()
+                } else {
+                    String::decode(&mut data_vec.as_ref())?
+                };
 
                 // Options must be lexically ordered by "name" if they appear in
                 // the sequence. Each named option may only appear once in a
