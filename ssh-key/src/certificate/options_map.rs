@@ -42,7 +42,6 @@ impl Decode for OptionsMap {
 
             while !reader.is_finished() {
                 let name = String::decode(reader)?;
-
                 let data = reader.read_prefixed(String::decode)?;
 
                 // Options must be lexically ordered by "name" if they appear in
@@ -79,7 +78,6 @@ impl Encode for OptionsMap {
 
         for (name, data) in self.iter() {
             name.encode(writer)?;
-
             data.encode_prefixed(writer)?
         }
 
