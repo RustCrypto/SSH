@@ -42,7 +42,13 @@ impl Decode for OptionsMap {
 
             while !reader.is_finished() {
                 let name = String::decode(reader)?;
-                let data = String::decode(reader)?;
+                let data = reader.read_prefixed(|reader| {
+                    if reader.remaining_len() > 0 {
+                        String::decode(reader)
+                    } else {
+                        Ok(String::default())
+                    }
+                })?;
 
                 // Options must be lexically ordered by "name" if they appear in
                 // the sequence. Each named option may only appear once in a
@@ -65,7 +71,16 @@ impl Encode for OptionsMap {
     fn encoded_len(&self) -> encoding::Result<usize> {
         self.iter()
             .try_fold(4, |acc, (name, data)| {
-                [acc, 4, name.len(), 4, data.len()].checked_sum()
+                [
+                    acc,
+                    name.encoded_len()?,
+                    if data.is_empty() {
+                        4
+                    } else {
+                        data.encoded_len_prefixed()?
+                    },
+                ]
+                .checked_sum()
             })
             .map_err(Into::into)
     }
@@ -78,7 +93,11 @@ impl Encode for OptionsMap {
 
         for (name, data) in self.iter() {
             name.encode(writer)?;
-            data.encode(writer)?;
+            if data.is_empty() {
+                0usize.encode(writer)?;
+            } else {
+                data.encode_prefixed(writer)?
+            }
         }
 
         Ok(())

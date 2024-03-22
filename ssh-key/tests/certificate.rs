@@ -140,6 +140,26 @@ fn decode_ed25519_openssh() {
 }
 
 #[test]
+fn decode_ed25519_openssh_with_crit_options() {
+    let src = "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC1lZDI1NTE5LWNlcnQtdjAxQG9wZW5zc2guY29tAAAAIBW/4zLqXWROWmN1sPgdySnH1GUsEFBjFrRwKKw71BoBAAAAIH1MFwI1oRdEifXgBQvWQfCBBtA/Pi8YCUE/I3wXFJo2AAAAAAAAAAAAAAABAAAAA2ZvbwAAAAAAAAAAAAAAAH//////////AAAAIwAAABFoZWxsb0BleGFtcGxlLmNvbQAAAAoAAAAGZm9vYmFyAAAAAAAAAAAAAAAzAAAAC3NzaC1lZDI1NTE5AAAAIH1MFwI1oRdEifXgBQvWQfCBBtA/Pi8YCUE/I3wXFJo2AAAAUwAAAAtzc2gtZWQyNTUxOQAAAEDRoPdI48KyoaLgaDZsSGs80qBeYQOXBd84CX8GYzFt/L21rxF1EeuPOkgsx7Q39WllXp+FgMMojsHftK/DJHEN";
+    let cert = Certificate::from_str(src).unwrap();
+
+    assert_eq!(Algorithm::Ed25519, cert.public_key().algorithm());
+
+    assert_eq!(cert.critical_options().len(), 1);
+    assert_eq!(
+        cert.critical_options().get("hello@example.com").unwrap(),
+        "foobar"
+    );
+
+    let openssh = cert.to_openssh().unwrap();
+
+    assert_eq!(openssh, src);
+
+    assert_eq!(cert, Certificate::from_str(&openssh).unwrap());
+}
+
+#[test]
 fn decode_rsa_4096_openssh() {
     let cert = Certificate::from_str(RSA_4096_CERT_EXAMPLE).unwrap();
     assert_eq!(Algorithm::Rsa { hash: None }, cert.public_key().algorithm());
