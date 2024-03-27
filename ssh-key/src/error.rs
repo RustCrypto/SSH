@@ -1,6 +1,7 @@
 //! Error types
 
 use crate::Algorithm;
+use alloc::sync::Arc;
 use core::fmt;
 
 #[cfg(feature = "alloc")]
@@ -45,7 +46,7 @@ pub enum Error {
 
     /// ECDSA key encoding errors.
     #[cfg(feature = "ecdsa")]
-    Ecdsa(sec1::Error),
+    Ecdsa(Arc<sec1::Error>),
 
     /// Encoding errors.
     Encoding(encoding::Error),
@@ -199,7 +200,7 @@ impl From<alloc::string::FromUtf8Error> for Error {
 #[cfg(feature = "ecdsa")]
 impl From<sec1::Error> for Error {
     fn from(err: sec1::Error) -> Error {
-        Error::Ecdsa(err)
+        Error::Ecdsa(err.into())
     }
 }
 
