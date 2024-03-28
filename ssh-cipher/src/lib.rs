@@ -45,7 +45,10 @@ use aes::{Aes128, Aes192, Aes256};
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 use {
     cbc::{Decryptor, Encryptor},
-    cipher::{block_padding::NoPadding, BlockCipher, BlockDecryptMut, BlockEncryptMut},
+    cipher::{
+        block_padding::NoPadding, BlockCipher, BlockCipherDecrypt, BlockCipherEncrypt,
+        BlockModeDecrypt, BlockModeEncrypt,
+    },
 };
 
 #[cfg(any(feature = "aes-cbc", feature = "aes-gcm", feature = "tdes"))]
@@ -418,13 +421,13 @@ impl str::FromStr for Cipher {
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 fn cbc_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
 where
-    C: BlockEncryptMut + BlockCipher + KeyInit,
+    C: BlockCipherEncrypt + BlockCipher + KeyInit,
 {
     let cipher = Encryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
 
     // Since the passed in buffer is already padded, using NoPadding here
     cipher
-        .encrypt_padded_mut::<NoPadding>(buffer, buffer.len())
+        .encrypt_padded::<NoPadding>(buffer, buffer.len())
         .map_err(|_| Error::Crypto)?;
 
     Ok(())
@@ -433,13 +436,13 @@ where
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 fn cbc_decrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
 where
-    C: BlockDecryptMut + BlockCipher + KeyInit,
+    C: BlockCipherDecrypt + BlockCipher + KeyInit,
 {
     let cipher = Decryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
 
     // Since the passed in buffer is already padded, using NoPadding here
     cipher
-        .decrypt_padded_mut::<NoPadding>(buffer)
+        .decrypt_padded::<NoPadding>(buffer)
         .map_err(|_| Error::Crypto)?;
 
     Ok(())

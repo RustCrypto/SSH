@@ -237,7 +237,7 @@ impl Encode for Ed25519Keypair {
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.public.encode(writer)?;
-        Zeroizing::new(self.to_bytes()).as_ref().encode(writer)?;
+        Zeroizing::new(self.to_bytes()).as_slice().encode(writer)?;
         Ok(())
     }
 }

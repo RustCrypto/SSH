@@ -43,7 +43,7 @@ fn encode_byte_slice() {
 #[test]
 fn encode_byte_vec() {
     let mut out = Vec::new();
-    Vec::from(b"example".as_ref()).encode(&mut out).unwrap();
+    Vec::from(&b"example"[..]).encode(&mut out).unwrap();
     assert_eq!(out, hex!("000000076578616d706c65"));
 }
 
