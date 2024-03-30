@@ -36,7 +36,7 @@ const COMMENT_DELIMITER: char = '#';
 ///   the key).
 pub struct AuthorizedKeys<'a> {
     /// Lines of the file being iterated over
-    lines: core::str::Lines<'a>,
+    lines: str::Lines<'a>,
 }
 
 impl<'a> AuthorizedKeys<'a> {

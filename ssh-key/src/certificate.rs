@@ -8,7 +8,6 @@ mod unix_time;
 
 pub use self::{builder::Builder, cert_type::CertType, field::Field, options_map::OptionsMap};
 
-use self::unix_time::UnixTime;
 use crate::{
     public::{KeyData, SshFormat},
     Algorithm, Error, Fingerprint, HashAlg, Result, Signature,
@@ -26,7 +25,10 @@ use signature::Verifier;
 use serde::{de, ser, Deserialize, Serialize};
 
 #[cfg(feature = "std")]
-use std::{fs, path::Path, time::SystemTime};
+use {
+    self::unix_time::UnixTime,
+    std::{fs, path::Path, time::SystemTime},
+};
 
 /// OpenSSH certificate as specified in [PROTOCOL.certkeys].
 ///
@@ -137,10 +139,10 @@ pub struct Certificate {
     valid_principals: Vec<String>,
 
     /// Valid after.
-    valid_after: UnixTime,
+    valid_after: u64,
 
     /// Valid before.
-    valid_before: UnixTime,
+    valid_before: u64,
 
     /// Critical options.
     critical_options: OptionsMap,
@@ -281,26 +283,34 @@ impl Certificate {
         &self.valid_principals
     }
 
-    /// Valid after (Unix time).
+    /// Valid after (Unix time), i.e. certificate issuance time.
     pub fn valid_after(&self) -> u64 {
-        self.valid_after.into()
+        self.valid_after
     }
 
-    /// Valid before (Unix time).
+    /// Valid before (Unix time), i.e. certificate expiration time.
     pub fn valid_before(&self) -> u64 {
-        self.valid_before.into()
+        self.valid_before
     }
 
-    /// Valid after (system time).
+    /// Valid after (system time), i.e. certificate issuance time.
+    ///
+    /// # Returns
+    /// - `Some` if the `u64` value is a valid `SystemTime`
+    /// - `None` if it is not (i.e. overflows `i64`)
     #[cfg(feature = "std")]
-    pub fn valid_after_time(&self) -> SystemTime {
-        self.valid_after.into()
+    pub fn valid_after_time(&self) -> Option<SystemTime> {
+        UnixTime::try_from(self.valid_after).ok().map(Into::into)
     }
 
-    /// Valid before (system time).
+    /// Valid before (system time), i.e. certificate expiration time.
+    ///
+    /// # Returns
+    /// - `Some` if the `u64` value is a valid `SystemTime`
+    /// - `None` if it is not (i.e. overflows `i64`, effectively never-expiring)
     #[cfg(feature = "std")]
-    pub fn valid_before_time(&self) -> SystemTime {
-        self.valid_before.into()
+    pub fn valid_before_time(&self) -> Option<SystemTime> {
+        UnixTime::try_from(self.valid_before).ok().map(Into::into)
     }
 
     /// The critical options section of the certificate specifies zero or more
@@ -391,8 +401,6 @@ impl Certificate {
             return Err(Error::CertificateValidation);
         }
 
-        let unix_timestamp = UnixTime::new(unix_timestamp)?;
-
         // From PROTOCOL.certkeys:
         //
         //  "valid after" and "valid before" specify a validity period for the
@@ -462,8 +470,8 @@ impl Decode for Certificate {
             cert_type: CertType::decode(reader)?,
             key_id: String::decode(reader)?,
             valid_principals: Vec::decode(reader)?,
-            valid_after: UnixTime::decode(reader)?,
-            valid_before: UnixTime::decode(reader)?,
+            valid_after: u64::decode(reader)?,
+            valid_before: u64::decode(reader)?,
             critical_options: OptionsMap::decode(reader)?,
             extensions: OptionsMap::decode(reader)?,
             reserved: Vec::decode(reader)?,
