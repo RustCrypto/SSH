@@ -239,6 +239,34 @@ impl KeypairData {
 
         n
     }
+
+    /// Decode [`KeypairData`] for the specified algorithm.
+    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+        match algorithm {
+            #[cfg(feature = "alloc")]
+            Algorithm::Dsa => DsaKeypair::decode(reader).map(Self::Dsa),
+            #[cfg(feature = "ecdsa")]
+            Algorithm::Ecdsa { curve } => match EcdsaKeypair::decode(reader)? {
+                keypair if keypair.curve() == curve => Ok(Self::Ecdsa(keypair)),
+                _ => Err(Error::AlgorithmUnknown),
+            },
+            Algorithm::Ed25519 => Ed25519Keypair::decode(reader).map(Self::Ed25519),
+            #[cfg(feature = "alloc")]
+            Algorithm::Rsa { .. } => RsaKeypair::decode(reader).map(Self::Rsa),
+            #[cfg(all(feature = "alloc", feature = "ecdsa"))]
+            Algorithm::SkEcdsaSha2NistP256 => {
+                SkEcdsaSha2NistP256::decode(reader).map(Self::SkEcdsaSha2NistP256)
+            }
+            #[cfg(feature = "alloc")]
+            Algorithm::SkEd25519 => SkEd25519::decode(reader).map(Self::SkEd25519),
+            #[cfg(feature = "alloc")]
+            algorithm @ Algorithm::Other(_) => {
+                OpaqueKeypair::decode_as(reader, algorithm).map(Self::Other)
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(Error::AlgorithmUnknown),
+        }
+    }
 }
 
 impl ConstantTimeEq for KeypairData {
@@ -286,30 +314,8 @@ impl Decode for KeypairData {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        match Algorithm::decode(reader)? {
-            #[cfg(feature = "alloc")]
-            Algorithm::Dsa => DsaKeypair::decode(reader).map(Self::Dsa),
-            #[cfg(feature = "ecdsa")]
-            Algorithm::Ecdsa { curve } => match EcdsaKeypair::decode(reader)? {
-                keypair if keypair.curve() == curve => Ok(Self::Ecdsa(keypair)),
-                _ => Err(Error::AlgorithmUnknown),
-            },
-            Algorithm::Ed25519 => Ed25519Keypair::decode(reader).map(Self::Ed25519),
-            #[cfg(feature = "alloc")]
-            Algorithm::Rsa { .. } => RsaKeypair::decode(reader).map(Self::Rsa),
-            #[cfg(all(feature = "alloc", feature = "ecdsa"))]
-            Algorithm::SkEcdsaSha2NistP256 => {
-                SkEcdsaSha2NistP256::decode(reader).map(Self::SkEcdsaSha2NistP256)
-            }
-            #[cfg(feature = "alloc")]
-            Algorithm::SkEd25519 => SkEd25519::decode(reader).map(Self::SkEd25519),
-            #[cfg(feature = "alloc")]
-            algorithm @ Algorithm::Other(_) => {
-                OpaqueKeypair::decode_as(reader, algorithm).map(Self::Other)
-            }
-            #[allow(unreachable_patterns)]
-            _ => Err(Error::AlgorithmUnknown),
-        }
+        let algorithm = Algorithm::decode(reader)?;
+        Self::decode_as(reader, algorithm)
     }
 }
 
