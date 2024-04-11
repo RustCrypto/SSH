@@ -95,7 +95,7 @@ impl<const SIZE: usize> Eq for EcdsaPrivateKey<SIZE> {}
 
 impl<const SIZE: usize> fmt::Debug for EcdsaPrivateKey<SIZE> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Ed25519PrivateKey").finish_non_exhaustive()
+        f.debug_struct("EcdsaPrivateKey").finish_non_exhaustive()
     }
 }
 
