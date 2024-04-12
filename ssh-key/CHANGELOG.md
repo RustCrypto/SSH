@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.6.6 (2024-04-11)
+### Added
+- impl `decode_as` for `KeypairData` ([#211])
+
+### Changed
+- clarify SSH vs OpenSSH formats ([#206])
+
+### Fixed
+- fix `certificate::OptionsMap` encoding ([#207])
+- fixup `EcdsaPrivateKey` Debug impl ([#210])
+
+[#206]: https://github.com/RustCrypto/SSH/pull/206
+[#207]: https://github.com/RustCrypto/SSH/pull/207
+[#210]: https://github.com/RustCrypto/SSH/pull/210
+[#211]: https://github.com/RustCrypto/SSH/pull/211
+
 ## 0.6.5 (2024-03-12)
 ### Added
 - `Sk*` constructors ([#201], [#204])
