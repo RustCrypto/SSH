@@ -11,6 +11,18 @@ fn decode_u8() {
 }
 
 #[test]
+fn decode_boolean() {
+    let mut bytes = hex!("01").as_slice();
+    let ret = bool::decode(&mut bytes).unwrap();
+    assert_eq!(ret, true);
+
+    // "All non-zero values MUST be interpreted as TRUE"
+    let mut bytes = hex!("FF").as_slice();
+    let ret = bool::decode(&mut bytes).unwrap();
+    assert_eq!(ret, true);
+}
+
+#[test]
 fn decode_u32() {
     let mut bytes = hex!("DEADBEEF").as_slice();
     let ret = u32::decode(&mut bytes).unwrap();

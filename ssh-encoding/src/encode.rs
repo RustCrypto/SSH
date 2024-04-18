@@ -98,6 +98,28 @@ impl Encode for u8 {
     }
 }
 
+/// Encode a `boolean` as described in [RFC4251 § 5]:
+///
+/// > A boolean value is stored as a single byte.  The value 0
+/// > represents FALSE, and the value 1 represents TRUE.  All non-zero
+/// > values MUST be interpreted as TRUE; however, applications MUST NOT
+/// > store values other than 0 and 1.
+///
+/// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+impl Encode for bool {
+    fn encoded_len(&self) -> Result<usize, Error> {
+        Ok(1)
+    }
+
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
+        if *self {
+            1u8.encode(writer)
+        } else {
+            0u8.encode(writer)
+        }
+    }
+}
+
 /// Encode a `uint32` as described in [RFC4251 § 5]:
 ///
 /// > Represents a 32-bit unsigned integer.  Stored as four bytes in the

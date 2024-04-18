@@ -62,6 +62,26 @@ impl Decode for u8 {
     }
 }
 
+/// Decode a `boolean` as described in [RFC4251 § 5]:
+///
+/// > A boolean value is stored as a single byte.  The value 0
+/// > represents FALSE, and the value 1 represents TRUE.  All non-zero
+/// > values MUST be interpreted as TRUE; however, applications MUST NOT
+/// > store values other than 0 and 1.
+///
+/// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+impl Decode for bool {
+    type Error = Error;
+
+    fn decode(reader: &mut impl Reader) -> Result<Self> {
+        let byte = u8::decode(reader)?;
+        match byte {
+            0 => Ok(false),
+            _ => Ok(true),
+        }
+    }
+}
+
 /// Decode a `uint32` as described in [RFC4251 § 5]:
 ///
 /// > Represents a 32-bit unsigned integer.  Stored as four bytes in the
