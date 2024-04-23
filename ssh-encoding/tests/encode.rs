@@ -13,6 +13,13 @@ fn encode_u8() {
 }
 
 #[test]
+fn encode_boolean() {
+    let mut out = Vec::new();
+    true.encode(&mut out).unwrap();
+    assert_eq!(out, hex!("01"));
+}
+
+#[test]
 fn encode_u32() {
     let mut out = Vec::new();
     0xDEADBEEFu32.encode(&mut out).unwrap();
