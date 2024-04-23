@@ -6,7 +6,7 @@ use ssh_key::{Algorithm, Cipher, KdfAlg, PrivateKey};
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 use ssh_key::LineEnding;
 
 #[cfg(all(feature = "std"))]
@@ -377,7 +377,21 @@ fn decode_rsa_4096_openssh() {
     assert_eq!("user@example.com", key.comment());
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "rsa")]
+#[test]
+fn round_trip_rsa_3072() {
+    let private_key = PrivateKey::from_openssh(OPENSSH_RSA_3072_EXAMPLE).unwrap();
+    let rsa_keypair = match private_key.key_data() {
+        ssh_key::private::KeypairData::Rsa(k) => k,
+        _ => unreachable!(),
+    };
+
+    let rsa_private_key = rsa::RsaPrivateKey::try_from(rsa_keypair).unwrap();
+    let rsa_keypair2 = ssh_key::private::RsaKeypair::try_from(&rsa_private_key).unwrap();
+    assert_eq!(rsa_keypair, &rsa_keypair2);
+}
+
+#[cfg(feature = "alloc")]
 #[test]
 fn decode_custom_algorithm_openssh() {
     let key = PrivateKey::from_openssh(OPENSSH_OPAQUE_EXAMPLE).unwrap();
@@ -401,7 +415,7 @@ fn decode_custom_algorithm_openssh() {
     assert_eq!(key.comment(), "comment@example.com");
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[test]
 fn encode_dsa_openssh() {
     encoding_test(OPENSSH_DSA_EXAMPLE)
@@ -425,32 +439,32 @@ fn encode_ecdsa_p521_openssh() {
     encoding_test(OPENSSH_ECDSA_P521_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[test]
 fn encode_ed25519_openssh() {
     encoding_test(OPENSSH_ED25519_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[test]
 fn encode_rsa_3072_openssh() {
     encoding_test(OPENSSH_RSA_3072_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[test]
 fn encode_rsa_4096_openssh() {
     encoding_test(OPENSSH_RSA_4096_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[test]
 fn encode_custom_algorithm_openssh() {
     encoding_test(OPENSSH_OPAQUE_EXAMPLE)
 }
 
 /// Common behavior of all encoding tests
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 fn encoding_test(private_key: &str) {
     let key = PrivateKey::from_openssh(private_key).unwrap();
 
