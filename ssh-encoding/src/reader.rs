@@ -178,6 +178,10 @@ pub struct NestedReader<'r, R: Reader> {
 
 impl<'r, R: Reader> Reader for NestedReader<'r, R> {
     fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
+        if out.is_empty() {
+            return Ok(out);
+        }
+
         let remaining_len = self
             .remaining_len
             .checked_sub(out.len())
