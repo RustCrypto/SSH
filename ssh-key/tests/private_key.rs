@@ -46,6 +46,11 @@ const OPENSSH_RSA_4096_EXAMPLE: &str = include_str!("examples/id_rsa_4096");
 #[cfg(feature = "alloc")]
 const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque");
 
+/// OpenSSH-formatted private key with no internal or external padding, and no comment
+/// Trips a corner case in base64ct
+#[cfg(feature = "ecdsa")]
+const OPENSSH_PADLESS_WONDER_EXAMPLE: &str = include_str!("examples/padless_wonder");
+
 /// Get a path into the `tests/scratch` directory.
 #[cfg(feature = "std")]
 pub fn scratch_path(filename: &str) -> PathBuf {
@@ -127,6 +132,24 @@ fn decode_ecdsa_p256_openssh() {
 
     #[cfg(feature = "alloc")]
     assert_eq!("user@example.com", key.comment());
+}
+
+#[cfg(feature = "ecdsa")]
+#[test]
+fn decode_padless_wonder_openssh() {
+    let key = PrivateKey::from_openssh(OPENSSH_PADLESS_WONDER_EXAMPLE).unwrap();
+    assert_eq!(
+        Algorithm::Ecdsa {
+            curve: EcdsaCurve::NistP256
+        },
+        key.algorithm(),
+    );
+    assert_eq!(Cipher::None, key.cipher());
+    assert_eq!(KdfAlg::None, key.kdf().algorithm());
+    assert!(key.kdf().is_none());
+
+    #[cfg(feature = "alloc")]
+    assert_eq!("", key.comment());
 }
 
 #[cfg(feature = "ecdsa")]
