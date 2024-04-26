@@ -56,7 +56,7 @@ checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 [[package]]
 name = "bcrypt-pbkdf"
 version = "0.11.0-pre.0"
-source = "git+https://github.com/baloo/password-hashes.git?branch=baloo/cipher/0.5.0-pre.4#599be2736b7d1fb786f179f9dfc8950bcac1e50b"
+source = "git+https://github.com/RustCrypto/password-hashes.git#cf91c17c93f57acfd3f547ecd697f86f8c271ba2"
 dependencies = [
  "blowfish",
  "pbkdf2",
@@ -501,7 +501,7 @@ dependencies = [
 [[package]]
 name = "pbkdf2"
 version = "0.13.0-pre.0"
-source = "git+https://github.com/baloo/password-hashes.git?branch=baloo/cipher/0.5.0-pre.4#599be2736b7d1fb786f179f9dfc8950bcac1e50b"
+source = "git+https://github.com/RustCrypto/password-hashes.git#cf91c17c93f57acfd3f547ecd697f86f8c271ba2"
 dependencies = [
  "digest",
 ]

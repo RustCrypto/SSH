@@ -27,7 +27,7 @@ dsa           = { git = "https://github.com/RustCrypto/signatures.git" }
 ecdsa         = { git = "https://github.com/RustCrypto/signatures.git" }
 
 # https://github.com/RustCrypto/password-hashes/pull/489
-bcrypt-pbkdf  = { git = "https://github.com/baloo/password-hashes.git", branch = "baloo/cipher/0.5.0-pre.4" }
+bcrypt-pbkdf  = { git = "https://github.com/RustCrypto/password-hashes.git" }
 
 # https://github.com/RustCrypto/stream-ciphers/pull/345
 chacha20      = { git = "https://github.com/RustCrypto/stream-ciphers.git" }
