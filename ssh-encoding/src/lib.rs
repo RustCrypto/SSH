@@ -43,8 +43,8 @@ pub use crate::{
 
 #[cfg(feature = "base64")]
 pub use {
-    crate::{reader::Base64Reader, writer::Base64Writer},
-    base64,
+    crate::{reader::base64::Base64Reader, writer::base64::Base64Writer},
+    base64ct as base64,
 };
 
 #[cfg(feature = "pem")]

@@ -12,7 +12,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 pub enum Error {
     /// Base64-related errors.
     #[cfg(feature = "base64")]
-    Base64(base64::Error),
+    Base64(base64ct::Error),
 
     /// Character encoding-related errors.
     CharacterEncoding,
@@ -82,15 +82,15 @@ impl From<alloc::string::FromUtf8Error> for Error {
 }
 
 #[cfg(feature = "base64")]
-impl From<base64::Error> for Error {
-    fn from(err: base64::Error) -> Error {
+impl From<base64ct::Error> for Error {
+    fn from(err: base64ct::Error) -> Error {
         Error::Base64(err)
     }
 }
 
 #[cfg(feature = "base64")]
-impl From<base64::InvalidLengthError> for Error {
-    fn from(_: base64::InvalidLengthError) -> Error {
+impl From<base64ct::InvalidLengthError> for Error {
+    fn from(_: base64ct::InvalidLengthError) -> Error {
         Error::Length
     }
 }
