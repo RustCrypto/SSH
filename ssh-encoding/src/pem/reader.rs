@@ -1,19 +1,29 @@
 use super::LINE_WIDTH;
-use crate::{Reader, Result};
+use crate::{Decode, Error, Reader, Result};
 
 /// Inner PEM decoder.
 type Inner<'i> = pem_rfc7468::Decoder<'i>;
 
 /// Constant-time PEM reader.
 pub struct PemReader<'i> {
+    /// Inner PEM reader.
     inner: Inner<'i>,
+
+    /// Custom length of remaining data, used for nested length-prefixed reading.
+    remaining_len: usize,
 }
 
 impl<'i> PemReader<'i> {
-    /// TODO
+    /// Create a new PEM reader.
+    ///
+    /// Uses [`LINE_WIDTH`] as the default line width (i.e. 70 chars).
     pub fn new(pem: &'i [u8]) -> Result<Self> {
+        let inner = Inner::new_wrapped(pem, LINE_WIDTH)?;
+        let remaining_len = inner.remaining_len();
+
         Ok(Self {
-            inner: Inner::new_wrapped(pem, LINE_WIDTH)?,
+            inner,
+            remaining_len,
         })
     }
 
@@ -23,12 +33,4 @@ impl<'i> PemReader<'i> {
     }
 }
 
-impl Reader for PemReader<'_> {
-    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
-        Ok(self.inner.decode(out)?)
-    }
-
-    fn remaining_len(&self) -> usize {
-        self.inner.remaining_len()
-    }
-}
+impl_reader_for_newtype!(PemReader<'_>);
