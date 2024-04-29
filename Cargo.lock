@@ -494,7 +494,6 @@ dependencies = [
  "elliptic-curve",
  "primefield",
  "primeorder",
- "rand_core",
  "sha2",
 ]
 

@@ -72,7 +72,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
       - uses: RustCrypto/actions/cargo-hack-install@master
-      - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features crypto,default,getrandom,p521,std --release
+      - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features crypto,default,getrandom,std --release
 
   test:
     runs-on: ubuntu-latest
