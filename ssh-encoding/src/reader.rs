@@ -29,18 +29,10 @@ pub trait Reader: Sized {
     /// Decodes a `uint32` which identifies the length of some encapsulated
     /// data, then calls the given reader function with the length of the
     /// remaining data.
-    fn read_prefixed<'r, T, E, F>(&'r mut self, f: F) -> core::result::Result<T, E>
+    fn read_prefixed<T, E, F>(&mut self, f: F) -> core::result::Result<T, E>
     where
         E: From<Error>,
-        F: FnOnce(&mut NestedReader<'r, Self>) -> core::result::Result<T, E>,
-    {
-        let len = usize::decode(self)?;
-
-        f(&mut NestedReader {
-            inner: self,
-            remaining_len: len,
-        })
-    }
+        F: FnOnce(&mut Self) -> core::result::Result<T, E>;
 
     /// Decodes `[u8]` from `byte[n]` as described in [RFC4251 § 5]:
     ///
@@ -111,16 +103,26 @@ pub trait Reader: Sized {
         })
     }
 
-    /// Finish decoding, returning the given value if there is no remaining
-    /// data, or an error otherwise.
-    fn finish<T>(self, value: T) -> Result<T> {
+    /// Ensure that decoding is finished.
+    ///
+    /// # Errors
+    ///
+    /// - Returns `Error::TrailingData` if there is data remaining in the encoder.
+    fn ensure_finished(&self) -> Result<()> {
         if self.is_finished() {
-            Ok(value)
+            Ok(())
         } else {
             Err(Error::TrailingData {
                 remaining: self.remaining_len(),
             })
         }
+    }
+
+    /// Finish decoding, returning the given value if there is no remaining
+    /// data, or an error otherwise.
+    fn finish<T>(self, value: T) -> Result<T> {
+        self.ensure_finished()?;
+        Ok(value)
     }
 }
 
@@ -136,37 +138,71 @@ impl Reader for &[u8] {
         }
     }
 
+    fn read_prefixed<T, E, F>(&mut self, f: F) -> core::result::Result<T, E>
+    where
+        E: From<Error>,
+        F: FnOnce(&mut Self) -> core::result::Result<T, E>,
+    {
+        let prefix_len = usize::decode(self)?;
+
+        if self.len() < prefix_len {
+            return Err(Error::Length.into());
+        }
+
+        let (mut prefix, remaining) = self.split_at(prefix_len);
+        let ret = f(&mut prefix)?;
+        *self = remaining;
+        Ok(ret)
+    }
+
     fn remaining_len(&self) -> usize {
         self.len()
     }
 }
 
-/// Reader type used by [`Reader::read_prefixed`].
-pub struct NestedReader<'r, R: Reader> {
-    /// Inner reader type.
-    inner: &'r mut R,
+/// Writes a `Reader` impl for the given newtype with a `remaining_len` field.
+// TODO(tarcieri): non-macro abstraction over `Base64Reader` and `PemReader`
+#[cfg(any(feature = "base64", feature = "pem"))]
+macro_rules! impl_reader_for_newtype {
+    ($type:ty) => {
+        impl Reader for $type {
+            fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
+                if out.is_empty() {
+                    return Ok(out);
+                }
 
-    /// Remaining length in the prefixed reader.
-    remaining_len: usize,
-}
+                let remaining_len = self
+                    .remaining_len
+                    .checked_sub(out.len())
+                    .ok_or(Error::Length)?;
 
-impl<'r, R: Reader> Reader for NestedReader<'r, R> {
-    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
-        if out.is_empty() {
-            return Ok(out);
+                let ret = self.inner.decode(out)?;
+                self.remaining_len = remaining_len;
+                Ok(ret)
+            }
+
+            fn read_prefixed<T, E, F>(&mut self, f: F) -> core::result::Result<T, E>
+            where
+                E: From<Error>,
+                F: FnOnce(&mut Self) -> core::result::Result<T, E>,
+            {
+                let prefix_len = usize::decode(self)?;
+                let new_remaining_len = self
+                    .remaining_len
+                    .checked_sub(prefix_len)
+                    .ok_or(Error::Length)?;
+
+                self.remaining_len = prefix_len;
+                let ret = f(self)?;
+                self.ensure_finished()?;
+
+                self.remaining_len = new_remaining_len;
+                Ok(ret)
+            }
+
+            fn remaining_len(&self) -> usize {
+                self.remaining_len
+            }
         }
-
-        let remaining_len = self
-            .remaining_len
-            .checked_sub(out.len())
-            .ok_or(Error::Length)?;
-
-        let ret = self.inner.read(out)?;
-        self.remaining_len = remaining_len;
-        Ok(ret)
-    }
-
-    fn remaining_len(&self) -> usize {
-        self.remaining_len
-    }
+    };
 }

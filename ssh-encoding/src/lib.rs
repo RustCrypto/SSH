@@ -32,6 +32,7 @@ mod decode;
 mod encode;
 mod error;
 mod label;
+#[macro_use]
 mod reader;
 mod writer;
 
@@ -46,7 +47,7 @@ pub use crate::{
     encode::Encode,
     error::{Error, Result},
     label::{Label, LabelError},
-    reader::{NestedReader, Reader},
+    reader::Reader,
     writer::Writer,
 };
 
