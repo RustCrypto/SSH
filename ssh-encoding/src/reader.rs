@@ -141,17 +141,6 @@ impl Reader for &[u8] {
     }
 }
 
-#[cfg(feature = "pem")]
-impl Reader for pem::Decoder<'_> {
-    fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
-        Ok(self.decode(out)?)
-    }
-
-    fn remaining_len(&self) -> usize {
-        self.remaining_len()
-    }
-}
-
 /// Reader type used by [`Reader::read_prefixed`].
 pub struct NestedReader<'r, R: Reader> {
     /// Inner reader type.

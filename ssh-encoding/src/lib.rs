@@ -33,6 +33,8 @@ mod writer;
 
 #[cfg(feature = "base64")]
 pub mod base64;
+#[cfg(feature = "pem")]
+pub mod pem;
 
 pub use crate::{
     checked::CheckedSum,
@@ -48,11 +50,4 @@ pub use crate::{
 pub use crate::{base64::Base64Reader, base64::Base64Writer};
 
 #[cfg(feature = "pem")]
-pub use {
-    crate::{decode::DecodePem, encode::EncodePem},
-    pem::{self, LineEnding},
-};
-
-/// Line width used by the PEM encoding of OpenSSH documents.
-#[cfg(feature = "pem")]
-const PEM_LINE_WIDTH: usize = 70;
+pub use crate::pem::{DecodePem, EncodePem};

@@ -28,7 +28,7 @@ pub enum Error {
 
     /// PEM encoding errors.
     #[cfg(feature = "pem")]
-    Pem(pem::Error),
+    Pem(pem_rfc7468::Error),
 
     /// Unexpected trailing data at end of message.
     TrailingData {
@@ -96,8 +96,8 @@ impl From<base64ct::InvalidLengthError> for Error {
 }
 
 #[cfg(feature = "pem")]
-impl From<pem::Error> for Error {
-    fn from(err: pem::Error) -> Error {
+impl From<pem_rfc7468::Error> for Error {
+    fn from(err: pem_rfc7468::Error) -> Error {
         Error::Pem(err)
     }
 }

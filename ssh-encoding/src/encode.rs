@@ -12,12 +12,6 @@ use alloc::{string::String, vec::Vec};
 #[cfg(feature = "bytes")]
 use bytes::Bytes;
 
-#[cfg(feature = "pem")]
-use {
-    crate::PEM_LINE_WIDTH,
-    pem::{LineEnding, PemLabel},
-};
-
 /// Encoding trait.
 ///
 /// This trait describes how to encode a given type.
@@ -39,51 +33,6 @@ pub trait Encode {
     fn encode_prefixed(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
-    }
-}
-
-/// Encoding trait for PEM documents.
-///
-/// This is an extension trait which is auto-impl'd for types which impl the
-/// [`Encode`] and [`PemLabel`] traits.
-#[cfg(feature = "pem")]
-pub trait EncodePem: Encode + PemLabel {
-    /// Encode this type using the [`Encode`] trait, writing the resulting PEM
-    /// document into the provided `out` buffer.
-    fn encode_pem<'o>(&self, line_ending: LineEnding, out: &'o mut [u8]) -> Result<&'o str, Error>;
-
-    /// Encode this type using the [`Encode`] trait, writing the resulting PEM
-    /// document to a returned [`String`].
-    #[cfg(feature = "alloc")]
-    fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Error>;
-}
-
-#[cfg(feature = "pem")]
-impl<T: Encode + PemLabel> EncodePem for T {
-    fn encode_pem<'o>(&self, line_ending: LineEnding, out: &'o mut [u8]) -> Result<&'o str, Error> {
-        let mut writer =
-            pem::Encoder::new_wrapped(Self::PEM_LABEL, PEM_LINE_WIDTH, line_ending, out)
-                .map_err(Error::from)?;
-
-        self.encode(&mut writer)?;
-        let encoded_len = writer.finish().map_err(Error::from)?;
-        str::from_utf8(&out[..encoded_len]).map_err(Error::from)
-    }
-
-    #[cfg(feature = "alloc")]
-    fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Error> {
-        let encoded_len = pem::encapsulated_len_wrapped(
-            Self::PEM_LABEL,
-            PEM_LINE_WIDTH,
-            line_ending,
-            self.encoded_len()?,
-        )
-        .map_err(Error::from)?;
-
-        let mut buf = vec![0u8; encoded_len];
-        let actual_len = self.encode_pem(line_ending, &mut buf)?.len();
-        buf.truncate(actual_len);
-        String::from_utf8(buf).map_err(Error::from)
     }
 }
 
