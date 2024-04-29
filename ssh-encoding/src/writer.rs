@@ -23,13 +23,6 @@ impl Writer for Vec<u8> {
     }
 }
 
-#[cfg(feature = "pem")]
-impl Writer for pem::Encoder<'_, '_> {
-    fn write(&mut self, bytes: &[u8]) -> Result<()> {
-        Ok(self.encode(bytes)?)
-    }
-}
-
 #[cfg(feature = "sha2")]
 impl Writer for Sha256 {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
