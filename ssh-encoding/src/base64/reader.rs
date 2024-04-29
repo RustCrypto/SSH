@@ -1,7 +1,6 @@
 //! Base64 reader support (constant-time).
 
-use super::Reader;
-use crate::Result;
+use crate::{Reader, Result};
 
 /// Inner constant-time Base64 reader type from the `base64ct` crate.
 type Inner<'i> = base64ct::Decoder<'i, base64ct::Base64>;

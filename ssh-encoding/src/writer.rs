@@ -1,8 +1,5 @@
 //! Writer trait and associated implementations.
 
-#[cfg(feature = "base64")]
-pub(crate) mod base64;
-
 use crate::Result;
 
 #[cfg(feature = "alloc")]

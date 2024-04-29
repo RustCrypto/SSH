@@ -1,8 +1,5 @@
 //! Reader trait and associated implementations.
 
-#[cfg(feature = "base64")]
-pub(crate) mod base64;
-
 use crate::{decode::Decode, Error, Result};
 use core::str;
 
