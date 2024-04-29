@@ -6,7 +6,10 @@ use core::fmt::Formatter;
 use encoding::{Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "std")]
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use {
+    core::time::Duration,
+    std::time::{SystemTime, UNIX_EPOCH},
+};
 
 /// Maximum allowed value for a Unix timestamp.
 pub const MAX_SECS: u64 = i64::MAX as u64;
