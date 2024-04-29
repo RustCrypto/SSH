@@ -10,7 +10,10 @@ use {
 };
 
 #[cfg(feature = "std")]
-use std::{fs, path::Path, vec::Vec};
+use {
+    alloc::vec::Vec,
+    std::{fs, path::Path},
+};
 
 /// Character that begins a comment
 const COMMENT_DELIMITER: char = '#';
