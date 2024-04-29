@@ -1,7 +1,6 @@
 //! Base64 writer support (constant-time).
 
-use super::Writer;
-use crate::Result;
+use crate::{Result, Writer};
 
 /// Inner constant-time Base64 reader type from the `base64ct` crate.
 type Inner<'o> = base64ct::Encoder<'o, base64ct::Base64>;

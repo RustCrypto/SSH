@@ -31,6 +31,9 @@ mod label;
 mod reader;
 mod writer;
 
+#[cfg(feature = "base64")]
+pub mod base64;
+
 pub use crate::{
     checked::CheckedSum,
     decode::Decode,
@@ -42,10 +45,7 @@ pub use crate::{
 };
 
 #[cfg(feature = "base64")]
-pub use {
-    crate::{reader::base64::Base64Reader, writer::base64::Base64Writer},
-    base64ct as base64,
-};
+pub use crate::{base64::Base64Reader, base64::Base64Writer};
 
 #[cfg(feature = "pem")]
 pub use {
