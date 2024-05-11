@@ -186,14 +186,13 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "4.2.0-pre"
-source = "git+https://github.com/baloo/curve25519-dalek.git?branch=baloo/rust-crypto/digest-sha2-bumps#70f0a07c65d3cbc9b01583c19cc9cd6b4ae5e407"
+source = "git+https://github.com/baloo/curve25519-dalek.git?branch=baloo/rust-crypto/digest-sha2-bumps#9ccf063be1882425c0a03cf61f5233778b5e655d"
 dependencies = [
  "cfg-if",
  "cpufeatures",
  "curve25519-dalek-derive",
  "digest",
  "fiat-crypto",
- "platforms",
  "rustc_version",
  "subtle",
 ]
@@ -201,7 +200,7 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek-derive"
 version = "0.1.1"
-source = "git+https://github.com/baloo/curve25519-dalek.git?branch=baloo/rust-crypto/digest-sha2-bumps#70f0a07c65d3cbc9b01583c19cc9cd6b4ae5e407"
+source = "git+https://github.com/baloo/curve25519-dalek.git?branch=baloo/rust-crypto/digest-sha2-bumps#9ccf063be1882425c0a03cf61f5233778b5e655d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -277,7 +276,7 @@ dependencies = [
 [[package]]
 name = "ed25519-dalek"
 version = "2.2.0-pre"
-source = "git+https://github.com/baloo/curve25519-dalek.git?branch=baloo/rust-crypto/digest-sha2-bumps#70f0a07c65d3cbc9b01583c19cc9cd6b4ae5e407"
+source = "git+https://github.com/baloo/curve25519-dalek.git?branch=baloo/rust-crypto/digest-sha2-bumps#9ccf063be1882425c0a03cf61f5233778b5e655d"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
@@ -532,12 +531,6 @@ dependencies = [
  "der",
  "spki",
 ]
-
-[[package]]
-name = "platforms"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14e6ab3f592e6fb464fc9712d8d6e6912de6473954635fd76a589d832cffcbb0"
 
 [[package]]
 name = "poly1305"
