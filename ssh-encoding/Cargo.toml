@@ -7,7 +7,8 @@ in RFC4251
 """
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
-repository = "https://github.com/RustCrypto/SSH/tree/master/ssh-encoding"
+homepage = "https://github.com/RustCrypto/SSH/tree/master/ssh-encoding"
+repository = "https://github.com/RustCrypto/SSH"
 categories = ["authentication", "cryptography", "encoding", "no-std", "parser-implementations"]
 keywords = ["crypto", "certificate", "key", "openssh", "ssh"]
 readme = "README.md"

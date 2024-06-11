@@ -9,7 +9,8 @@ with further support for the `authorized_keys` and `known_hosts` file formats.
 """
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
-repository = "https://github.com/RustCrypto/SSH/tree/master/ssh-key"
+homepage = "https://github.com/RustCrypto/SSH/tree/master/ssh-key"
+repository = "https://github.com/RustCrypto/SSH"
 categories = ["authentication", "cryptography", "encoding", "no-std", "parser-implementations"]
 keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
 readme = "README.md"
