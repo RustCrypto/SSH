@@ -1,0 +1,21 @@
+[package]
+name = "ssh-derive"
+version = "0.0.0"
+description = "Custom derive support for the `ssh-encoding` crate"
+authors = ["RustCrypto Developers"]
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/RustCrypto/SSH/tree/master/ssh-derive"
+repository = "https://github.com/RustCrypto/SSH"
+categories = ["authentication", "cryptography", "encoding", "no-std", "parser-implementations"]
+keywords = ["crypto", "certificate", "key", "openssh", "ssh"]
+readme = "README.md"
+edition = "2021"
+rust-version = "1.60"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+syn = { version = "2", features = ["extra-traits"] }
