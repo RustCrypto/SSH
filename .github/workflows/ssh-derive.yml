@@ -1,0 +1,38 @@
+name: ssh-derive
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ssh-derive.yml"
+      - "ssh-derive/**"
+      - "Cargo.*"
+  push:
+    branches: master
+
+defaults:
+  run:
+    working-directory: ssh-derive
+
+env:
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  minimal-versions:
+    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
+    with:
+      stable-cmd: cargo test --all-features --release
+      working-directory: ${{ github.workflow }}
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - 1.60.0 # MSRV
+          - stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      - run: cargo test
