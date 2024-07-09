@@ -51,4 +51,4 @@ dual licensed as above, without any additional terms or conditions.
 [//]: # (links)
 
 [RustCrypto]: https://github.com/rustcrypto
-[RFC4251]: https://datatracker.ietf.org/doc/html/rfc4251
+[`ssh-encoding`]: https://docs.rs/ssh-encoding
