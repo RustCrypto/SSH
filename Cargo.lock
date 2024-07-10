@@ -816,7 +816,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-protocol"
-version = "0.0.1-alpha"
+version = "0.1.0-pre"
 dependencies = [
  "ssh-cipher",
  "ssh-encoding",
