@@ -455,14 +455,9 @@ impl Certificate {
         self.reserved.encode(writer)?;
         self.signature_key.encode_prefixed(writer)
     }
-}
 
-impl Decode for Certificate {
-    type Error = Error;
-
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let algorithm = Algorithm::new_certificate(&String::decode(reader)?)?;
-
+    /// Decode [`Certificate`] for the specified algorithm.
+    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
         Ok(Self {
             nonce: Vec::decode(reader)?,
             public_key: KeyData::decode_as(reader, algorithm)?,
@@ -479,6 +474,15 @@ impl Decode for Certificate {
             signature: reader.read_prefixed(Signature::decode)?,
             comment: String::new(),
         })
+    }
+}
+
+impl Decode for Certificate {
+    type Error = Error;
+
+    fn decode(reader: &mut impl Reader) -> Result<Self> {
+        let algorithm = Algorithm::new_certificate(&String::decode(reader)?)?;
+        Self::decode_as(reader, algorithm)
     }
 }
 

@@ -174,7 +174,7 @@ impl KeyData {
     }
 
     /// Decode [`KeyData`] for the specified algorithm.
-    pub(crate) fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
             #[cfg(feature = "alloc")]
             Algorithm::Dsa => DsaPublicKey::decode(reader).map(Self::Dsa),
