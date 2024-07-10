@@ -1,0 +1,30 @@
+[package]
+name = "ssh-protocol"
+version = "0.0.0"
+description = """
+Pure Rust implementation of the SSH protocol as described in RFC4251/RFC4253 as well as
+OpenSSH-specific extensions (WIP)
+"""
+authors = ["RustCrypto Developers"]
+license = "Apache-2.0 OR MIT"
+homepage = "https://github.com/RustCrypto/SSH/tree/master/ssh-protocol"
+repository = "https://github.com/RustCrypto/SSH"
+categories = ["authentication", "cryptography", "encoding", "no-std"]
+keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
+readme = "README.md"
+edition = "2021"
+rust-version = "1.73"
+
+[dependencies]
+cipher = { package = "ssh-cipher", version = "=0.3.0-pre", default-features = false, path = "../ssh-cipher" }
+encoding = { package = "ssh-encoding", version = "=0.3.0-pre", default-features = false, path = "../ssh-encoding" }
+key = { package = "ssh-key", version = "=0.7.0-pre", default-features = false, path = "../ssh-key" }
+
+[features]
+default = ["std"]
+alloc = ["encoding/alloc", "key/alloc"]
+std = ["alloc", "encoding/std", "key/std"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

@@ -815,6 +815,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ssh-protocol"
+version = "0.0.0"
+dependencies = [
+ "ssh-cipher",
+ "ssh-encoding",
+ "ssh-key",
+]
+
+[[package]]
 name = "subtle"
 version = "2.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
