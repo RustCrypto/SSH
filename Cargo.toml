@@ -5,8 +5,9 @@ members = [
     "ssh-derive",
     "ssh-encoding",
     "ssh-key",
-    "ssh-protocol",
+    #"ssh-protocol",
 ]
+exclude = ["ssh-protocol"]
 
 [profile.dev]
 opt-level = 2
