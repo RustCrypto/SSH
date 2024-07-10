@@ -1,0 +1,35 @@
+name: ssh-protocol
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/ssh-protocol.yml"
+      - "ssh-cipher/**"
+      - "ssh-encoding/**"
+      - "ssh-key/**"
+      - "ssh-protocol/**"
+      - "Cargo.*"
+  push:
+    branches: master
+
+defaults:
+  run:
+    working-directory: ssh-protocol
+
+env:
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - 1.73.0 # MSRV
+          - stable
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+      - run: cargo test --release

@@ -4,7 +4,8 @@ members = [
     "ssh-cipher",
     "ssh-derive",
     "ssh-encoding",
-    "ssh-key"
+    "ssh-key",
+    "ssh-protocol",
 ]
 
 [profile.dev]
