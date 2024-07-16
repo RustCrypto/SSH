@@ -10,7 +10,7 @@ categories = ["authentication", "cryptography", "encoding", "no-std", "parser-im
 keywords = ["crypto", "certificate", "key", "openssh", "ssh"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.60"
+rust-version = "1.61"
 
 [lib]
 proc-macro = true
