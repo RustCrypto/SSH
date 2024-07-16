@@ -46,7 +46,7 @@ impl ChaCha20Poly1305 {
 
         // TODO(tarcieri): support for using both keys
         let (k_2, _k_1) = key.split_at(KEY_SIZE);
-        let key = Key::from_slice(k_2);
+        let key = Key::try_from(k_2).map_err(|_| Error::KeySize)?;
 
         let nonce = if nonce.is_empty() {
             // For key encryption
@@ -55,7 +55,7 @@ impl ChaCha20Poly1305 {
             Nonce::try_from(nonce).map_err(|_| Error::IvSize)?
         };
 
-        let mut cipher = ChaCha20::new(key, &nonce.into());
+        let mut cipher = ChaCha20::new(&key, &nonce.into());
         let mut poly1305_key = poly1305::Key::default();
         cipher.apply_keystream(&mut poly1305_key);
 
