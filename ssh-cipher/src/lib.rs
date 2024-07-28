@@ -28,14 +28,18 @@ mod error;
 
 #[cfg(feature = "chacha20poly1305")]
 mod chacha20poly1305;
+#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+mod decryptor;
+#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+mod encryptor;
 
 pub use crate::error::{Error, Result};
 
+#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
+
 use core::{fmt, str};
 use encoding::{Label, LabelError};
-
-#[cfg(feature = "aes-ctr")]
-use cipher::StreamCipherCore;
 
 #[cfg(feature = "aes-gcm")]
 use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
@@ -43,26 +47,8 @@ use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
 #[cfg(feature = "chacha20poly1305")]
 use crate::chacha20poly1305::ChaCha20Poly1305;
 
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
-use aes::{Aes128, Aes192, Aes256};
-
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-use {
-    cbc::{Decryptor, Encryptor},
-    cipher::{
-        block_padding::NoPadding, BlockCipher, BlockCipherDecrypt, BlockCipherEncrypt,
-        BlockModeDecrypt, BlockModeEncrypt,
-    },
-};
-
-#[cfg(any(feature = "aes-cbc", feature = "aes-gcm", feature = "tdes"))]
+#[cfg(feature = "aes-gcm")]
 use cipher::KeyInit;
-
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
-use cipher::KeyIvInit;
-
-#[cfg(feature = "tdes")]
-use des::TdesEde3;
 
 /// AES-128 in block chaining (CBC) mode
 const AES128_CBC: &str = "aes128-cbc";
@@ -235,39 +221,12 @@ impl Cipher {
     }
 
     /// Decrypt the ciphertext in the `buffer` in-place using this cipher.
+    #[cfg_attr(
+        not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")),
+        allow(unused_variables)
+    )]
     pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
         match self {
-            #[cfg(feature = "aes-cbc")]
-            Self::Aes128Cbc => {
-                if tag.is_some() {
-                    return Err(Error::TagSize);
-                }
-                cbc_decrypt::<Aes128>(key, iv, buffer)
-            }
-            #[cfg(feature = "aes-cbc")]
-            Self::Aes192Cbc => {
-                if tag.is_some() {
-                    return Err(Error::TagSize);
-                }
-                cbc_decrypt::<Aes192>(key, iv, buffer)
-            }
-            #[cfg(feature = "aes-cbc")]
-            Self::Aes256Cbc => {
-                if tag.is_some() {
-                    return Err(Error::TagSize);
-                }
-                cbc_decrypt::<Aes256>(key, iv, buffer)
-            }
-            #[cfg(feature = "aes-ctr")]
-            Self::Aes128Ctr | Self::Aes192Ctr | Self::Aes256Ctr => {
-                if tag.is_some() {
-                    return Err(Error::TagSize);
-                }
-
-                // Counter mode encryption and decryption are the same operation
-                self.encrypt(key, iv, buffer)?;
-                Ok(())
-            }
             #[cfg(feature = "aes-gcm")]
             Self::Aes128Gcm => {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
@@ -295,54 +254,37 @@ impl Cipher {
                 let tag = tag.ok_or(Error::TagSize)?;
                 ChaCha20Poly1305::new(key, iv)?.decrypt(buffer, tag)
             }
-            #[cfg(feature = "tdes")]
-            Self::TDesCbc => {
-                if tag.is_some() {
-                    return Err(Error::TagSize);
-                }
-                cbc_decrypt::<TdesEde3>(key, iv, buffer)
-            }
+            // Use `Decryptor` for non-AEAD modes
+            #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
             _ => {
-                // Suppress unused variable warnings.
-                let (_, _, _, _) = (key, iv, buffer, tag);
-                Err(self.unsupported())
+                // Non-AEAD modes don't take a tag.
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
+
+                self.decryptor(key, iv)?.decrypt(buffer)
             }
+            #[cfg(not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")))]
+            _ => return Err(self.unsupported()),
         }
     }
 
+    /// Get a stateful [`Decryptor`] for the given key and IV.
+    ///
+    /// Only applicable to unauthenticated modes (e.g. AES-CBC, AES-CTR). Not usable with
+    /// authenticated modes which are inherently one-shot (AES-GCM, ChaCha20Poly1305).
+    #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+    pub fn decryptor(self, key: &[u8], iv: &[u8]) -> Result<Decryptor> {
+        Decryptor::new(self, key, iv)
+    }
+
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
+    #[cfg_attr(
+        not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")),
+        allow(unused_variables)
+    )]
     pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<Option<Tag>> {
         match self {
-            #[cfg(feature = "aes-cbc")]
-            Self::Aes128Cbc => {
-                cbc_encrypt::<Aes128>(key, iv, buffer)?;
-                Ok(None)
-            }
-            #[cfg(feature = "aes-cbc")]
-            Self::Aes192Cbc => {
-                cbc_encrypt::<Aes192>(key, iv, buffer)?;
-                Ok(None)
-            }
-            #[cfg(feature = "aes-cbc")]
-            Self::Aes256Cbc => {
-                cbc_encrypt::<Aes256>(key, iv, buffer)?;
-                Ok(None)
-            }
-            #[cfg(feature = "aes-ctr")]
-            Self::Aes128Ctr => {
-                ctr_encrypt::<Ctr128BE<Aes128>>(key, iv, buffer)?;
-                Ok(None)
-            }
-            #[cfg(feature = "aes-ctr")]
-            Self::Aes192Ctr => {
-                ctr_encrypt::<Ctr128BE<Aes192>>(key, iv, buffer)?;
-                Ok(None)
-            }
-            #[cfg(feature = "aes-ctr")]
-            Self::Aes256Ctr => {
-                ctr_encrypt::<Ctr128BE<Aes256>>(key, iv, buffer)?;
-                Ok(None)
-            }
             #[cfg(feature = "aes-gcm")]
             Self::Aes128Gcm => {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
@@ -368,17 +310,24 @@ impl Cipher {
                 let tag = ChaCha20Poly1305::new(key, iv)?.encrypt(buffer);
                 Ok(Some(tag))
             }
-            #[cfg(feature = "tdes")]
-            Self::TDesCbc => {
-                cbc_encrypt::<TdesEde3>(key, iv, buffer)?;
+            // Use `Encryptor` for non-AEAD modes
+            #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+            _ => {
+                self.encryptor(key, iv)?.encrypt(buffer)?;
                 Ok(None)
             }
-            _ => {
-                // Suppress unused variable warnings.
-                let (_, _, _) = (key, iv, buffer);
-                Err(self.unsupported())
-            }
+            #[cfg(not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")))]
+            _ => return Err(self.unsupported()),
         }
+    }
+
+    /// Get a stateful [`Encryptor`] for the given key and IV.
+    ///
+    /// Only applicable to unauthenticated modes (e.g. AES-CBC, AES-CTR). Not usable with
+    /// authenticated modes which are inherently one-shot (AES-GCM, ChaCha20Poly1305).
+    #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+    pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<Encryptor> {
+        Encryptor::new(self, key, iv)
     }
 
     /// Create an unsupported cipher error.
@@ -420,48 +369,4 @@ impl str::FromStr for Cipher {
             _ => Err(LabelError::new(ciphername)),
         }
     }
-}
-
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-fn cbc_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
-where
-    C: BlockCipherEncrypt + BlockCipher + KeyInit,
-{
-    let cipher = Encryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
-
-    // Since the passed in buffer is already padded, using NoPadding here
-    cipher
-        .encrypt_padded::<NoPadding>(buffer, buffer.len())
-        .map_err(|_| Error::Crypto)?;
-
-    Ok(())
-}
-
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-fn cbc_decrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
-where
-    C: BlockCipherDecrypt + BlockCipher + KeyInit,
-{
-    let cipher = Decryptor::<C>::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
-
-    // Since the passed in buffer is already padded, using NoPadding here
-    cipher
-        .decrypt_padded::<NoPadding>(buffer)
-        .map_err(|_| Error::Crypto)?;
-
-    Ok(())
-}
-
-#[cfg(feature = "aes-ctr")]
-fn ctr_encrypt<C>(key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<()>
-where
-    C: StreamCipherCore + KeyIvInit,
-{
-    let cipher = C::new_from_slices(key, iv).map_err(|_| Error::KeySize)?;
-
-    cipher
-        .try_apply_keystream_partial(buffer.into())
-        .map_err(|_| Error::Crypto)?;
-
-    Ok(())
 }
