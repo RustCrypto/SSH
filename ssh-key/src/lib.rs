@@ -5,7 +5,6 @@
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
 )]
-#![allow(unexpected_cfgs)] // `ed25519` is temporarily disabled
 #![forbid(unsafe_code)]
 #![warn(
     clippy::alloc_instead_of_core,
