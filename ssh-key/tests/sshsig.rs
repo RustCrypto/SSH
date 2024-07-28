@@ -1,7 +1,6 @@
 //! `sshsig` signature tests.
 
 #![cfg(feature = "alloc")]
-#![allow(unexpected_cfgs)] // `ed25519` is temporarily disabled
 
 use hex_literal::hex;
 use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
