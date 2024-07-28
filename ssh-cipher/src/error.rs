@@ -16,6 +16,9 @@ pub enum Error {
     /// Invalid key size.
     KeySize,
 
+    /// Invalid length (i.e. of an input buffer).
+    Length,
+
     /// Invalid initialization vector / nonce size.
     IvSize,
 
@@ -31,6 +34,7 @@ impl fmt::Display for Error {
         match self {
             Error::Crypto => write!(f, "cryptographic error"),
             Error::KeySize => write!(f, "invalid key size"),
+            Error::Length => write!(f, "invalid input length"),
             Error::IvSize => write!(f, "invalid initialization vector size"),
             Error::TagSize => write!(f, "invalid AEAD tag size"),
             Error::UnsupportedCipher(cipher) => write!(f, "unsupported cipher: {}", cipher),

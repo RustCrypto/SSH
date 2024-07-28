@@ -92,7 +92,7 @@ pub type Nonce = [u8; 12];
 /// `chacha20-poly1305@openssh.com`.
 pub type Tag = [u8; 16];
 
-/// Counter mode with a 32-bit big endian counter.
+/// Counter mode with a 128-bit big endian counter.
 #[cfg(feature = "aes-ctr")]
 type Ctr128BE<Cipher> = ctr::CtrCore<Cipher, ctr::flavors::Ctr128BE>;
 
@@ -221,6 +221,9 @@ impl Cipher {
     }
 
     /// Decrypt the ciphertext in the `buffer` in-place using this cipher.
+    ///
+    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
+    /// block size.
     #[cfg_attr(
         not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")),
         allow(unused_variables)
@@ -279,6 +282,9 @@ impl Cipher {
     }
 
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
+    ///
+    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
+    /// block size.
     #[cfg_attr(
         not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")),
         allow(unused_variables)
@@ -328,6 +334,24 @@ impl Cipher {
     #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
     pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<Encryptor> {
         Encryptor::new(self, key, iv)
+    }
+
+    /// Check that the key and IV are the expected length for this cipher.
+    #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+    fn check_key_and_iv(self, key: &[u8], iv: &[u8]) -> Result<()> {
+        let (key_size, iv_size) = self
+            .key_and_iv_size()
+            .ok_or(Error::UnsupportedCipher(self))?;
+
+        if key.len() != key_size {
+            return Err(Error::KeySize);
+        }
+
+        if iv.len() != iv_size {
+            return Err(Error::IvSize);
+        }
+
+        Ok(())
     }
 
     /// Create an unsupported cipher error.
