@@ -72,7 +72,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
       - uses: RustCrypto/actions/cargo-hack-install@master
-      - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features default,dsa,ed25519,getrandom,p256,p384,p521,rsa,tdes,std --release
+      - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features default,dsa,getrandom,p256,p384,p521,rsa,tdes,std --release # ed25519
       - run: cargo build --target ${{ matrix.target }} --no-default-features --features alloc,crypto,dsa,encryption,tdes --release
 
   test:
@@ -88,7 +88,7 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       - uses: RustCrypto/actions/cargo-hack-install@master
-      - run: cargo hack test --feature-powerset --exclude-features default,dsa,ed25519,getrandom,p256,p384,p521,rsa,tdes,std --release
+      - run: cargo hack test --feature-powerset --exclude-features default,dsa,getrandom,p256,p384,p521,rsa,tdes,std --release # ed25519
       - run: cargo test --release
       - run: cargo test --release --features getrandom
       - run: cargo test --release --features std
