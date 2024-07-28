@@ -709,7 +709,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-cipher"
-version = "0.3.0-pre"
+version = "0.3.0-pre.0"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.3.0-pre"
+version = "0.3.0-pre.0"
 dependencies = [
  "base64ct",
  "bytes",
@@ -745,7 +745,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-key"
-version = "0.7.0-pre"
+version = "0.7.0-pre.0"
 dependencies = [
  "bcrypt-pbkdf",
  "dsa",
@@ -770,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-protocol"
-version = "0.1.0-pre"
+version = "0.1.0-pre.0"
 dependencies = [
  "ssh-cipher",
  "ssh-encoding",
