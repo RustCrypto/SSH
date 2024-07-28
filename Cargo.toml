@@ -12,40 +12,5 @@ members = [
 opt-level = 2
 
 [patch.crates-io]
-# When you remove the last patch.crates-io entry, please re-enable `minimal-versions`
-# in `.github/workflows/ssh-key.yml` and `.github/workflows/ssh-cipher.yml`
-p256 = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-p384 = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-p521 = { git = "https://github.com/RustCrypto/elliptic-curves.git" }
-
-# https://github.com/RustCrypto/signatures/pull/807
-ed25519 = { git = "https://github.com/RustCrypto/signatures.git" }
-# https://github.com/dalek-cryptography/curve25519-dalek/pull/620
-ed25519-dalek = { git = "https://github.com/baloo/curve25519-dalek.git", branch = "baloo/rust-crypto/digest-sha2-bumps" }
-
-dsa = { git = "https://github.com/RustCrypto/signatures.git" }
-ecdsa = { git = "https://github.com/RustCrypto/signatures.git" }
-
-# https://github.com/RustCrypto/password-hashes/pull/489
-bcrypt-pbkdf = { git = "https://github.com/RustCrypto/password-hashes.git" }
-
-# https://github.com/RustCrypto/stream-ciphers/pull/345
-chacha20 = { git = "https://github.com/RustCrypto/stream-ciphers.git" }
-
-# https://github.com/RustCrypto/block-ciphers/pull/413
-# https://github.com/RustCrypto/block-ciphers/pull/419 - pending release
-blowfish = { git = "https://github.com/RustCrypto/block-ciphers.git" }
-
-# https://github.com/RustCrypto/block-modes/pull/56
-cbc = { git = "https://github.com/RustCrypto/block-modes.git" }
-ctr = { git = "https://github.com/RustCrypto/block-modes.git" }
-
-# https://github.com/RustCrypto/AEADs/pull/583
-aes-gcm = { git = "https://github.com/RustCrypto/AEADs.git" }
-
-der = { git = "https://github.com/RustCrypto/formats.git" }
-pkcs1 = { git = "https://github.com/RustCrypto/formats.git" }
-pkcs8 = { git = "https://github.com/RustCrypto/formats.git" }
-sec1 = { git = "https://github.com/RustCrypto/formats.git" }
-spki = { git = "https://github.com/RustCrypto/formats.git" }
-
+# https://github.com/dalek-cryptography/curve25519-dalek/pull/676
+ed25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek.git", branch = "rustcrypto-new-releases" }
