@@ -172,7 +172,7 @@ impl Cipher {
             Self::Aes256Ctr => Some((32, 16)),
             Self::Aes128Gcm => Some((16, 12)),
             Self::Aes256Gcm => Some((32, 12)),
-            Self::ChaCha20Poly1305 => Some((64, 0)),
+            Self::ChaCha20Poly1305 => Some((32, 12)),
             Self::TDesCbc => Some((24, 8)),
         }
     }
