@@ -34,6 +34,9 @@ const OPENSSH_ECDSA_P521_EXAMPLE: &str = include_str!("examples/id_ecdsa_p521");
 /// Ed25519 OpenSSH-formatted private key
 const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
 
+/// Ed25519 OpenSSH-formatted private key with 64-column line wrapping
+const OPENSSH_ED25519_64COLS_EXAMPLE: &str = include_str!("examples/id_ed25519.64cols");
+
 /// RSA (3072-bit) OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
 const OPENSSH_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072");
@@ -245,6 +248,14 @@ fn decode_ed25519_openssh() {
 
     #[cfg(feature = "alloc")]
     assert_eq!(key.comment(), "user@example.com");
+}
+
+/// Test alternative PEM line wrappings (64 columns).
+#[test]
+fn decode_ed25519_openssh_64cols() {
+    let key = PrivateKey::from_openssh(OPENSSH_ED25519_64COLS_EXAMPLE).unwrap();
+    let other_key = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
+    assert_eq!(key, other_key);
 }
 
 #[cfg(feature = "alloc")]
