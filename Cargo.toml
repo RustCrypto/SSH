@@ -18,4 +18,4 @@ ssh-encoding = { path = "./ssh-encoding" }
 ssh-key = { path = "./ssh-key" }
 
 # https://github.com/dalek-cryptography/curve25519-dalek/pull/676
-ed25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek.git", branch = "rustcrypto-new-releases" }
+#ed25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek.git", branch = "rustcrypto-new-releases" }

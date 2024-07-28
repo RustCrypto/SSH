@@ -1,5 +1,7 @@
 //! SSH private key tests.
 
+#![allow(unexpected_cfgs)] // `ed25519` is temporarily disabled
+
 use hex_literal::hex;
 use ssh_key::{Algorithm, Cipher, KdfAlg, PrivateKey};
 
