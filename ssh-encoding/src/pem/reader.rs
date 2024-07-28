@@ -1,4 +1,3 @@
-use super::LINE_WIDTH;
 use crate::{Decode, Error, Reader, Result};
 
 /// Inner PEM decoder.
@@ -14,11 +13,9 @@ pub struct PemReader<'i> {
 }
 
 impl<'i> PemReader<'i> {
-    /// Create a new PEM reader.
-    ///
-    /// Uses [`LINE_WIDTH`] as the default line width (i.e. 70 chars).
+    /// Create a new PEM reader which autodetects the line width of the input.
     pub fn new(pem: &'i [u8]) -> Result<Self> {
-        let inner = Inner::new_wrapped(pem, LINE_WIDTH)?;
+        let inner = Inner::new_detect_wrap(pem)?;
         let remaining_len = inner.remaining_len();
 
         Ok(Self {
