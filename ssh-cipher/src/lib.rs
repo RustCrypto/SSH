@@ -35,6 +35,9 @@ mod encryptor;
 
 pub use crate::error::{Error, Result};
 
+#[cfg(feature = "chacha20poly1305")]
+pub use crate::chacha20poly1305::ChaCha20Poly1305;
+
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
 pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
 
@@ -43,9 +46,6 @@ use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes-gcm")]
 use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
-
-#[cfg(feature = "chacha20poly1305")]
-use crate::chacha20poly1305::ChaCha20Poly1305;
 
 #[cfg(feature = "aes-gcm")]
 use cipher::KeyInit;

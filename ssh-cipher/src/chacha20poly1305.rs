@@ -1,10 +1,4 @@
-//! OpenSSH variant of ChaCha20Poly1305: `chacha20-poly1305@openssh.com`
-//!
-//! Differences from ChaCha20Poly1305 as described in RFC8439:
-//! - The input of Poly1305 is not padded
-//! - The lengths of ciphertext and AAD are not authenticated using Poly1305
-//!
-//! [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
+//! OpenSSH variant of ChaCha20Poly1305.
 
 use crate::{Error, Nonce, Result, Tag};
 use chacha20::{ChaCha20, Key};
@@ -12,7 +6,17 @@ use cipher::{KeyInit, KeyIvInit, StreamCipher, StreamCipherSeek};
 use poly1305::Poly1305;
 use subtle::ConstantTimeEq;
 
-pub(crate) struct ChaCha20Poly1305 {
+/// OpenSSH variant of ChaCha20Poly1305: `chacha20-poly1305@openssh.com`
+/// as described in [PROTOCOL.chacha20poly1305].
+///
+/// Differences from ChaCha20Poly1305-IETF as described in [RFC8439]:
+/// - The input of Poly1305 is not padded.
+/// - AAD is unsupported.
+/// - The lengths of ciphertext (and AAD) are not authenticated using Poly1305.
+///
+/// [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
+/// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
+pub struct ChaCha20Poly1305 {
     cipher: ChaCha20,
     mac: Poly1305,
 }
@@ -36,12 +40,20 @@ impl ChaCha20Poly1305 {
         Ok(Self { cipher, mac })
     }
 
+    /// Encrypt the provided `buffer` in-place, returning the Poly1305 authentication tag.
     #[inline]
     pub fn encrypt(mut self, buffer: &mut [u8]) -> Tag {
         self.cipher.apply_keystream(buffer);
         self.mac.compute_unpadded(buffer).into()
     }
 
+    /// Decrypt the provided `buffer` in-place, verifying it against the provided Poly1305
+    /// authentication `tag`.
+    ///
+    /// In the event tag verification fails, [`Error::Crypto`] is returned, and `buffer` is not
+    /// modified.
+    ///
+    /// Upon success, `Ok(())` is returned and `buffer` is rewritten with the decrypted plaintext.
     #[inline]
     pub fn decrypt(mut self, buffer: &mut [u8], tag: Tag) -> Result<()> {
         let expected_tag = self.mac.compute_unpadded(buffer);
