@@ -42,7 +42,7 @@ impl DotSsh {
         self.path.join("config")
     }
 
-    /// Iterate over the private keys in the `.ssh` directory.
+    /// Iterate over the private keys in the `~/.ssh` directory.
     pub fn private_keys(&self) -> Result<impl Iterator<Item = PrivateKey>> {
         Ok(PrivateKeysIter {
             read_dir: fs::read_dir(&self.path)?,
@@ -56,7 +56,7 @@ impl DotSsh {
             .find(|key| key.public_key().fingerprint(fingerprint.algorithm()) == fingerprint)
     }
 
-    /// Iterate over the public keys in the `.ssh` directory.
+    /// Iterate over the public keys in the `~/.ssh` directory.
     pub fn public_keys(&self) -> Result<impl Iterator<Item = PublicKey>> {
         Ok(PublicKeysIter {
             read_dir: fs::read_dir(&self.path)?,
@@ -78,7 +78,7 @@ impl Default for DotSsh {
     }
 }
 
-/// Iterator over the private keys in the `.ssh` directory.
+/// Iterator over the private keys in the `~/.ssh` directory.
 pub struct PrivateKeysIter {
     read_dir: ReadDir,
 }
@@ -97,7 +97,7 @@ impl Iterator for PrivateKeysIter {
     }
 }
 
-/// Iterator over the public keys in the `.ssh` directory.
+/// Iterator over the public keys in the `~/.ssh` directory.
 pub struct PublicKeysIter {
     read_dir: ReadDir,
 }
