@@ -362,6 +362,7 @@ impl FromStr for PublicKey {
 }
 
 #[cfg(feature = "alloc")]
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for PublicKey {
     fn to_string(&self) -> String {
         self.to_openssh().expect("SSH public key encoding error")

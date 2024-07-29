@@ -521,6 +521,7 @@ impl FromStr for Certificate {
     }
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for Certificate {
     fn to_string(&self) -> String {
         self.to_openssh().expect("SSH certificate encoding error")

@@ -169,6 +169,7 @@ impl str::FromStr for Entry {
     }
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for Entry {
     fn to_string(&self) -> String {
         let mut s = String::new();
@@ -273,6 +274,7 @@ impl str::FromStr for HostPatterns {
     }
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for HostPatterns {
     fn to_string(&self) -> String {
         match &self {
