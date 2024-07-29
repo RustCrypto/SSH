@@ -156,6 +156,8 @@ mod error;
 mod fingerprint;
 mod kdf;
 
+#[cfg(feature = "std")]
+mod dot_ssh;
 #[cfg(feature = "alloc")]
 mod mpint;
 #[cfg(feature = "alloc")]
@@ -191,3 +193,6 @@ pub use sec1;
 
 #[cfg(feature = "rand_core")]
 pub use rand_core;
+
+#[cfg(feature = "std")]
+pub use crate::dot_ssh::DotSsh;
