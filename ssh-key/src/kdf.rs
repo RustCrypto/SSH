@@ -86,26 +86,7 @@ impl Kdf {
         cipher: Cipher,
         password: impl AsRef<[u8]>,
     ) -> Result<(Zeroizing<Vec<u8>>, Vec<u8>)> {
-        let (key_size, iv_size) = match cipher {
-            // Derive two ChaCha20Poly1305 keys, but only use the first.
-            // In the typical SSH protocol, the second key is used for length encryption.
-            //
-            // From `PROTOCOL.chacha20poly1305`:
-            //
-            // > The chacha20-poly1305@openssh.com cipher requires 512 bits of key
-            // > material as output from the SSH key exchange. This forms two 256 bit
-            // > keys (K_1 and K_2), used by two separate instances of chacha20.
-            // > The first 256 bits constitute K_2 and the second 256 bits become
-            // > K_1.
-            // >
-            // > The instance keyed by K_1 is a stream cipher that is used only
-            // > to encrypt the 4 byte packet length field. The second instance,
-            // > keyed by K_2, is used in conjunction with poly1305 to build an AEAD
-            // > (Authenticated Encryption with Associated Data) that is used to encrypt
-            // > and authenticate the entire packet.
-            Cipher::ChaCha20Poly1305 => (64, 0),
-            _ => cipher.key_and_iv_size().ok_or(Error::Decrypted)?,
-        };
+        let (key_size, iv_size) = cipher.key_and_iv_size().ok_or(Error::Decrypted)?;
 
         let okm_size = key_size
             .checked_add(iv_size)
@@ -115,12 +96,11 @@ impl Kdf {
         self.derive(password, &mut okm)?;
         let mut iv = okm.split_off(key_size);
 
+        // For whatever reason `chacha20-poly1305@openssh.com` uses a nonce of all zeros for private
+        // key encryption, relying on a unique salt used in the password-based encryption key
+        // derivation to ensure that each encryption key is only used once.
         if cipher == Cipher::ChaCha20Poly1305 {
-            // Only use the first ChaCha20 key.
-            okm.truncate(32);
-
-            // Use an all-zero nonce (with a key derived from password + salt providing uniqueness)
-            iv.extend_from_slice(&cipher::Nonce::default());
+            iv.copy_from_slice(&cipher::Nonce::default());
         }
 
         Ok((okm, iv))

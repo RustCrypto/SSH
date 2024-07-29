@@ -45,37 +45,26 @@ enum Inner {
 impl Decryptor {
     /// Create a new decryptor object with the given [`Cipher`], key, and IV.
     pub fn new(cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<Self> {
+        cipher.check_key_and_iv(key, iv)?;
+
         let inner = match cipher {
             #[cfg(feature = "aes-cbc")]
-            Cipher::Aes128Cbc => Inner::Aes128Cbc(
-                cbc::Decryptor::new_from_slices(key, iv).map_err(|_| Error::KeySize)?,
-            ),
+            Cipher::Aes128Cbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::Aes128Cbc),
             #[cfg(feature = "aes-cbc")]
-            Cipher::Aes192Cbc => Inner::Aes192Cbc(
-                cbc::Decryptor::new_from_slices(key, iv).map_err(|_| Error::KeySize)?,
-            ),
+            Cipher::Aes192Cbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::Aes192Cbc),
             #[cfg(feature = "aes-cbc")]
-            Cipher::Aes256Cbc => Inner::Aes256Cbc(
-                cbc::Decryptor::new_from_slices(key, iv).map_err(|_| Error::KeySize)?,
-            ),
+            Cipher::Aes256Cbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::Aes256Cbc),
             #[cfg(feature = "aes-ctr")]
-            Cipher::Aes128Ctr => {
-                Inner::Aes128Ctr(Ctr128BE::new_from_slices(key, iv).map_err(|_| Error::KeySize)?)
-            }
+            Cipher::Aes128Ctr => Ctr128BE::new_from_slices(key, iv).map(Inner::Aes128Ctr),
             #[cfg(feature = "aes-ctr")]
-            Cipher::Aes192Ctr => {
-                Inner::Aes192Ctr(Ctr128BE::new_from_slices(key, iv).map_err(|_| Error::KeySize)?)
-            }
+            Cipher::Aes192Ctr => Ctr128BE::new_from_slices(key, iv).map(Inner::Aes192Ctr),
             #[cfg(feature = "aes-ctr")]
-            Cipher::Aes256Ctr => {
-                Inner::Aes256Ctr(Ctr128BE::new_from_slices(key, iv).map_err(|_| Error::KeySize)?)
-            }
+            Cipher::Aes256Ctr => Ctr128BE::new_from_slices(key, iv).map(Inner::Aes256Ctr),
             #[cfg(feature = "tdes")]
-            Cipher::TDesCbc => Inner::TDesCbc(
-                cbc::Decryptor::new_from_slices(key, iv).map_err(|_| Error::KeySize)?,
-            ),
+            Cipher::TDesCbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::TDesCbc),
             _ => return Err(cipher.unsupported()),
-        };
+        }
+        .map_err(|_| Error::Length)?;
 
         Ok(Self { inner })
     }
@@ -100,25 +89,29 @@ impl Decryptor {
         }
     }
 
-    /// Decrypt the given buffer in place, returning [`Error::Crypto`] on padding failure.
+    /// Decrypt the given buffer in place.
+    ///
+    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
+    /// block size.
     pub fn decrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
         #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
         match &mut self.inner {
             #[cfg(feature = "aes-cbc")]
-            Inner::Aes128Cbc(cipher) => cbc_decrypt(cipher, buffer)?,
+            Inner::Aes128Cbc(cipher) => cbc_decrypt(cipher, buffer),
             #[cfg(feature = "aes-cbc")]
-            Inner::Aes192Cbc(cipher) => cbc_decrypt(cipher, buffer)?,
+            Inner::Aes192Cbc(cipher) => cbc_decrypt(cipher, buffer),
             #[cfg(feature = "aes-cbc")]
-            Inner::Aes256Cbc(cipher) => cbc_decrypt(cipher, buffer)?,
+            Inner::Aes256Cbc(cipher) => cbc_decrypt(cipher, buffer),
             #[cfg(feature = "aes-ctr")]
-            Inner::Aes128Ctr(cipher) => ctr_decrypt(cipher, buffer)?,
+            Inner::Aes128Ctr(cipher) => ctr_decrypt(cipher, buffer),
             #[cfg(feature = "aes-ctr")]
-            Inner::Aes192Ctr(cipher) => ctr_decrypt(cipher, buffer)?,
+            Inner::Aes192Ctr(cipher) => ctr_decrypt(cipher, buffer),
             #[cfg(feature = "aes-ctr")]
-            Inner::Aes256Ctr(cipher) => ctr_decrypt(cipher, buffer)?,
+            Inner::Aes256Ctr(cipher) => ctr_decrypt(cipher, buffer),
             #[cfg(feature = "tdes")]
-            Inner::TDesCbc(cipher) => cbc_decrypt(cipher, buffer)?,
+            Inner::TDesCbc(cipher) => cbc_decrypt(cipher, buffer),
         }
+        .map_err(|_| Error::Length)?;
 
         Ok(())
     }
@@ -134,7 +127,7 @@ where
 
     // Ensure input is block-aligned.
     if !remaining.is_empty() {
-        return Err(Error::Crypto);
+        return Err(Error::Length);
     }
 
     decryptor.decrypt_blocks(blocks);
