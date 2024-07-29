@@ -300,6 +300,7 @@ impl PemLabel for SshSig {
     const PEM_LABEL: &'static str = "SSH SIGNATURE";
 }
 
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for SshSig {
     fn to_string(&self) -> String {
         self.to_pem(LineEnding::default())

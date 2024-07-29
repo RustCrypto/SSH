@@ -165,6 +165,7 @@ impl str::FromStr for Entry {
 }
 
 #[cfg(feature = "alloc")]
+#[allow(clippy::to_string_trait_impl)]
 impl ToString for Entry {
     fn to_string(&self) -> String {
         let mut s = String::new();

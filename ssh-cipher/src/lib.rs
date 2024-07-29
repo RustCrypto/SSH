@@ -268,7 +268,7 @@ impl Cipher {
                 self.decryptor(key, iv)?.decrypt(buffer)
             }
             #[cfg(not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")))]
-            _ => return Err(self.unsupported()),
+            _ => Err(self.unsupported()),
         }
     }
 
@@ -323,7 +323,7 @@ impl Cipher {
                 Ok(None)
             }
             #[cfg(not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")))]
-            _ => return Err(self.unsupported()),
+            _ => Err(self.unsupported()),
         }
     }
 
