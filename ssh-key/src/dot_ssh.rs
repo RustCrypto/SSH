@@ -69,6 +69,16 @@ impl DotSsh {
             .ok()?
             .find(|key| key.fingerprint(fingerprint.algorithm()) == fingerprint)
     }
+
+    /// Write a private key into `~/.ssh`.
+    pub fn write_private_key(&self, filename: impl AsRef<Path>, key: &PrivateKey) -> Result<()> {
+        key.write_openssh_file(&self.path.join(filename), Default::default())
+    }
+
+    /// Write a public key into `~/.ssh`.
+    pub fn write_public_key(&self, filename: impl AsRef<Path>, key: &PublicKey) -> Result<()> {
+        key.write_openssh_file(&self.path.join(filename))
+    }
 }
 
 impl Default for DotSsh {
