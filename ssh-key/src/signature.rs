@@ -102,7 +102,7 @@ impl Signature {
     pub fn new(algorithm: Algorithm, data: impl Into<Vec<u8>>) -> Result<Self> {
         let data = data.into();
 
-        // Validate signature is well-formed per OpensSH encoding
+        // Validate signature is well-formed per OpenSSH encoding
         match algorithm {
             Algorithm::Dsa if data.len() == DSA_SIGNATURE_SIZE => (),
             Algorithm::Ecdsa { curve } => ecdsa_sig_size(&data, curve, false)?,
