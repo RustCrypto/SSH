@@ -109,7 +109,7 @@ impl Signature {
             Algorithm::Ed25519 if data.len() == ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEcdsaSha2NistP256 => ecdsa_sig_size(&data, EcdsaCurve::NistP256, true)?,
-            Algorithm::Rsa { hash: Some(_) } => (),
+            Algorithm::Rsa { .. } => (),
             Algorithm::Other(_) if !data.is_empty() => (),
             _ => return Err(encoding::Error::Length.into()),
         }
@@ -669,6 +669,7 @@ impl Signer<Signature> for RsaKeypair {
 impl Verifier<Signature> for RsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
+            // TODO(tarcieri): optional off-by-default support for legacy SHA1 signatures?
             Algorithm::Rsa { hash: Some(hash) } => {
                 let signature = rsa::pkcs1v15::Signature::try_from(signature.data.as_ref())?;
 
