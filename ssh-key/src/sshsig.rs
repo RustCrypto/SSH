@@ -367,6 +367,8 @@ impl Serialize for SshSig {
     where
         S: ser::Serializer,
     {
-        self.to_pem(LineEnding::LF).map_err(ser::Error::custom)?.serialize(serializer)
+        self.to_pem(LineEnding::LF)
+            .map_err(ser::Error::custom)?
+            .serialize(serializer)
     }
 }
