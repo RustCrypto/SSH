@@ -14,6 +14,9 @@ use crate::{PrivateKey, PublicKey};
 
 type Version = u32;
 
+#[cfg(feature = "serde")]
+use serde::{de, ser, Deserialize, Serialize};
+
 /// `sshsig` provides a general-purpose signature format based on SSH keys and
 /// wire formats.
 ///
@@ -344,5 +347,26 @@ impl Encode for SignedData<'_> {
         self.hash_alg.encode(writer)?;
         self.hash.encode(writer)?;
         Ok(())
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'de> Deserialize<'de> for SshSig {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+        string.parse::<SshSig>().map_err(de::Error::custom)
+    }
+}
+
+#[cfg(feature = "serde")]
+impl Serialize for SshSig {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: ser::Serializer,
+    {
+        self.to_pem(LineEnding::LF).map_err(ser::Error::custom)?.serialize(serializer)
     }
 }
