@@ -10,7 +10,7 @@ use core::{
 };
 use encoding::{
     base64::{Base64Unpadded, Encoding},
-    Encode,
+    DigestWriter, Encode,
 };
 use sha2::{Digest, Sha256, Sha512};
 
@@ -63,12 +63,16 @@ impl Fingerprint {
         match algorithm {
             HashAlg::Sha256 => {
                 let mut digest = Sha256::new();
-                public_key.encode(&mut digest).expect(FINGERPRINT_ERR_MSG);
+                public_key
+                    .encode(&mut DigestWriter(&mut digest))
+                    .expect(FINGERPRINT_ERR_MSG);
                 Self::Sha256(digest.finalize().into())
             }
             HashAlg::Sha512 => {
                 let mut digest = Sha512::new();
-                public_key.encode(&mut digest).expect(FINGERPRINT_ERR_MSG);
+                public_key
+                    .encode(&mut DigestWriter(&mut digest))
+                    .expect(FINGERPRINT_ERR_MSG);
                 Self::Sha512(digest.finalize().into())
             }
         }

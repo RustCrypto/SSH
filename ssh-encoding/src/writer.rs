@@ -8,8 +8,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "bytes")]
 use bytes::{BufMut, BytesMut};
 
-#[cfg(feature = "sha2")]
-use sha2::{Digest, Sha256, Sha512};
+use digest::Digest;
 
 /// Writer trait which encodes the SSH binary format to various output
 /// encodings.
@@ -34,18 +33,18 @@ impl Writer for BytesMut {
     }
 }
 
-#[cfg(feature = "sha2")]
-impl Writer for Sha256 {
-    fn write(&mut self, bytes: &[u8]) -> Result<()> {
-        self.update(bytes);
-        Ok(())
-    }
-}
+/// Wrapper for digests.
+///
+/// This allows to update digests from the serializer directly.
+#[derive(Debug)]
+pub struct DigestWriter<'d, D>(pub &'d mut D);
 
-#[cfg(feature = "sha2")]
-impl Writer for Sha512 {
+impl<D> Writer for DigestWriter<'_, D>
+where
+    D: Digest,
+{
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
-        self.update(bytes);
+        self.0.update(bytes);
         Ok(())
     }
 }

@@ -48,7 +48,7 @@ pub use crate::{
     error::{Error, Result},
     label::{Label, LabelError},
     reader::Reader,
-    writer::Writer,
+    writer::{DigestWriter, Writer},
 };
 
 #[cfg(feature = "base64")]
