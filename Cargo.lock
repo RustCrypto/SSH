@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-key"
-version = "0.7.0-pre.0"
+version = "0.7.0-pre.1"
 dependencies = [
  "bcrypt-pbkdf",
  "dsa",
