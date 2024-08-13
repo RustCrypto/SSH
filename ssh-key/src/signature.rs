@@ -845,7 +845,7 @@ mod tests {
         );
         let signature = keypair.try_sign(&data[..]).expect("dsa try_sign is ok");
         keypair
-            .public
+            .public()
             .verify(&data[..], &signature)
             .expect("dsa verify is ok");
 
@@ -861,7 +861,7 @@ mod tests {
             .try_sign(&data[..])
             .expect("dsa try_sign for r.len() == 19 is ok");
         keypair
-            .public
+            .public()
             .verify(&data[..], &signature)
             .expect("dsa verify is ok");
     }
