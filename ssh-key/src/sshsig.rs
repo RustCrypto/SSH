@@ -15,7 +15,6 @@ use crate::{PrivateKey, PublicKey};
 type Version = u32;
 
 #[cfg(feature = "serde")]
-use std::io::Cursor;
 use serde::{de, ser, Deserialize, Serialize};
 
 /// `sshsig` provides a general-purpose signature format based on SSH keys and
@@ -207,7 +206,6 @@ impl SshSig {
 
     /// Get the hash algorithm used to produce this signature.
 
-
     ///
     /// Data to be signed is first hashed with the specified `hash_alg`.
     /// This is done to limit the amount of data presented to the signature
@@ -367,7 +365,6 @@ impl<'de> Deserialize<'de> for SshSig {
             let mut bytes_slice: &[u8] = &bytes;
             Self::decode(&mut bytes_slice).map_err(de::Error::custom)
         }
-            
     }
 }
 
