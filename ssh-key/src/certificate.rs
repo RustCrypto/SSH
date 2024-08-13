@@ -204,9 +204,7 @@ impl Certificate {
 
     /// Serialize OpenSSH certificate as raw bytes.
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut cert_bytes = Vec::new();
-        self.encode(&mut cert_bytes)?;
-        Ok(cert_bytes)
+        Ok(self.encode_vec()?)
     }
 
     /// Read OpenSSH certificate from a file.

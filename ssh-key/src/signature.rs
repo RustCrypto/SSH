@@ -236,9 +236,7 @@ impl TryFrom<Signature> for Vec<u8> {
     type Error = Error;
 
     fn try_from(signature: Signature) -> Result<Vec<u8>> {
-        let mut ret = Vec::<u8>::new();
-        signature.encode(&mut ret)?;
-        Ok(ret)
+        Ok(signature.encode_vec()?)
     }
 }
 
@@ -761,36 +759,28 @@ mod tests {
     #[test]
     fn encode_dsa() {
         let signature = Signature::try_from(DSA_SIGNATURE).unwrap();
-
-        let mut result = Vec::new();
-        signature.encode(&mut result).unwrap();
+        let result = signature.encode_vec().unwrap();
         assert_eq!(DSA_SIGNATURE, &result);
     }
 
     #[test]
     fn encode_ecdsa_sha2_p256() {
         let signature = Signature::try_from(ECDSA_SHA2_P256_SIGNATURE).unwrap();
-
-        let mut result = Vec::new();
-        signature.encode(&mut result).unwrap();
+        let result = signature.encode_vec().unwrap();
         assert_eq!(ECDSA_SHA2_P256_SIGNATURE, &result);
     }
 
     #[test]
     fn encode_ed25519() {
         let signature = Signature::try_from(ED25519_SIGNATURE).unwrap();
-
-        let mut result = Vec::new();
-        signature.encode(&mut result).unwrap();
+        let result = signature.encode_vec().unwrap();
         assert_eq!(ED25519_SIGNATURE, &result);
     }
 
     #[test]
     fn encode_sk_ed25519() {
         let signature = Signature::try_from(SK_ED25519_SIGNATURE).unwrap();
-
-        let mut result = Vec::new();
-        signature.encode(&mut result).unwrap();
+        let result = signature.encode_vec().unwrap();
         assert_eq!(SK_ED25519_SIGNATURE, &result);
     }
 

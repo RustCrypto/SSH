@@ -156,9 +156,7 @@ impl PublicKey {
     /// Serialize SSH public key as raw bytes.
     #[cfg(feature = "alloc")]
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
-        let mut public_key_bytes = Vec::new();
-        self.key_data.encode(&mut public_key_bytes)?;
-        Ok(public_key_bytes)
+        Ok(self.key_data.encode_vec()?)
     }
 
     /// Verify the [`SshSig`] signature over the given message using this
