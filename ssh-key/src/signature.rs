@@ -145,22 +145,22 @@ impl Signature {
 
 /// Returns Ok() if data holds an ecdsa signature with components of appropriate size
 /// according to curve.
-fn ecdsa_sig_size(data: &Vec<u8>, curve: EcdsaCurve, sk_trailer: bool) -> Result<()> {
-    let reader = &mut data.as_slice();
+fn ecdsa_sig_size(mut data: &[u8], curve: EcdsaCurve, sk_trailer: bool) -> Result<()> {
+    let reader = &mut data;
 
     for _ in 0..2 {
         let component = Mpint::decode(reader)?;
-
-        if component.as_positive_bytes().ok_or(Error::Crypto)?.len() != curve.field_size() {
+        let bytes = component.as_positive_bytes().ok_or(Error::FormatEncoding)?;
+        if bytes.len() != curve.field_size() {
             return Err(encoding::Error::Length.into());
         }
     }
+
     if sk_trailer {
         reader.drain(SK_SIGNATURE_TRAILER_SIZE)?;
     }
-    reader
-        .finish(())
-        .map_err(|_| encoding::Error::Length.into())
+
+    Ok(reader.finish(())?)
 }
 
 impl AsRef<[u8]> for Signature {
