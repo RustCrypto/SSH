@@ -25,6 +25,7 @@ pub struct Decryptor {
 }
 
 /// Inner decryptor enum which is deliberately kept out of the public API.
+#[derive(Clone)]
 enum Inner {
     #[cfg(feature = "aes-cbc")]
     Aes128Cbc(cbc::Decryptor<Aes128>),
@@ -40,6 +41,31 @@ enum Inner {
     Aes256Ctr(Ctr128BE<Aes256>),
     #[cfg(feature = "tdes")]
     TDesCbc(cbc::Decryptor<TdesEde3>),
+}
+
+impl Inner {
+    fn decrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
+        #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+        match self {
+            #[cfg(feature = "aes-cbc")]
+            Self::Aes128Cbc(cipher) => cbc_decrypt(cipher, buffer),
+            #[cfg(feature = "aes-cbc")]
+            Self::Aes192Cbc(cipher) => cbc_decrypt(cipher, buffer),
+            #[cfg(feature = "aes-cbc")]
+            Self::Aes256Cbc(cipher) => cbc_decrypt(cipher, buffer),
+            #[cfg(feature = "aes-ctr")]
+            Self::Aes128Ctr(cipher) => ctr_decrypt(cipher, buffer),
+            #[cfg(feature = "aes-ctr")]
+            Self::Aes192Ctr(cipher) => ctr_decrypt(cipher, buffer),
+            #[cfg(feature = "aes-ctr")]
+            Self::Aes256Ctr(cipher) => ctr_decrypt(cipher, buffer),
+            #[cfg(feature = "tdes")]
+            Self::TDesCbc(cipher) => cbc_decrypt(cipher, buffer),
+        }
+        .map_err(|_| Error::Length)?;
+
+        Ok(())
+    }
 }
 
 impl Decryptor {
@@ -94,26 +120,16 @@ impl Decryptor {
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     pub fn decrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
-        #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
-        match &mut self.inner {
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes128Cbc(cipher) => cbc_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes192Cbc(cipher) => cbc_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes256Cbc(cipher) => cbc_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes128Ctr(cipher) => ctr_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes192Ctr(cipher) => ctr_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes256Ctr(cipher) => ctr_decrypt(cipher, buffer),
-            #[cfg(feature = "tdes")]
-            Inner::TDesCbc(cipher) => cbc_decrypt(cipher, buffer),
-        }
-        .map_err(|_| Error::Length)?;
+        self.inner.decrypt(buffer)
+    }
 
-        Ok(())
+    /// Decrypt the given buffer in place without altering the internal state
+    ///
+    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
+    /// block size.
+    pub fn peek_decrypt(&self, buffer: &mut [u8]) -> Result<()> {
+        let mut inner = self.inner.clone();
+        inner.decrypt(buffer)
     }
 }
 
