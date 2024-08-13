@@ -20,16 +20,52 @@ use {
 #[derive(Clone)]
 pub struct RsaPrivateKey {
     /// RSA private exponent.
-    pub d: Mpint,
+    d: Mpint,
 
     /// CRT coefficient: `(inverse of q) mod p`.
-    pub iqmp: Mpint,
+    iqmp: Mpint,
 
     /// First prime factor of `n`.
-    pub p: Mpint,
+    p: Mpint,
 
     /// Second prime factor of `n`.
-    pub q: Mpint,
+    q: Mpint,
+}
+
+impl RsaPrivateKey {
+    /// Create a new RSA private key with the following components:
+    ///
+    /// - `d`: RSA private exponent.
+    /// - `iqmp`: CRT coefficient: `(inverse of q) mod p`.
+    /// - `p`: First prime factor of `n`.
+    /// - `q`: Second prime factor of `n`.
+    pub fn new(d: Mpint, iqmp: Mpint, p: Mpint, q: Mpint) -> Result<Self> {
+        if d.is_positive() && iqmp.is_positive() && p.is_positive() && q.is_positive() {
+            Ok(Self { d, iqmp, p, q })
+        } else {
+            Err(Error::FormatEncoding)
+        }
+    }
+
+    /// RSA private exponent.
+    pub fn d(&self) -> &Mpint {
+        &self.d
+    }
+
+    /// CRT coefficient: `(inverse of q) mod p`.
+    pub fn iqmp(&self) -> &Mpint {
+        &self.iqmp
+    }
+
+    /// First prime factor of `n`.
+    pub fn p(&self) -> &Mpint {
+        &self.p
+    }
+
+    /// Second prime factor of `n`.
+    pub fn q(&self) -> &Mpint {
+        &self.q
+    }
 }
 
 impl ConstantTimeEq for RsaPrivateKey {
@@ -57,7 +93,7 @@ impl Decode for RsaPrivateKey {
         let iqmp = Mpint::decode(reader)?;
         let p = Mpint::decode(reader)?;
         let q = Mpint::decode(reader)?;
-        Ok(Self { d, iqmp, p, q })
+        Self::new(d, iqmp, p, q)
     }
 }
 
@@ -94,10 +130,10 @@ impl Drop for RsaPrivateKey {
 #[derive(Clone)]
 pub struct RsaKeypair {
     /// Public key.
-    pub public: RsaPublicKey,
+    public: RsaPublicKey,
 
     /// Private key.
-    pub private: RsaPrivateKey,
+    private: RsaPrivateKey,
 }
 
 impl RsaKeypair {
@@ -113,6 +149,27 @@ impl RsaKeypair {
         } else {
             Err(Error::Crypto)
         }
+    }
+
+    /// Create a new keypair from the given `public` and `private` key components.
+    pub fn new(public: RsaPublicKey, private: RsaPrivateKey) -> Result<Self> {
+        // TODO(tarcieri): perform validation that the public and private components match?
+        Ok(Self { public, private })
+    }
+
+    /// Get the size of the RSA modulus in bits.
+    pub fn key_size(&self) -> u32 {
+        self.public.key_size()
+    }
+
+    /// Get the public component of the keypair.
+    pub fn public(&self) -> &RsaPublicKey {
+        &self.public
+    }
+
+    /// Get the private component of the keypair.
+    pub fn private(&self) -> &RsaPrivateKey {
+        &self.private
     }
 }
 
@@ -138,7 +195,7 @@ impl Decode for RsaKeypair {
         let e = Mpint::decode(reader)?;
         let public = RsaPublicKey::new(e, n)?;
         let private = RsaPrivateKey::decode(reader)?;
-        Ok(RsaKeypair { public, private })
+        Self::new(public, private)
     }
 }
 

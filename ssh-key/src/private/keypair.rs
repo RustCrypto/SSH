@@ -222,7 +222,7 @@ impl KeypairData {
             #[cfg(feature = "alloc")]
             Self::Encrypted(ciphertext) => ciphertext.as_ref(),
             #[cfg(feature = "alloc")]
-            Self::Rsa(rsa) => rsa.private.d.as_bytes(),
+            Self::Rsa(rsa) => rsa.private().d().as_bytes(),
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             Self::SkEcdsaSha2NistP256(sk) => sk.key_handle(),
             #[cfg(feature = "alloc")]
