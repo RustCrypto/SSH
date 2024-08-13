@@ -41,7 +41,11 @@ impl RsaPublicKey {
         }
 
         let bits = match n.as_positive_bytes() {
-            Some(bytes) => u32::try_from(bytes.len() * 8).map_err(|_| Error::FormatEncoding)?,
+            Some(bytes) => bytes
+                .len()
+                .checked_mul(8)
+                .and_then(|bits| u32::try_from(bits).ok())
+                .ok_or(Error::FormatEncoding)?,
             None => return Err(Error::FormatEncoding),
         };
 
