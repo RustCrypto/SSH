@@ -10,17 +10,55 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DsaPublicKey {
     /// Prime modulus.
-    pub p: Mpint,
+    p: Mpint,
 
     /// Prime divisor of `p - 1`.
-    pub q: Mpint,
+    q: Mpint,
 
-    /// Generator of a subgroup of order `q` in the multiplicative group
-    /// `GF(p)`, such that `1 < g < p`.
-    pub g: Mpint,
+    /// Generator of a subgroup of order `q` in the multiplicative group `GF(p)`, such that
+    /// `1 < g < p`.
+    g: Mpint,
 
     /// The public key, where `y = gˣ mod p`.
-    pub y: Mpint,
+    y: Mpint,
+}
+
+impl DsaPublicKey {
+    /// Create a new [`DsaPublicKey`] with the following components:
+    ///
+    /// - `p`: prime modulus.
+    /// - `q`: prime divisor of `p - 1`.
+    /// - `g`: generator of a subgroup of order `q` in the multiplicative group `GF(p)`, such
+    ///   that `1 < g < p`.
+    /// - `y`: the public key, where `y = gˣ mod p`.
+    pub fn new(p: Mpint, q: Mpint, g: Mpint, y: Mpint) -> Result<Self> {
+        if p.is_positive() && q.is_positive() && g.is_positive() && y.is_positive() {
+            Ok(Self { p, q, g, y })
+        } else {
+            Err(Error::FormatEncoding)
+        }
+    }
+
+    /// Prime modulus.
+    pub fn p(&self) -> &Mpint {
+        &self.p
+    }
+
+    /// Prime divisor of `p - 1`.
+    pub fn q(&self) -> &Mpint {
+        &self.q
+    }
+
+    /// Generator of a subgroup of order `q` in the multiplicative group `GF(p)`, such that
+    /// `1 < g < p`.
+    pub fn g(&self) -> &Mpint {
+        &self.g
+    }
+
+    /// The public key, where `y = gˣ mod p`.
+    pub fn y(&self) -> &Mpint {
+        &self.y
+    }
 }
 
 impl Decode for DsaPublicKey {
@@ -31,7 +69,7 @@ impl Decode for DsaPublicKey {
         let q = Mpint::decode(reader)?;
         let g = Mpint::decode(reader)?;
         let y = Mpint::decode(reader)?;
-        Ok(Self { p, q, g, y })
+        Self::new(p, q, g, y)
     }
 }
 

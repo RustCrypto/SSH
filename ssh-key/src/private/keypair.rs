@@ -215,7 +215,7 @@ impl KeypairData {
     pub(super) fn checkint(&self) -> u32 {
         let bytes = match self {
             #[cfg(feature = "alloc")]
-            Self::Dsa(dsa) => dsa.private.as_bytes(),
+            Self::Dsa(dsa) => dsa.private().as_bytes(),
             #[cfg(feature = "ecdsa")]
             Self::Ecdsa(ecdsa) => ecdsa.private_key_bytes(),
             Self::Ed25519(ed25519) => ed25519.private.as_ref(),
