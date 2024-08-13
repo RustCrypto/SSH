@@ -783,7 +783,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-cipher"
-version = "0.3.0-pre.0"
+version = "0.3.0-pre.1"
 dependencies = [
  "aes",
  "aes-gcm",
