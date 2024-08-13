@@ -268,8 +268,8 @@ fn decode_rsa_3072_openssh() {
     assert!(key.kdf().is_none());
 
     let rsa_keypair = key.key_data().rsa().unwrap();
-    assert_eq!(3072, rsa_keypair.public.key_size());
-    assert_eq!(&hex!("010001"), rsa_keypair.public.e().as_bytes());
+    assert_eq!(3072, rsa_keypair.key_size());
+    assert_eq!(&hex!("010001"), rsa_keypair.public().e().as_bytes());
     assert_eq!(
         &hex!(
             "00a68e478c9bc93726436b7f5e9e6f9a46e1b73bec1e8cb7754de2c6a5b6c455f2f012a7259afcf94181d69
@@ -282,7 +282,7 @@ fn decode_rsa_3072_openssh() {
              0549d3174b85bd7f6624c3753cf235b650d0e4228f32be7b54a590d869fb7786559bb7a4d66f9d3a69c085e
              fdf083a915d47a1d9161a08756b263b06e739d99f2890362abc96ade42cce8f939a40daff9"
         ),
-        rsa_keypair.public.n().as_bytes(),
+        rsa_keypair.public().n().as_bytes(),
     );
     assert_eq!(
         &hex!(
@@ -296,7 +296,7 @@ fn decode_rsa_3072_openssh() {
              325f3fb37326623dbbec63b3d984830b2dd27bebb6bd2ed5345dfff18df1806adebceda9845804968930681
              ac3e523138c5216cb135997e3e143a7816acc3d8741eacec7e15f53da0f0810691708d9d"
         ),
-        rsa_keypair.private.d.as_bytes()
+        rsa_keypair.private().d().as_bytes()
     );
     assert_eq!(
         &hex!(
@@ -306,7 +306,7 @@ fn decode_rsa_3072_openssh() {
              88dd6f72eef5cff1927cde573a4ca0d43c2b6c6a95721445122e1cf6aa5f05b65cb9c86124f9f79fa29f05e
              3f06f3b83edca9941f571650e0fb468aae4c"
         ),
-        rsa_keypair.private.iqmp.as_bytes()
+        rsa_keypair.private().iqmp().as_bytes()
     );
     assert_eq!(
         &hex!(
@@ -316,7 +316,7 @@ fn decode_rsa_3072_openssh() {
              990e48b93fd1d284fcc8c1c07fbefc04d02925b2f159a9a9f567073e1c94fdc6e472f48963be16c5c545385
              6ad2bf7916e42c36e75a5018910d8dad038d73"
         ),
-        rsa_keypair.private.p.as_bytes()
+        rsa_keypair.private().p().as_bytes()
     );
     assert_eq!(
         &hex!(
@@ -326,7 +326,7 @@ fn decode_rsa_3072_openssh() {
              9d136d085c1d05c39f4c36cf89fdc3c66a755e63f446e16302b13599400f0a83321a2e6b9153df02f03de31
              8ea09039282853f2011e0905d1157667caf1e3"
         ),
-        rsa_keypair.private.q.as_bytes()
+        rsa_keypair.private().q().as_bytes()
     );
     assert_eq!("user@example.com", key.comment());
 }
@@ -341,8 +341,8 @@ fn decode_rsa_4096_openssh() {
     assert!(key.kdf().is_none());
 
     let rsa_keypair = key.key_data().rsa().unwrap();
-    assert_eq!(4096, rsa_keypair.public.key_size());
-    assert_eq!(&hex!("010001"), rsa_keypair.public.e().as_bytes());
+    assert_eq!(4096, rsa_keypair.key_size());
+    assert_eq!(&hex!("010001"), rsa_keypair.public().e().as_bytes());
     assert_eq!(
         &hex!(
             "00b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
@@ -358,7 +358,7 @@ fn decode_rsa_4096_openssh() {
              4814140f75cac08079431043222fb91f075d76be55cbe138e3b99a605c561c49dea50e253c8306c4f4f77d9
              96f898db64c5d8a0a15c6efa28b0934bf0b6f2b01950d877230fe4401078420fd6dd3"
         ),
-        rsa_keypair.public.n().as_bytes(),
+        rsa_keypair.public().n().as_bytes(),
     );
     assert_eq!(
         &hex!(
@@ -375,7 +375,7 @@ fn decode_rsa_4096_openssh() {
              822cdcf88b44cd6aea8bfc646ce52f9d05e7e867a32d462e35a163c15b7df00e9c0a870345b86e7882971b4
              d79d42507ade7c26e6db29f52fbe58430f915c554145faa950ae6b6e4f87bf24a61"
         ),
-        rsa_keypair.private.d.as_bytes()
+        rsa_keypair.private().d().as_bytes()
     );
     assert_eq!(
         &hex!(
@@ -386,7 +386,7 @@ fn decode_rsa_4096_openssh() {
              235833fdc93947a2b4ed45d43df51087d91d59eb0bf09fe6f45036b23c944addce2976b805425c6841129be
              5b17c4dcc41d62daa053d06a1fbfd3c20543a63066ad69933ae64538c305ae645d81557a6f3c9"
         ),
-        rsa_keypair.private.iqmp.as_bytes()
+        rsa_keypair.private().iqmp().as_bytes()
     );
     assert_eq!(
         &hex!(
@@ -397,7 +397,7 @@ fn decode_rsa_4096_openssh() {
              0613082e7d1830f936e29c7865c2b8acd30870dd20679788e0b2aaa2285d35ea7347c4083e2ee9c92dcb11e
              ea114245c5f22d7afeb9d51cbc0ca17116261fac8a8f3c3054da1f53ad297f8ce184663ec4e617d"
         ),
-        rsa_keypair.private.p.as_bytes()
+        rsa_keypair.private().p().as_bytes()
     );
     assert_eq!(
         &hex!(
@@ -408,7 +408,7 @@ fn decode_rsa_4096_openssh() {
              3d09881ed7fa5f49b374bcab97dafa067e8eb63bc9ddf2668bf3ebb2bb585d7b12ff591e6ff34889196b9e5
              293809f168d681bb7b09680fef093c8a28ef0d25568fce4ab5e879fee21a7525ac08caf9efa2d8f"
         ),
-        rsa_keypair.private.q.as_bytes()
+        rsa_keypair.private().q().as_bytes()
     );
     assert_eq!("user@example.com", key.comment());
 }
