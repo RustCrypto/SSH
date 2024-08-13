@@ -10,7 +10,7 @@ use core::str;
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "bytes")]
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 
 /// Encoding trait.
 ///
@@ -33,6 +33,22 @@ pub trait Encode {
     fn encode_prefixed(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
+    }
+
+    /// Encode this value, returning a `Vec<u8>` containing the encoded message.
+    #[cfg(feature = "alloc")]
+    fn encode_vec(&self) -> Result<Vec<u8>, Error> {
+        let mut ret = Vec::with_capacity(self.encoded_len()?);
+        self.encode(&mut ret)?;
+        Ok(ret)
+    }
+
+    /// Encode this value, returning a [`BytesMut`] containing the encoded message.
+    #[cfg(feature = "bytes")]
+    fn encode_bytes(&self) -> Result<BytesMut, Error> {
+        let mut ret = BytesMut::with_capacity(self.encoded_len()?);
+        self.encode(&mut ret)?;
+        Ok(ret)
     }
 }
 

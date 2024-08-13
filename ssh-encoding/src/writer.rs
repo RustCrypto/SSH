@@ -5,6 +5,9 @@ use crate::Result;
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
+#[cfg(feature = "bytes")]
+use bytes::{BufMut, BytesMut};
+
 #[cfg(feature = "sha2")]
 use sha2::{Digest, Sha256, Sha512};
 
@@ -19,6 +22,14 @@ pub trait Writer: Sized {
 impl Writer for Vec<u8> {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         self.extend_from_slice(bytes);
+        Ok(())
+    }
+}
+
+#[cfg(feature = "bytes")]
+impl Writer for BytesMut {
+    fn write(&mut self, bytes: &[u8]) -> Result<()> {
+        self.put(bytes);
         Ok(())
     }
 }

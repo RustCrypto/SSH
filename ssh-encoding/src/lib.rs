@@ -54,5 +54,8 @@ pub use crate::{
 #[cfg(feature = "base64")]
 pub use crate::{base64::Base64Reader, base64::Base64Writer};
 
+#[cfg(feature = "bytes")]
+pub use bytes;
+
 #[cfg(feature = "pem")]
 pub use crate::pem::{DecodePem, EncodePem};
