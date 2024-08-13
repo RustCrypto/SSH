@@ -96,6 +96,11 @@ impl Mpint {
             _ => None,
         }
     }
+
+    /// Is this [`Mpint`] positive?
+    pub fn is_positive(&self) -> bool {
+        self.as_positive_bytes().is_some()
+    }
 }
 
 impl AsRef<[u8]> for Mpint {

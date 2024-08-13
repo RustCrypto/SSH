@@ -165,7 +165,13 @@ fn decode_rsa_4096_openssh() {
     assert_eq!(Algorithm::Rsa { hash: None }, cert.public_key().algorithm());
 
     let rsa_key = cert.public_key().rsa().unwrap();
-    assert_eq!(&hex!("010001"), rsa_key.e.as_bytes());
+    dbg!(rsa_key.n().as_bytes());
+    dbg!(
+        rsa_key.n().as_positive_bytes(),
+        rsa_key.n().as_positive_bytes().unwrap().len()
+    );
+    assert_eq!(4096, rsa_key.key_size());
+    assert_eq!(&hex!("010001"), rsa_key.e().as_bytes());
     assert_eq!(
         &hex!(
             "00b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
@@ -181,7 +187,7 @@ fn decode_rsa_4096_openssh() {
              4814140f75cac08079431043222fb91f075d76be55cbe138e3b99a605c561c49dea50e253c8306c4f4f77d9
              96f898db64c5d8a0a15c6efa28b0934bf0b6f2b01950d877230fe4401078420fd6dd3"
         ),
-        rsa_key.n.as_bytes(),
+        rsa_key.n().as_bytes(),
     );
 
     assert_eq!("user@example.com", cert.comment());

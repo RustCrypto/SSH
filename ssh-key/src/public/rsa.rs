@@ -17,16 +17,55 @@ use {
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct RsaPublicKey {
     /// RSA public exponent.
-    pub e: Mpint,
+    e: Mpint,
 
     /// RSA modulus.
-    pub n: Mpint,
+    n: Mpint,
+
+    /// Length of this key in bits.
+    bits: u32,
 }
 
 impl RsaPublicKey {
     /// Minimum allowed RSA key size.
     #[cfg(feature = "rsa")]
     pub(crate) const MIN_KEY_SIZE: usize = RsaKeypair::MIN_KEY_SIZE;
+
+    /// Create a new [`RsaPublicKey`] with the given components:
+    ///
+    /// - `e`: RSA public exponent.
+    /// - `n`: RSA modulus.
+    pub fn new(e: Mpint, n: Mpint) -> Result<Self> {
+        if !e.is_positive() {
+            return Err(Error::FormatEncoding);
+        }
+
+        let bits = match n.as_positive_bytes() {
+            Some(bytes) => bytes
+                .len()
+                .checked_mul(8)
+                .and_then(|bits| u32::try_from(bits).ok())
+                .ok_or(Error::FormatEncoding)?,
+            None => return Err(Error::FormatEncoding),
+        };
+
+        Ok(Self { e, n, bits })
+    }
+
+    /// Get the RSA public exponent.
+    pub fn e(&self) -> &Mpint {
+        &self.e
+    }
+
+    /// Get the RSA modulus.
+    pub fn n(&self) -> &Mpint {
+        &self.n
+    }
+
+    /// Get the size of the RSA modulus in bits.
+    pub fn key_size(&self) -> u32 {
+        self.bits
+    }
 }
 
 impl Decode for RsaPublicKey {
@@ -35,7 +74,7 @@ impl Decode for RsaPublicKey {
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let e = Mpint::decode(reader)?;
         let n = Mpint::decode(reader)?;
-        Ok(Self { e, n })
+        Self::new(e, n)
     }
 }
 
@@ -100,10 +139,9 @@ impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
     type Error = Error;
 
     fn try_from(key: &rsa::RsaPublicKey) -> Result<RsaPublicKey> {
-        Ok(RsaPublicKey {
-            e: key.e().try_into()?,
-            n: key.n().try_into()?,
-        })
+        let e = Mpint::try_from(key.e())?;
+        let n = Mpint::try_from(key.n())?;
+        RsaPublicKey::new(e, n)
     }
 }
 

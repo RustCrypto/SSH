@@ -268,7 +268,8 @@ fn decode_rsa_3072_openssh() {
     assert!(key.kdf().is_none());
 
     let rsa_keypair = key.key_data().rsa().unwrap();
-    assert_eq!(&hex!("010001"), rsa_keypair.public.e.as_bytes());
+    assert_eq!(3072, rsa_keypair.public.key_size());
+    assert_eq!(&hex!("010001"), rsa_keypair.public.e().as_bytes());
     assert_eq!(
         &hex!(
             "00a68e478c9bc93726436b7f5e9e6f9a46e1b73bec1e8cb7754de2c6a5b6c455f2f012a7259afcf94181d69
@@ -281,7 +282,7 @@ fn decode_rsa_3072_openssh() {
              0549d3174b85bd7f6624c3753cf235b650d0e4228f32be7b54a590d869fb7786559bb7a4d66f9d3a69c085e
              fdf083a915d47a1d9161a08756b263b06e739d99f2890362abc96ade42cce8f939a40daff9"
         ),
-        rsa_keypair.public.n.as_bytes(),
+        rsa_keypair.public.n().as_bytes(),
     );
     assert_eq!(
         &hex!(
@@ -340,7 +341,8 @@ fn decode_rsa_4096_openssh() {
     assert!(key.kdf().is_none());
 
     let rsa_keypair = key.key_data().rsa().unwrap();
-    assert_eq!(&hex!("010001"), rsa_keypair.public.e.as_bytes());
+    assert_eq!(4096, rsa_keypair.public.key_size());
+    assert_eq!(&hex!("010001"), rsa_keypair.public.e().as_bytes());
     assert_eq!(
         &hex!(
             "00b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
@@ -356,7 +358,7 @@ fn decode_rsa_4096_openssh() {
              4814140f75cac08079431043222fb91f075d76be55cbe138e3b99a605c561c49dea50e253c8306c4f4f77d9
              96f898db64c5d8a0a15c6efa28b0934bf0b6f2b01950d877230fe4401078420fd6dd3"
         ),
-        rsa_keypair.public.n.as_bytes(),
+        rsa_keypair.public.n().as_bytes(),
     );
     assert_eq!(
         &hex!(

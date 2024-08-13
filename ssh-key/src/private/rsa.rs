@@ -136,7 +136,7 @@ impl Decode for RsaKeypair {
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         let n = Mpint::decode(reader)?;
         let e = Mpint::decode(reader)?;
-        let public = RsaPublicKey { n, e };
+        let public = RsaPublicKey::new(e, n)?;
         let private = RsaPrivateKey::decode(reader)?;
         Ok(RsaKeypair { public, private })
     }
@@ -145,16 +145,16 @@ impl Decode for RsaKeypair {
 impl Encode for RsaKeypair {
     fn encoded_len(&self) -> encoding::Result<usize> {
         [
-            self.public.n.encoded_len()?,
-            self.public.e.encoded_len()?,
+            self.public.n().encoded_len()?,
+            self.public.e().encoded_len()?,
             self.private.encoded_len()?,
         ]
         .checked_sum()
     }
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
-        self.public.n.encode(writer)?;
-        self.public.e.encode(writer)?;
+        self.public.n().encode(writer)?;
+        self.public.e().encode(writer)?;
         self.private.encode(writer)
     }
 }
@@ -194,8 +194,8 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
 
     fn try_from(key: &RsaKeypair) -> Result<rsa::RsaPrivateKey> {
         let ret = rsa::RsaPrivateKey::from_components(
-            rsa::BigUint::try_from(&key.public.n)?,
-            rsa::BigUint::try_from(&key.public.e)?,
+            rsa::BigUint::try_from(key.public.n())?,
+            rsa::BigUint::try_from(key.public.e())?,
             rsa::BigUint::try_from(&key.private.d)?,
             vec![
                 rsa::BigUint::try_from(&key.private.p)?,
