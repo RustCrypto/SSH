@@ -812,6 +812,7 @@ version = "0.3.0-pre.0"
 dependencies = [
  "base64ct",
  "bytes",
+ "digest",
  "hex-literal",
  "pem-rfc7468",
  "sha2",
