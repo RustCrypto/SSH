@@ -378,8 +378,7 @@ impl Serialize for SshSig {
                 .map_err(ser::Error::custom)?
                 .serialize(serializer)
         } else {
-            let mut bytes = Vec::new();
-            self.encode(&mut bytes).map_err(ser::Error::custom)?;
+            let bytes = self.encode_vec().map_err(ser::Error::custom)?;
             bytes.serialize(serializer)
         }
     }
