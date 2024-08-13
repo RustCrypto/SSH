@@ -15,6 +15,7 @@ use crate::{PrivateKey, PublicKey};
 type Version = u32;
 
 #[cfg(feature = "serde")]
+use std::io::Cursor;
 use serde::{de, ser, Deserialize, Serialize};
 
 /// `sshsig` provides a general-purpose signature format based on SSH keys and
@@ -205,6 +206,8 @@ impl SshSig {
     }
 
     /// Get the hash algorithm used to produce this signature.
+
+
     ///
     /// Data to be signed is first hashed with the specified `hash_alg`.
     /// This is done to limit the amount of data presented to the signature
@@ -356,8 +359,15 @@ impl<'de> Deserialize<'de> for SshSig {
     where
         D: de::Deserializer<'de>,
     {
-        let string = String::deserialize(deserializer)?;
-        string.parse::<SshSig>().map_err(de::Error::custom)
+        if deserializer.is_human_readable() {
+            let string = String::deserialize(deserializer)?;
+            string.parse::<SshSig>().map_err(de::Error::custom)
+        } else {
+            let bytes = Vec::<u8>::deserialize(deserializer)?;
+            let mut bytes_slice: &[u8] = &bytes;
+            Self::decode(&mut bytes_slice).map_err(de::Error::custom)
+        }
+            
     }
 }
 
@@ -367,8 +377,14 @@ impl Serialize for SshSig {
     where
         S: ser::Serializer,
     {
-        self.to_pem(LineEnding::LF)
-            .map_err(ser::Error::custom)?
-            .serialize(serializer)
+        if serializer.is_human_readable() {
+            self.to_pem(LineEnding::LF)
+                .map_err(ser::Error::custom)?
+                .serialize(serializer)
+        } else {
+            let mut bytes = Vec::new();
+            self.encode(&mut bytes).map_err(ser::Error::custom)?;
+            bytes.serialize(serializer)
+        }
     }
 }
