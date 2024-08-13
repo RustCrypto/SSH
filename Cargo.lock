@@ -815,7 +815,6 @@ dependencies = [
  "digest",
  "hex-literal",
  "pem-rfc7468",
- "sha2",
 ]
 
 [[package]]

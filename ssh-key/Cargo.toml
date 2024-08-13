@@ -19,7 +19,7 @@ rust-version = "1.73"
 
 [dependencies]
 cipher = { package = "ssh-cipher", version = "=0.3.0-pre.0", path = "../ssh-cipher" }
-encoding = { package = "ssh-encoding", version = "=0.3.0-pre.0", features = ["base64", "pem", "sha2"], path = "../ssh-encoding" }
+encoding = { package = "ssh-encoding", version = "=0.3.0-pre.0", features = ["base64", "digest", "pem"], path = "../ssh-encoding" }
 sha2 = { version = "=0.11.0-pre.4", default-features = false }
 signature = { version = "=2.3.0-pre.4", default-features = false }
 subtle = { version = "2", default-features = false }

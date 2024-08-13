@@ -8,6 +8,7 @@ use alloc::vec::Vec;
 #[cfg(feature = "bytes")]
 use bytes::{BufMut, BytesMut};
 
+#[cfg(feature = "digest")]
 use digest::Digest;
 
 /// Writer trait which encodes the SSH binary format to various output
@@ -36,9 +37,11 @@ impl Writer for BytesMut {
 /// Wrapper for digests.
 ///
 /// This allows to update digests from the serializer directly.
+#[cfg(feature = "digest")]
 #[derive(Debug)]
 pub struct DigestWriter<'d, D>(pub &'d mut D);
 
+#[cfg(feature = "digest")]
 impl<D> Writer for DigestWriter<'_, D>
 where
     D: Digest,
