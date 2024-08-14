@@ -35,20 +35,24 @@ mod encryptor;
 
 pub use crate::error::{Error, Result};
 
-#[cfg(feature = "chacha20poly1305")]
-pub use crate::chacha20poly1305::ChaCha20Poly1305;
-
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
 pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
 
+#[cfg(feature = "chacha20poly1305")]
+pub use crate::chacha20poly1305::{ChaCha20Poly1305, ChaChaKey, ChaChaNonce};
+
+use cipher::array::{typenum::U16, Array};
 use core::{fmt, str};
 use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes-gcm")]
-use aes_gcm::{aead::AeadInPlace, Aes128Gcm, Aes256Gcm};
+use {
+    aead::array::typenum::U12,
+    aes_gcm::{Aes128Gcm, Aes256Gcm},
+};
 
-#[cfg(feature = "aes-gcm")]
-use cipher::KeyInit;
+#[cfg(any(feature = "aes-gcm", feature = "chacha20poly1305"))]
+use aead::{AeadInPlace, KeyInit};
 
 /// AES-128 in block chaining (CBC) mode
 const AES128_CBC: &str = "aes128-cbc";
@@ -80,17 +84,15 @@ const CHACHA20_POLY1305: &str = "chacha20-poly1305@openssh.com";
 /// Triple-DES in block chaining (CBC) mode
 const TDES_CBC: &str = "3des-cbc";
 
-/// Nonce for AEAD modes.
-///
-/// This is used by e.g. `aes128-gcm@openssh.com`/`aes256-gcm@openssh.com` and
-/// `chacha20-poly1305@openssh.com`.
-pub type Nonce = [u8; 12];
+/// Nonce for `aes128-gcm@openssh.com`/`aes256-gcm@openssh.com`.
+#[cfg(feature = "aes-gcm")]
+pub type AesGcmNonce = Array<u8, U12>;
 
 /// Authentication tag for ciphertext data.
 ///
 /// This is used by e.g. `aes128-gcm@openssh.com`/`aes256-gcm@openssh.com` and
 /// `chacha20-poly1305@openssh.com`.
-pub type Tag = [u8; 16];
+pub type Tag = Array<u8, U16>;
 
 /// Counter mode with a 128-bit big endian counter.
 #[cfg(feature = "aes-ctr")]
@@ -172,7 +174,7 @@ impl Cipher {
             Self::Aes256Ctr => Some((32, 16)),
             Self::Aes128Gcm => Some((16, 12)),
             Self::Aes256Gcm => Some((32, 12)),
-            Self::ChaCha20Poly1305 => Some((32, 12)),
+            Self::ChaCha20Poly1305 => Some((32, 8)),
             Self::TDesCbc => Some((24, 8)),
         }
     }
@@ -233,10 +235,10 @@ impl Cipher {
             #[cfg(feature = "aes-gcm")]
             Self::Aes128Gcm => {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
+                let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
                 cipher
-                    .decrypt_in_place_detached(&nonce.into(), &[], buffer, &tag.into())
+                    .decrypt_in_place_detached(nonce, &[], buffer, &tag)
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(())
@@ -244,18 +246,22 @@ impl Cipher {
             #[cfg(feature = "aes-gcm")]
             Self::Aes256Gcm => {
                 let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
+                let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
                 cipher
-                    .decrypt_in_place_detached(&nonce.into(), &[], buffer, &tag.into())
+                    .decrypt_in_place_detached(nonce, &[], buffer, &tag)
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(())
             }
             #[cfg(feature = "chacha20poly1305")]
             Self::ChaCha20Poly1305 => {
+                let key = key.try_into().map_err(|_| Error::KeySize)?;
+                let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
-                ChaCha20Poly1305::new(key, iv)?.decrypt(buffer, tag)
+                ChaCha20Poly1305::new(key)
+                    .decrypt_in_place_detached(nonce, b"", buffer, &tag)
+                    .map_err(|_| Error::Crypto)
             }
             // Use `Decryptor` for non-AEAD modes
             #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
@@ -294,26 +300,30 @@ impl Cipher {
             #[cfg(feature = "aes-gcm")]
             Self::Aes128Gcm => {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
+                let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = cipher
-                    .encrypt_in_place_detached(&nonce.into(), &[], buffer)
+                    .encrypt_in_place_detached(nonce, &[], buffer)
                     .map_err(|_| Error::Crypto)?;
 
-                Ok(Some(tag.into()))
+                Ok(Some(tag))
             }
             #[cfg(feature = "aes-gcm")]
             Self::Aes256Gcm => {
                 let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
-                let nonce = Nonce::try_from(iv).map_err(|_| Error::IvSize)?;
+                let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = cipher
-                    .encrypt_in_place_detached(&nonce.into(), &[], buffer)
+                    .encrypt_in_place_detached(nonce, &[], buffer)
                     .map_err(|_| Error::Crypto)?;
 
-                Ok(Some(tag.into()))
+                Ok(Some(tag))
             }
             #[cfg(feature = "chacha20poly1305")]
             Self::ChaCha20Poly1305 => {
-                let tag = ChaCha20Poly1305::new(key, iv)?.encrypt(buffer);
+                let key = key.try_into().map_err(|_| Error::KeySize)?;
+                let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
+                let tag = ChaCha20Poly1305::new(key)
+                    .encrypt_in_place_detached(nonce, b"", buffer)
+                    .map_err(|_| Error::Crypto)?;
                 Ok(Some(tag))
             }
             // Use `Encryptor` for non-AEAD modes
