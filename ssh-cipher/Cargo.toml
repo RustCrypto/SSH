@@ -32,6 +32,7 @@ chacha20 = { version = "=0.10.0-pre.1", optional = true, default-features = fals
 des = { version = "=0.9.0-pre.1", optional = true, default-features = false }
 poly1305 = { version = "0.9.0-rc.0", optional = true, default-features = false }
 subtle = { version = "2", optional = true, default-features = false }
+zeroize = { version = "1", optional = true, default-features = false }
 
 [dev-dependencies]
 hex-literal = "0.4"
@@ -44,6 +45,14 @@ aes-ctr = ["dep:aes", "dep:ctr"]
 aes-gcm = ["dep:aead", "dep:aes", "dep:aes-gcm"]
 chacha20poly1305 = ["dep:aead", "dep:chacha20", "dep:poly1305", "dep:subtle"]
 tdes = ["dep:des", "dep:cbc"]
+zeroize = [
+    "dep:zeroize",
+    "aes?/zeroize",
+    "aes-gcm?/zeroize",
+    "chacha20?/zeroize",
+    "des?/zeroize",
+    "poly1305?/zeroize"
+]
 
 [package.metadata.docs.rs]
 all-features = true

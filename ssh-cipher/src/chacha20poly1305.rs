@@ -11,6 +11,9 @@ use cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
 use poly1305::Poly1305;
 use subtle::ConstantTimeEq;
 
+#[cfg(feature = "zeroize")]
+use zeroize::{Zeroize, ZeroizeOnDrop};
+
 /// Key for `chacha20-poly1305@openssh.com`.
 pub type ChaChaKey = chacha20::Key;
 
@@ -29,7 +32,6 @@ pub type ChaChaNonce = chacha20::LegacyNonce;
 /// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
 #[derive(Clone)]
 pub struct ChaCha20Poly1305 {
-    // TODO(tarcieri): zeroize on drop
     key: ChaChaKey,
 }
 
@@ -92,6 +94,16 @@ impl ChaCha20Poly1305 {
         Cipher::new(&self.key, nonce).decrypt(buffer, tag, aad_len)
     }
 }
+
+impl Drop for ChaCha20Poly1305 {
+    fn drop(&mut self) {
+        #[cfg(feature = "zeroize")]
+        self.key.zeroize();
+    }
+}
+
+#[cfg(feature = "zeroize")]
+impl ZeroizeOnDrop for ChaCha20Poly1305 {}
 
 /// Internal type representing a cipher instance.
 struct Cipher {
