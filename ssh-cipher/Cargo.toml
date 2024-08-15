@@ -33,6 +33,9 @@ des = { version = "=0.9.0-pre.1", optional = true, default-features = false }
 poly1305 = { version = "0.9.0-rc.0", optional = true, default-features = false }
 subtle = { version = "2", optional = true, default-features = false }
 
+[dev-dependencies]
+hex-literal = "0.4"
+
 [features]
 std = []
 
