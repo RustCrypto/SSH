@@ -100,7 +100,7 @@ impl Kdf {
         // key encryption, relying on a unique salt used in the password-based encryption key
         // derivation to ensure that each encryption key is only used once.
         if cipher == Cipher::ChaCha20Poly1305 {
-            iv.copy_from_slice(&cipher::Nonce::default());
+            iv.copy_from_slice(&cipher::ChaChaNonce::default());
         }
 
         Ok((okm, iv))
