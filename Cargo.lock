@@ -793,6 +793,7 @@ dependencies = [
  "cipher",
  "ctr",
  "des",
+ "hex-literal",
  "poly1305",
  "ssh-encoding",
  "subtle",

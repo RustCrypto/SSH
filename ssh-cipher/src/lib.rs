@@ -34,12 +34,13 @@ mod decryptor;
 mod encryptor;
 
 pub use crate::error::{Error, Result};
+pub use cipher;
 
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
 pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
 
 #[cfg(feature = "chacha20poly1305")]
-pub use crate::chacha20poly1305::{ChaCha20Poly1305, ChaChaKey, ChaChaNonce};
+pub use crate::chacha20poly1305::{ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaNonce};
 
 use cipher::array::{typenum::U16, Array};
 use core::{fmt, str};
@@ -47,12 +48,12 @@ use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes-gcm")]
 use {
-    aead::array::typenum::U12,
+    aead::{array::typenum::U12, AeadInPlace},
     aes_gcm::{Aes128Gcm, Aes256Gcm},
 };
 
 #[cfg(any(feature = "aes-gcm", feature = "chacha20poly1305"))]
-use aead::{AeadInPlace, KeyInit};
+use aead::KeyInit;
 
 /// AES-128 in block chaining (CBC) mode
 const AES128_CBC: &str = "aes128-cbc";
@@ -260,7 +261,7 @@ impl Cipher {
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
                 ChaCha20Poly1305::new(key)
-                    .decrypt_in_place_detached(nonce, b"", buffer, &tag)
+                    .decrypt(nonce, buffer, tag, 0)
                     .map_err(|_| Error::Crypto)
             }
             // Use `Decryptor` for non-AEAD modes
@@ -322,7 +323,7 @@ impl Cipher {
                 let key = key.try_into().map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = ChaCha20Poly1305::new(key)
-                    .encrypt_in_place_detached(nonce, b"", buffer)
+                    .encrypt(nonce, buffer, 0)
                     .map_err(|_| Error::Crypto)?;
                 Ok(Some(tag))
             }
