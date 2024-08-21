@@ -147,7 +147,7 @@ impl str::FromStr for Entry {
                 config_opts: Default::default(),
                 public_key: line.parse()?,
             }),
-            3 => line
+            3.. => line
                 .split_once(' ')
                 .map(|(config_opts_str, public_key_str)| {
                     ConfigOptsIter(config_opts_str).validate()?;
