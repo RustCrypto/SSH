@@ -140,25 +140,37 @@ impl str::FromStr for Entry {
     type Err = Error;
 
     fn from_str(line: &str) -> Result<Self> {
-        // TODO(tarcieri): more liberal whitespace handling?
         match line.matches(' ').count() {
             1..=2 => Ok(Self {
                 #[cfg(feature = "alloc")]
                 config_opts: Default::default(),
                 public_key: line.parse()?,
             }),
-            3.. => line
-                .split_once(' ')
-                .map(|(config_opts_str, public_key_str)| {
-                    ConfigOptsIter(config_opts_str).validate()?;
-
-                    Ok(Self {
+            3.. => {
+                // Having >= 3 spaces is ambiguous: it's either a key preceded
+                // by options, or a key with spaces in its comment.  We'll try
+                // parsing as a single key first, then fall back to parsing as
+                // option + key.
+                match line.parse() {
+                    Ok(public_key) => Ok(Self {
                         #[cfg(feature = "alloc")]
-                        config_opts: ConfigOpts(config_opts_str.to_string()),
-                        public_key: public_key_str.parse()?,
-                    })
-                })
-                .ok_or(Error::FormatEncoding)?,
+                        config_opts: Default::default(),
+                        public_key,
+                    }),
+                    Err(_) => line
+                        .split_once(' ')
+                        .map(|(config_opts_str, public_key_str)| {
+                            ConfigOptsIter(config_opts_str).validate()?;
+
+                            Ok(Self {
+                                #[cfg(feature = "alloc")]
+                                config_opts: ConfigOpts(config_opts_str.to_string()),
+                                public_key: public_key_str.parse()?,
+                            })
+                        })
+                        .ok_or(Error::FormatEncoding)?,
+                }
+            }
             _ => Err(Error::FormatEncoding),
         }
     }
@@ -317,6 +329,7 @@ impl<'a> Iterator for ConfigOptsIter<'a> {
 
 #[cfg(all(test, feature = "alloc"))]
 mod tests {
+    use super::AuthorizedKeys;
     use super::ConfigOptsIter;
 
     #[test]
@@ -373,5 +386,21 @@ mod tests {
             opts.try_next(),
             Err(encoding::Error::CharacterEncoding.into())
         );
+    }
+
+    #[test]
+    fn authorized_keys_comments() {
+        for key in [
+            "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hi",
+            "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world",
+            "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world this is a long comment",
+            "cert-authority,no-agent-forwarding ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world this is a long comment",
+        ] {
+            let mut iter = AuthorizedKeys::new(key);
+
+            let parsed = iter.next().expect("must parse one key");
+            assert!(parsed.is_ok());
+            assert!(iter.next().is_none());
+        }
     }
 }
