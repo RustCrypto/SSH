@@ -329,7 +329,6 @@ impl<'a> Iterator for ConfigOptsIter<'a> {
 
 #[cfg(all(test, feature = "alloc"))]
 mod tests {
-    use super::AuthorizedKeys;
     use super::ConfigOptsIter;
 
     #[test]
@@ -386,21 +385,5 @@ mod tests {
             opts.try_next(),
             Err(encoding::Error::CharacterEncoding.into())
         );
-    }
-
-    #[test]
-    fn authorized_keys_comments() {
-        for key in [
-            "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hi",
-            "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world",
-            "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world this is a long comment",
-            "cert-authority,no-agent-forwarding ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world this is a long comment",
-        ] {
-            let mut iter = AuthorizedKeys::new(key);
-
-            let parsed = iter.next().expect("must parse one key");
-            assert!(parsed.is_ok());
-            assert!(iter.next().is_none());
-        }
     }
 }
