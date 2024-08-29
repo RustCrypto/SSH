@@ -151,7 +151,7 @@ fn ecdsa_sig_size(mut data: &[u8], curve: EcdsaCurve, sk_trailer: bool) -> Resul
     for _ in 0..2 {
         let component = Mpint::decode(reader)?;
         let bytes = component.as_positive_bytes().ok_or(Error::FormatEncoding)?;
-        if bytes.len() != curve.field_size() {
+        if bytes.len() > curve.field_size() {
             return Err(encoding::Error::Length.into());
         }
     }
@@ -517,6 +517,14 @@ impl_signature_for_curve!(p256, "p256", NistP256, 32);
 impl_signature_for_curve!(p384, "p384", NistP384, 48);
 impl_signature_for_curve!(p521, "p521", NistP521, 66);
 
+#[cfg(any(feature = "p256", feature = "p384", feature = "p521"))]
+fn build_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
+    let bytes = m.as_positive_bytes()?;
+    std::mem::size_of::<B>()
+        .checked_sub(bytes.len())
+        .map(|i| B::from_iter(std::iter::repeat(0u8).take(i).chain(bytes.iter().cloned())))
+}
+
 #[cfg(feature = "p256")]
 impl TryFrom<&Signature> for p256::ecdsa::Signature {
     type Error = Error;
@@ -536,11 +544,11 @@ fn p256_signature_from_openssh_bytes(mut signature_bytes: &[u8]) -> Result<p256:
     let r = Mpint::decode(reader)?;
     let s = Mpint::decode(reader)?;
 
-    match (r.as_positive_bytes(), s.as_positive_bytes()) {
-        (Some(r), Some(s)) => Ok(p256::ecdsa::Signature::from_scalars(
-            p256::FieldBytes::try_from(r).map_err(|_| Error::Crypto)?,
-            p256::FieldBytes::try_from(s).map_err(|_| Error::Crypto)?,
-        )?),
+    match (
+        build_field_bytes::<p256::FieldBytes>(r),
+        build_field_bytes::<p256::FieldBytes>(s),
+    ) {
+        (Some(r), Some(s)) => Ok(p256::ecdsa::Signature::from_scalars(r, s)?),
         _ => Err(Error::Crypto),
     }
 }
@@ -558,11 +566,11 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
                 let r = Mpint::decode(reader)?;
                 let s = Mpint::decode(reader)?;
 
-                match (r.as_positive_bytes(), s.as_positive_bytes()) {
-                    (Some(r), Some(s)) => Ok(p384::ecdsa::Signature::from_scalars(
-                        p384::FieldBytes::try_from(r).map_err(|_| Error::Crypto)?,
-                        p384::FieldBytes::try_from(s).map_err(|_| Error::Crypto)?,
-                    )?),
+                match (
+                    build_field_bytes::<p384::FieldBytes>(r),
+                    build_field_bytes::<p384::FieldBytes>(s),
+                ) {
+                    (Some(r), Some(s)) => Ok(p384::ecdsa::Signature::from_scalars(r, s)?),
                     _ => Err(Error::Crypto),
                 }
             }
@@ -584,11 +592,11 @@ impl TryFrom<&Signature> for p521::ecdsa::Signature {
                 let r = Mpint::decode(reader)?;
                 let s = Mpint::decode(reader)?;
 
-                match (r.as_positive_bytes(), s.as_positive_bytes()) {
-                    (Some(r), Some(s)) => Ok(p521::ecdsa::Signature::from_scalars(
-                        p521::FieldBytes::try_from(r).map_err(|_| Error::Crypto)?,
-                        p521::FieldBytes::try_from(s).map_err(|_| Error::Crypto)?,
-                    )?),
+                match (
+                    build_field_bytes::<p521::FieldBytes>(r),
+                    build_field_bytes::<p521::FieldBytes>(s),
+                ) {
+                    (Some(r), Some(s)) => Ok(p521::ecdsa::Signature::from_scalars(r, s)?),
                     _ => Err(Error::Crypto),
                 }
             }
@@ -699,6 +707,9 @@ mod tests {
         signature::{Signer, Verifier},
     };
 
+    #[cfg(feature = "p256")]
+    use super::{build_field_bytes, Mpint};
+
     const DSA_SIGNATURE: &[u8] = &hex!("000000077373682d6473730000002866725bf3c56100e975e21fff28a60f73717534d285ea3e1beefc2891f7189d00bd4d94627e84c55c");
     const ECDSA_SHA2_P256_SIGNATURE: &[u8] = &hex!("0000001365636473612d736861322d6e6973747032353600000048000000201298ab320720a32139cda8a40c97a13dc54ce032ea3c6f09ea9e87501e48fa1d0000002046e4ac697a6424a9870b9ef04ca1182cd741965f989bd1f1f4a26fd83cf70348");
     const ED25519_SIGNATURE: &[u8] = &hex!("0000000b7373682d65643235353139000000403d6b9906b76875aef1e7b2f1e02078a94f439aebb9a4734da1a851a81e22ce0199bbf820387a8de9c834c9c3cc778d9972dcbe70f68d53cc6bc9e26b02b46d04");
@@ -714,6 +725,35 @@ mod tests {
     fn convert_ecdsa_sha2_p256() {
         let p256_signature = p256::ecdsa::Signature::try_from(&hex!("00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001")[..]).unwrap();
         let _ssh_signature = Signature::try_from(p256_signature).unwrap();
+    }
+
+    #[cfg(feature = "p256")]
+    #[test]
+    fn build_field_bytes_p256() {
+        let i = Mpint::from_bytes(&hex!(
+            "1122334455667788112233445566778811223344556677881122334455667788"
+        ))
+        .unwrap();
+        let fb = build_field_bytes::<p256::FieldBytes>(i);
+        assert!(fb.is_some());
+
+        // too long
+        let i = Mpint::from_bytes(&hex!(
+            "991122334455667788112233445566778811223344556677881122334455667788"
+        ))
+        .unwrap();
+        let fb = build_field_bytes::<p256::FieldBytes>(i);
+        assert!(fb.is_none());
+
+        // short is okay
+        let i = Mpint::from_bytes(&hex!(
+            "22334455667788112233445566778811223344556677881122334455667788"
+        ))
+        .unwrap();
+        let fb = build_field_bytes::<p256::FieldBytes>(i)
+            .expect("failed to build FieldBytes from short hex string");
+        assert_eq!(fb[0], 0x00);
+        assert_eq!(fb[1], 0x22);
     }
 
     #[test]
