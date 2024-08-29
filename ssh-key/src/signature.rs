@@ -13,7 +13,6 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
     bigint::BigUint,
-    core::iter,
     sha1::Sha1,
     signature::{DigestSigner, DigestVerifier},
 };
@@ -23,6 +22,9 @@ use crate::{
     private::{EcdsaKeypair, EcdsaPrivateKey},
     public::EcdsaPublicKey,
 };
+
+#[cfg(any(feature = "dsa", feature = "p256", feature = "p384", feature = "p521"))]
+use core::iter;
 
 #[cfg(feature = "rsa")]
 use {
@@ -520,9 +522,10 @@ impl_signature_for_curve!(p521, "p521", NistP521, 66);
 #[cfg(any(feature = "p256", feature = "p384", feature = "p521"))]
 fn build_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
     let bytes = m.as_positive_bytes()?;
-    std::mem::size_of::<B>()
+    #[allow(unused_qualifications)] // size_of is in the prelude of Rust > 1.80
+    core::mem::size_of::<B>()
         .checked_sub(bytes.len())
-        .map(|i| B::from_iter(std::iter::repeat(0u8).take(i).chain(bytes.iter().cloned())))
+        .map(|i| B::from_iter(iter::repeat(0u8).take(i).chain(bytes.iter().cloned())))
 }
 
 #[cfg(feature = "p256")]
