@@ -519,6 +519,7 @@ impl_signature_for_curve!(p256, "p256", NistP256, 32);
 impl_signature_for_curve!(p384, "p384", NistP384, 48);
 impl_signature_for_curve!(p521, "p521", NistP521, 66);
 
+/// Build a generic sized object from a `u8` iterator, with leading zero padding
 #[cfg(any(feature = "p256", feature = "p384", feature = "p521"))]
 fn zero_pad_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
     use core::mem::size_of;
