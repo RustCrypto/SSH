@@ -38,7 +38,7 @@ dual licensed as above, without any additional terms or conditions.
 
 [//]: # (badges)
 
-[crate-image]: https://buildstats.info/crate/ssh-protocol
+[crate-image]: https://img.shields.io/crates/v/ssh-protocol
 [crate-link]: https://crates.io/crates/ssh-protocol
 [docs-image]: https://docs.rs/ssh-protocol/badge.svg
 [docs-link]: https://docs.rs/ssh-protocol/

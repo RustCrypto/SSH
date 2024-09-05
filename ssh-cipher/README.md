@@ -43,7 +43,7 @@ dual licensed as above, without any additional terms or conditions.
 
 [//]: # (badges)
 
-[crate-image]: https://buildstats.info/crate/ssh-cipher
+[crate-image]: https://img.shields.io/crates/v/ssh-cipher
 [crate-link]: https://crates.io/crates/ssh-cipher
 [docs-image]: https://docs.rs/ssh-cipher/badge.svg
 [docs-link]: https://docs.rs/ssh-cipher/
