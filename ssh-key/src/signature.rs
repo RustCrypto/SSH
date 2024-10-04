@@ -547,8 +547,6 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
 }
 #[cfg(feature = "p256")]
 fn p256_signature_from_openssh_bytes(mut signature_bytes: &[u8]) -> Result<p256::ecdsa::Signature> {
-    const FIELD_SIZE: usize = 32;
-
     let reader = &mut signature_bytes;
     let r = Mpint::decode(reader)?;
     let s = Mpint::decode(reader)?;
@@ -567,8 +565,6 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
     type Error = Error;
 
     fn try_from(signature: &Signature) -> Result<p384::ecdsa::Signature> {
-        const FIELD_SIZE: usize = 48;
-
         match signature.algorithm {
             Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP384,
@@ -595,8 +591,6 @@ impl TryFrom<&Signature> for p521::ecdsa::Signature {
     type Error = Error;
 
     fn try_from(signature: &Signature) -> Result<p521::ecdsa::Signature> {
-        const FIELD_SIZE: usize = 66;
-
         match signature.algorithm {
             Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP521,
