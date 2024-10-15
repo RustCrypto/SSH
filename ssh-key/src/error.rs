@@ -115,6 +115,17 @@ impl fmt::Display for Error {
     }
 }
 
+impl core::error::Error for Error {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        match self {
+            #[cfg(feature = "ecdsa")]
+            Self::Ecdsa(err) => Some(err),
+            Self::Encoding(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 impl From<cipher::Error> for Error {
     fn from(_: cipher::Error) -> Error {
         Error::Crypto
@@ -157,6 +168,7 @@ impl From<encoding::pem::Error> for Error {
     }
 }
 
+// TODO(tarcieri): avoid special casing this when `signature` supports `core::error::Error`
 #[cfg(not(feature = "std"))]
 impl From<signature::Error> for Error {
     fn from(_: signature::Error) -> Error {
@@ -167,7 +179,7 @@ impl From<signature::Error> for Error {
 #[cfg(feature = "std")]
 impl From<signature::Error> for Error {
     fn from(err: signature::Error) -> Error {
-        use std::error::Error as _;
+        use core::error::Error as _;
 
         err.source()
             .and_then(|source| source.downcast_ref().cloned())
@@ -175,6 +187,7 @@ impl From<signature::Error> for Error {
     }
 }
 
+// TODO(tarcieri): avoid special casing this when `signature` supports `core::error::Error`
 #[cfg(not(feature = "std"))]
 impl From<Error> for signature::Error {
     fn from(_: Error) -> signature::Error {
@@ -221,17 +234,5 @@ impl From<std::io::Error> for Error {
 impl From<std::time::SystemTimeError> for Error {
     fn from(_: std::time::SystemTimeError) -> Error {
         Error::Time
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            #[cfg(feature = "ecdsa")]
-            Self::Ecdsa(err) => Some(err),
-            Self::Encoding(err) => Some(err),
-            _ => None,
-        }
     }
 }

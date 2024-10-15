@@ -21,9 +21,6 @@
     unused_qualifications
 )]
 
-#[cfg(feature = "std")]
-extern crate std;
-
 mod error;
 
 #[cfg(feature = "chacha20poly1305")]

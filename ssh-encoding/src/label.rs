@@ -66,6 +66,8 @@ impl LabelError {
     }
 }
 
+impl core::error::Error for LabelError {}
+
 impl fmt::Display for LabelError {
     #[cfg(not(feature = "alloc"))]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -77,6 +79,3 @@ impl fmt::Display for LabelError {
         write!(f, "invalid label: '{}'", self.label)
     }
 }
-
-#[cfg(feature = "std")]
-impl std::error::Error for LabelError {}
