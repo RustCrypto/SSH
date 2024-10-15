@@ -16,7 +16,7 @@ categories = ["cryptography", "no-std"]
 keywords = ["crypto", "encryption", "openssh", "ssh"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.81"
 
 [dependencies]
 cipher = "=0.5.0-pre.6"
@@ -38,8 +38,6 @@ zeroize = { version = "1", optional = true, default-features = false }
 hex-literal = "0.4"
 
 [features]
-std = []
-
 aes-cbc = ["dep:aes", "dep:cbc"]
 aes-ctr = ["dep:aes", "dep:ctr"]
 aes-gcm = ["dep:aead", "dep:aes", "dep:aes-gcm"]

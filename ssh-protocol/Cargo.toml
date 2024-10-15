@@ -13,7 +13,7 @@ categories = ["authentication", "cryptography", "encoding", "no-std"]
 keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.73"
+rust-version = "1.81"
 
 [dependencies]
 cipher = { package = "ssh-cipher", version = "=0.3.0-pre.2", default-features = false, path = "../ssh-cipher" }
@@ -23,7 +23,7 @@ key = { package = "ssh-key", version = "=0.7.0-pre.1", default-features = false,
 [features]
 default = ["std"]
 alloc = ["encoding/alloc", "key/alloc"]
-std = ["alloc", "encoding/std", "key/std"]
+std = ["alloc", "key/std"]
 
 [package.metadata.docs.rs]
 all-features = true

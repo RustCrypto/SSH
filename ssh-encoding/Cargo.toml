@@ -13,20 +13,19 @@ categories = ["authentication", "cryptography", "encoding", "no-std", "parser-im
 keywords = ["crypto", "certificate", "key", "openssh", "ssh"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.71"
+rust-version = "1.81"
 
 [dependencies]
 base64ct = { version = "1.4", optional = true }
 bytes = { version = "1", optional = true, default-features = false }
 digest = { version = "=0.11.0-pre.9", optional = true, default-features = false }
-pem-rfc7468 = { version = "1.0.0-rc.1", optional = true }
+pem-rfc7468 = { version = "1.0.0-rc.2", optional = true }
 
 [dev-dependencies]
 hex-literal = "0.4.1"
 
 [features]
 alloc = ["base64ct?/alloc", "pem-rfc7468?/alloc"]
-std = ["alloc", "base64ct?/std", "digest?/std", "pem-rfc7468?/std"]
 
 base64 = ["dep:base64ct"]
 bytes = ["alloc", "dep:bytes"]

@@ -37,6 +37,19 @@ pub enum Error {
     },
 }
 
+impl core::error::Error for Error {
+    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
+        match self {
+            // TODO(tarcieri): re-add support when `base64ct` uses `core::error`
+            //#[cfg(feature = "base64")]
+            //Self::Base64(err) => Some(err),
+            #[cfg(feature = "pem")]
+            Self::Pem(err) => Some(err),
+            _ => None,
+        }
+    }
+}
+
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -99,18 +112,5 @@ impl From<base64ct::InvalidLengthError> for Error {
 impl From<pem_rfc7468::Error> for Error {
     fn from(err: pem_rfc7468::Error) -> Error {
         Error::Pem(err)
-    }
-}
-
-#[cfg(feature = "std")]
-impl std::error::Error for Error {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            #[cfg(feature = "base64")]
-            Self::Base64(err) => Some(err),
-            #[cfg(feature = "pem")]
-            Self::Pem(err) => Some(err),
-            _ => None,
-        }
     }
 }

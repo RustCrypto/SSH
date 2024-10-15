@@ -15,7 +15,7 @@ categories = ["authentication", "cryptography", "encoding", "no-std", "parser-im
 keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.73"
+rust-version = "1.81"
 
 [dependencies]
 cipher = { package = "ssh-cipher", version = "=0.3.0-pre.2", features = ["zeroize"], path = "../ssh-cipher" }
@@ -28,15 +28,15 @@ zeroize = { version = "1", default-features = false }
 # optional dependencies
 bcrypt-pbkdf = { version = "=0.11.0-pre.1", optional = true, default-features = false, features = ["alloc"] }
 bigint = { package = "num-bigint-dig", version = "0.8", optional = true, default-features = false }
-dsa = { version = "=0.7.0-pre.0", optional = true, default-features = false }
+dsa = { version = "=0.7.0-pre.1", optional = true, default-features = false }
 ed25519-dalek = { version = "=2.2.0-pre", optional = true, default-features = false }
 home = { version = "0.5", optional = true }
 p256 = { version = "=0.14.0-pre.1", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "=0.14.0-pre.1", optional = true, default-features = false, features = ["ecdsa"] }
 p521 = { version = "=0.14.0-pre.1", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.6.4", optional = true, default-features = false }
-rsa = { version = "=0.10.0-pre.2", optional = true, default-features = false, features = ["sha2"] }
-sec1 = { version = "0.8.0-rc.0", optional = true, default-features = false, features = ["point"] }
+rsa = { version = "=0.10.0-pre.3", optional = true, default-features = false, features = ["sha2"] }
+sec1 = { version = "0.8.0-rc.3", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1", optional = true }
 sha1 = { version = "=0.11.0-pre.4", optional = true, default-features = false }
 
@@ -53,7 +53,6 @@ alloc = [
 ]
 std = [
     "alloc",
-    "encoding/std",
     "p256?/std",
     "p384?/std",
     "p521?/std",
