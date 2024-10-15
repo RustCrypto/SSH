@@ -46,7 +46,7 @@ const MAGIC_HASH_PREFIX: &str = "|1|";
 ///   the key).
 pub struct KnownHosts<'a> {
     /// Lines of the file being iterated over
-    lines: core::str::Lines<'a>,
+    lines: str::Lines<'a>,
 }
 
 impl<'a> KnownHosts<'a> {
