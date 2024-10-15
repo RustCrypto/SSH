@@ -8,7 +8,7 @@ use ssh_key::AuthorizedKeys;
 #[test]
 fn read_example_file() {
     let authorized_keys = AuthorizedKeys::read_file("./tests/examples/authorized_keys").unwrap();
-    assert_eq!(authorized_keys.len(), 4);
+    assert_eq!(authorized_keys.len(), 5);
 
     assert_eq!(authorized_keys[0].config_opts().to_string(), "");
     assert_eq!(
@@ -45,5 +45,11 @@ fn read_example_file() {
     assert_eq!(
         authorized_keys[3].public_key().comment(),
         "user4@example.com"
+    );
+
+    assert_eq!(authorized_keys[4].public_key().to_string(), "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBN76zuqnjypL54/w4763l7q1Sn3IBYHptJ5wcYfEWkzeNTvpexr05Z18m2yPT2SWRd1JJ8Aj5TYidG9MdSS5J78= hello world this is a long comment");
+    assert_eq!(
+        authorized_keys[4].public_key().comment(),
+        "hello world this is a long comment"
     );
 }
