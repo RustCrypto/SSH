@@ -16,7 +16,7 @@ categories = ["cryptography", "no-std"]
 keywords = ["crypto", "encryption", "openssh", "ssh"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.72"
+rust-version = "1.81"
 
 [dependencies]
 cipher = "=0.5.0-pre.6"
