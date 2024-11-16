@@ -80,7 +80,7 @@ p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 p521 = ["dep:p521", "ecdsa"]
 rsa = ["dep:bigint", "dep:rsa", "alloc", "rand_core"]
-rsa-sha1 = ["rsa", "dep:sha1"]
+rsa-sha1 = ["rsa", "dep:sha1", "sha1/oid"]
 tdes = ["cipher/tdes", "encryption"]
 
 [package.metadata.docs.rs]
