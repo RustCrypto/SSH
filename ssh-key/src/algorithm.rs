@@ -37,6 +37,12 @@ const CERT_ED25519: &str = "ssh-ed25519-cert-v01@openssh.com";
 /// OpenSSH certificate with RSA public key
 const CERT_RSA: &str = "ssh-rsa-cert-v01@openssh.com";
 
+/// OpenSSH certificate with RSA + SHA-256 as described in RFC8332 § 3
+const CERT_RSA_SHA2_256: &str = "rsa-sha2-256-cert-v01@openssh.com";
+
+/// OpenSSH certificate with RSA + SHA-512 as described in RFC8332 § 3
+const CERT_RSA_SHA2_512: &str = "rsa-sha2-512-cert-v01@openssh.com";
+
 /// OpenSSH certificate for ECDSA (NIST P-256) U2F/FIDO security key
 const CERT_SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256-cert-v01@openssh.com";
 
@@ -176,6 +182,12 @@ impl Algorithm {
             }),
             CERT_ED25519 => Ok(Algorithm::Ed25519),
             CERT_RSA => Ok(Algorithm::Rsa { hash: None }),
+            CERT_RSA_SHA2_256 => Ok(Algorithm::Rsa {
+                hash: Some(HashAlg::Sha256),
+            }),
+            CERT_RSA_SHA2_512 => Ok(Algorithm::Rsa {
+                hash: Some(HashAlg::Sha512),
+            }),
             CERT_SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             CERT_SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
             #[cfg(feature = "alloc")]
@@ -224,7 +236,13 @@ impl Algorithm {
                 EcdsaCurve::NistP521 => CERT_ECDSA_SHA2_P521,
             },
             Algorithm::Ed25519 => CERT_ED25519,
-            Algorithm::Rsa { .. } => CERT_RSA,
+            Algorithm::Rsa { hash: None } => CERT_RSA,
+            Algorithm::Rsa {
+                hash: Some(HashAlg::Sha256),
+            } => CERT_RSA_SHA2_256,
+            Algorithm::Rsa {
+                hash: Some(HashAlg::Sha512),
+            } => CERT_RSA_SHA2_512,
             Algorithm::SkEcdsaSha2NistP256 => CERT_SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => CERT_SK_SSH_ED25519,
             Algorithm::Other(algorithm) => return algorithm.certificate_type(),
