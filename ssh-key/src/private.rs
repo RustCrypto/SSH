@@ -575,7 +575,7 @@ impl PrivateKey {
 
         let padding_len = reader.remaining_len();
 
-        if padding_len >= block_size {
+        if padding_len >= MAX_BLOCK_SIZE {
             return Err(encoding::Error::Length.into());
         }
 
