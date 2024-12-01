@@ -199,7 +199,7 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
             rsa::BigUint::try_from(&key.private.d)?,
             vec![
                 rsa::BigUint::try_from(&key.private.p)?,
-                rsa::BigUint::try_from(&key.private.p)?,
+                rsa::BigUint::try_from(&key.private.q)?,
             ],
         )?;
 
