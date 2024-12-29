@@ -233,6 +233,33 @@ impl PrivateKey {
         Self::decode_pem(pem)
     }
 
+    /// Parse a PuTTY PPK private key.
+    ///
+    /// PPK-formatted private keys begin with the following:
+    ///
+    /// ```text
+    /// PuTTY-User-Key-File-<VERSION>: <ALGORITHM>
+    /// ```
+    #[cfg(feature = "ppk")]
+    pub fn from_ppk(ppk: impl AsRef<str>) -> Result<Self> {
+        use crate::ppk::PpkContainer;
+
+        let ppk: PpkContainer = PpkContainer::try_from(ppk.as_ref())?;
+
+        Ok(Self {
+            auth_tag: None,
+            checkint: None,
+            cipher: ppk
+                .encryption
+                .as_ref()
+                .map(|e| e.algorithm.into())
+                .unwrap_or(Cipher::None),
+            kdf: ppk.encryption.map(|x| x.kdf).unwrap_or(Kdf::None),
+            key_data: ppk.keypair_data,
+            public_key: ppk.public_key,
+        })
+    }
+
     /// Parse a raw binary SSH private key.
     pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
         let reader = &mut bytes;

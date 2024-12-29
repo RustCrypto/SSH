@@ -164,6 +164,8 @@ mod mpint;
 mod signature;
 #[cfg(feature = "alloc")]
 mod sshsig;
+#[cfg(feature = "ppk")]
+mod ppk;
 
 pub use crate::{
     algorithm::{Algorithm, EcdsaCurve, HashAlg, KdfAlg},

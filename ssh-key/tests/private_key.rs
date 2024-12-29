@@ -19,20 +19,44 @@ use {
 #[cfg(feature = "alloc")]
 const OPENSSH_DSA_EXAMPLE: &str = include_str!("examples/id_dsa_1024");
 
+/// Same key, converted by puttygen
+#[cfg(all(feature = "ppk", feature = "alloc"))]
+const PPK_DSA_EXAMPLE: &str = include_str!("examples/id_dsa_1024.ppk");
+
+/// Same key, converted and encrypted by puttygen
+#[cfg(all(feature = "ppk", feature = "alloc", feature = "encryption"))]
+const PPK_DSA_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_dsa_1024_enc.ppk");
+
 /// ECDSA/P-256 OpenSSH-formatted public key
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p256")]
 const OPENSSH_ECDSA_P256_EXAMPLE: &str = include_str!("examples/id_ecdsa_p256");
 
+/// Same key, converted by puttygen
+#[cfg(all(feature = "ppk", feature = "p256"))]
+const PPK_ECDSA_P256_EXAMPLE: &str = include_str!("examples/id_ecdsa_p256.ppk");
+
+/// Same key, converted and encrypted by puttygen
+#[cfg(all(feature = "ppk", feature = "p256", feature = "encryption"))]
+const PPK_ECDSA_P256_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_ecdsa_p256_enc.ppk");
+
 /// ECDSA/P-384 OpenSSH-formatted public key
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p384")]
 const OPENSSH_ECDSA_P384_EXAMPLE: &str = include_str!("examples/id_ecdsa_p384");
 
 /// ECDSA/P-521 OpenSSH-formatted public key
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p521")]
 const OPENSSH_ECDSA_P521_EXAMPLE: &str = include_str!("examples/id_ecdsa_p521");
 
 /// Ed25519 OpenSSH-formatted private key
 const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
+
+/// Same key, converted by puttygen
+#[cfg(all(feature = "ppk", feature = "ed25519"))]
+const PPK_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519.ppk");
+
+/// Same key, converted and encrypted by puttygen
+#[cfg(all(feature = "ppk", feature = "ed25519", feature = "encryption"))]
+const PPK_ED25519_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_ed25519_enc.ppk");
 
 /// Ed25519 OpenSSH-formatted private key with 64-column line wrapping
 const OPENSSH_ED25519_64COLS_EXAMPLE: &str = include_str!("examples/id_ed25519.64cols");
@@ -40,6 +64,14 @@ const OPENSSH_ED25519_64COLS_EXAMPLE: &str = include_str!("examples/id_ed25519.6
 /// RSA (3072-bit) OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
 const OPENSSH_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072");
+
+/// Same key, converted by puttygen
+#[cfg(feature = "ppk")]
+const PPK_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072.ppk");
+
+/// Same key, converted and encrypted by puttygen
+#[cfg(all(feature = "ppk", feature = "encryption"))]
+const PPK_RSA_3072_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_rsa_3072_enc.ppk");
 
 /// RSA (4096-bit) OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
@@ -63,7 +95,23 @@ pub fn scratch_path(filename: &str) -> PathBuf {
 #[cfg(feature = "alloc")]
 #[test]
 fn decode_dsa_openssh() {
-    let key = PrivateKey::from_openssh(OPENSSH_DSA_EXAMPLE).unwrap();
+    validate_dsa(PrivateKey::from_openssh(OPENSSH_DSA_EXAMPLE).unwrap());
+}
+
+#[cfg(all(feature = "ppk", feature = "alloc"))]
+#[test]
+fn decode_dsa_ppk() {
+    validate_dsa(PrivateKey::from_ppk(PPK_DSA_EXAMPLE).unwrap());
+}
+
+// #[cfg(all(feature = "ppk", feature = "alloc", feature = "encryption"))]
+// #[test]
+// fn decode_dsa_ppk_encrypted() {
+//     validate_dsa(PrivateKey::from_ppk(PPK_DSA_EXAMPLE_ENCRYPTED).unwrap());
+// }
+
+#[cfg(feature = "alloc")]
+fn validate_dsa(key: PrivateKey) {
     assert_eq!(Algorithm::Dsa, key.algorithm());
     assert_eq!(Cipher::None, key.cipher());
     assert_eq!(KdfAlg::None, key.kdf().algorithm());
@@ -105,10 +153,25 @@ fn decode_dsa_openssh() {
     assert_eq!("user@example.com", key.comment());
 }
 
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p256")]
 #[test]
 fn decode_ecdsa_p256_openssh() {
-    let key = PrivateKey::from_openssh(OPENSSH_ECDSA_P256_EXAMPLE).unwrap();
+    validate_ecdsa_p256(PrivateKey::from_openssh(OPENSSH_ECDSA_P256_EXAMPLE).unwrap());
+}
+
+#[cfg(all(feature = "ppk", feature = "p256"))]
+#[test]
+fn decode_ecdsa_p256_ppk() {
+    validate_ecdsa_p256(PrivateKey::from_ppk(PPK_ECDSA_P256_EXAMPLE).unwrap());
+}
+
+// #[cfg(all(feature = "ppk", feature = "p256", feature = "encryption"))]
+// #[test]
+// fn decode_ecdsa_p256_ppk_encrypted() {
+//     validate_ecdsa_p256(PrivateKey::from_ppk(PPK_ECDSA_P256_EXAMPLE_ENCRYPTED).unwrap());
+// }
+
+fn validate_ecdsa_p256(key: PrivateKey) {
     assert_eq!(
         Algorithm::Ecdsa {
             curve: EcdsaCurve::NistP256
@@ -137,7 +200,7 @@ fn decode_ecdsa_p256_openssh() {
     assert_eq!("user@example.com", key.comment());
 }
 
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p384")]
 #[test]
 fn decode_padless_wonder_openssh() {
     let key = PrivateKey::from_openssh(OPENSSH_PADLESS_WONDER_EXAMPLE).unwrap();
@@ -191,7 +254,7 @@ fn decode_ecdsa_p384_openssh() {
     assert_eq!("user@example.com", key.comment());
 }
 
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p521")]
 #[test]
 fn decode_ecdsa_p521_openssh() {
     let key = PrivateKey::from_openssh(OPENSSH_ECDSA_P521_EXAMPLE).unwrap();
@@ -230,7 +293,22 @@ fn decode_ecdsa_p521_openssh() {
 
 #[test]
 fn decode_ed25519_openssh() {
-    let key = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
+    validate_ed25519(PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap());
+}
+
+#[test]
+#[cfg(all(feature = "ppk", feature = "ed25519"))]
+fn decode_ed25519_ppk() {
+    validate_ed25519(PrivateKey::from_ppk(PPK_ED25519_EXAMPLE).unwrap());
+}
+
+// #[test]
+// #[cfg(all(feature = "ppk", feature="ed25519",feature = "encryption"))]
+// fn decode_ed25519_ppk_encrypted() {
+//     validate_ed25519(PrivateKey::from_ppk(PPK_ED25519_EXAMPLE_ENCRYPTED).unwrap());
+// }
+
+fn validate_ed25519(key: PrivateKey) {
     assert_eq!(Algorithm::Ed25519, key.algorithm());
     assert_eq!(Cipher::None, key.cipher());
     assert_eq!(KdfAlg::None, key.kdf().algorithm());
@@ -261,7 +339,22 @@ fn decode_ed25519_openssh_64cols() {
 #[cfg(feature = "alloc")]
 #[test]
 fn decode_rsa_3072_openssh() {
-    let key = PrivateKey::from_openssh(OPENSSH_RSA_3072_EXAMPLE).unwrap();
+    validate_rsa_3072(PrivateKey::from_openssh(OPENSSH_RSA_3072_EXAMPLE).unwrap());
+}
+
+#[test]
+#[cfg(feature = "ppk")]
+fn decode_rsa_3072_ppk() {
+    validate_rsa_3072(PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE).unwrap());
+}
+
+// #[test]
+// #[cfg(feature = "ppk")]
+// fn decode_rsa_3072_ppk_encrypted() {
+//     validate_rsa_3072(PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE_ENCRYPTED).unwrap());
+// }
+
+fn validate_rsa_3072(key: PrivateKey) {
     assert_eq!(Algorithm::Rsa { hash: None }, key.algorithm());
     assert_eq!(Cipher::None, key.cipher());
     assert_eq!(KdfAlg::None, key.kdf().algorithm());
@@ -457,19 +550,19 @@ fn encode_dsa_openssh() {
     encoding_test(OPENSSH_DSA_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "ecdsa"))]
+#[cfg(all(feature = "alloc", feature = "p256"))]
 #[test]
 fn encode_ecdsa_p256_openssh() {
     encoding_test(OPENSSH_ECDSA_P256_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "ecdsa"))]
+#[cfg(all(feature = "alloc", feature = "p384"))]
 #[test]
 fn encode_ecdsa_p384_openssh() {
     encoding_test(OPENSSH_ECDSA_P384_EXAMPLE)
 }
 
-#[cfg(all(feature = "alloc", feature = "ecdsa"))]
+#[cfg(all(feature = "alloc", feature = "p521"))]
 #[test]
 fn encode_ecdsa_p521_openssh() {
     encoding_test(OPENSSH_ECDSA_P521_EXAMPLE)
