@@ -3,7 +3,7 @@
 use hex_literal::hex;
 use ssh_key::{Algorithm, Cipher, KdfAlg, PrivateKey};
 
-#[cfg(feature = "ecdsa")]
+#[cfg(any(feature = "p256", feature = "p384", feature = "p521"))]
 use ssh_key::EcdsaCurve;
 
 #[cfg(feature = "alloc")]
@@ -66,11 +66,11 @@ const OPENSSH_ED25519_64COLS_EXAMPLE: &str = include_str!("examples/id_ed25519.6
 const OPENSSH_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072");
 
 /// Same key, converted by puttygen
-#[cfg(feature = "ppk")]
+#[cfg(all(feature = "ppk", feature = "rsa"))]
 const PPK_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072.ppk");
 
 /// Same key, converted and encrypted by puttygen
-#[cfg(all(feature = "ppk", feature = "encryption"))]
+#[cfg(all(feature = "ppk", feature = "rsa", feature = "encryption"))]
 const PPK_RSA_3072_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_rsa_3072_enc.ppk");
 
 /// RSA (4096-bit) OpenSSH-formatted public key
@@ -83,7 +83,7 @@ const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque");
 
 /// OpenSSH-formatted private key with no internal or external padding, and no comment
 /// Trips a corner case in base64ct
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p384")]
 const OPENSSH_PADLESS_WONDER_EXAMPLE: &str = include_str!("examples/padless_wonder");
 
 /// Get a path into the `tests/scratch` directory.

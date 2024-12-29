@@ -15,7 +15,7 @@ use sha2::Sha256;
 
 use crate::private::KeypairData;
 use crate::public::KeyData;
-use crate::{Algorithm, Error, Mpint, PublicKey};
+use crate::{Algorithm, Error, PublicKey};
 use encoding::base64::{self, Base64, Encoding};
 use encoding::{Decode, Encode, LabelError, Reader};
 use subtle::ConstantTimeEq;
@@ -397,6 +397,7 @@ fn decode_private_key_as(
     match (&algorithm, public.key_data()) {
         (Algorithm::Dsa { .. }, KeyData::Dsa(pk)) => {
             use crate::private::{DsaKeypair, DsaPrivateKey};
+
             Ok(KeypairData::Dsa(DsaKeypair::new(
                 pk.clone(),
                 DsaPrivateKey::decode(reader)?,
@@ -406,6 +407,7 @@ fn decode_private_key_as(
         #[cfg(feature = "rsa")]
         (Algorithm::Rsa { .. }, KeyData::Rsa(pk)) => {
             use crate::private::{RsaKeypair, RsaPrivateKey};
+            use crate::Mpint;
 
             let d = Mpint::decode(reader)?;
             let p = Mpint::decode(reader)?;
@@ -419,6 +421,7 @@ fn decode_private_key_as(
         (Algorithm::Ed25519 { .. }, KeyData::Ed25519(pk)) => {
             // PPK encodes Ed25519 private exponent as an mpint
             use crate::private::{Ed25519Keypair, Ed25519PrivateKey};
+            use crate::Mpint;
             use zeroize::Zeroizing;
 
             // Copy and pad exponent
@@ -445,7 +448,7 @@ fn decode_private_key_as(
             // PPK encodes EcDSA private exponent as an mpint
             use crate::private::EcdsaKeypair;
             use crate::public::EcdsaPublicKey;
-            use crate::EcdsaCurve;
+            use crate::{EcdsaCurve, Mpint};
 
             // Copy and pad exponent
             let e = Mpint::decode(reader)?;
