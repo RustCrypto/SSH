@@ -6,6 +6,7 @@ use core::fmt::{Debug, Display};
 use core::num::ParseIntError;
 use core::str::FromStr;
 use hex::FromHex;
+use hmac::digest::KeyInit;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::collections::HashMap;
@@ -175,7 +176,7 @@ pub enum PpkParseError {
     MissingValue(PpkKey),
     MissingPublicKey,
     MissingPrivateKey,
-    Base64(base64::InvalidEncodingError),
+    Base64(base64::Error),
     Eof,
     UnsupportedFormatVersion(u8),
     UnsupportedEncryption(String),
@@ -263,8 +264,8 @@ impl TryFrom<&str> for PpkWrapper {
                     content.extend_from_slice(line.as_bytes());
                 }
 
-                let decoded =
-                    Base64::decode_in_place(&mut content).map_err(PpkParseError::Base64)?;
+                let decoded = Base64::decode_in_place(&mut content)
+                    .map_err(|e| PpkParseError::Base64(e.into()))?;
 
                 match key {
                     "Public-Lines" => public_key = Some(decoded.to_vec()),
@@ -388,10 +389,10 @@ fn decode_private_key_as(
     match (&algorithm, public.key_data()) {
         (Algorithm::Dsa { .. }, KeyData::Dsa(pk)) => {
             use crate::private::{DsaKeypair, DsaPrivateKey};
-            Ok(KeypairData::Dsa(DsaKeypair {
-                private: DsaPrivateKey::decode(reader)?,
-                public: pk.clone(),
-            }))
+            Ok(KeypairData::Dsa(DsaKeypair::new(
+                pk.clone(),
+                DsaPrivateKey::decode(reader)?,
+            )?))
         }
 
         #[cfg(feature = "rsa")]
@@ -402,11 +403,8 @@ fn decode_private_key_as(
             let p = Mpint::decode(reader)?;
             let q = Mpint::decode(reader)?;
             let iqmp = Mpint::decode(reader)?;
-            let private = RsaPrivateKey { d, iqmp, p, q };
-            Ok(KeypairData::Rsa(RsaKeypair {
-                private,
-                public: pk.clone(),
-            }))
+            let private = RsaPrivateKey::new(d, iqmp, p, q)?;
+            Ok(KeypairData::Rsa(RsaKeypair::new(pk.clone(), private)?))
         }
 
         #[cfg(feature = "ed25519")]

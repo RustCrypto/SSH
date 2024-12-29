@@ -160,12 +160,12 @@ mod kdf;
 mod dot_ssh;
 #[cfg(feature = "alloc")]
 mod mpint;
+#[cfg(feature = "ppk")]
+mod ppk;
 #[cfg(feature = "alloc")]
 mod signature;
 #[cfg(feature = "alloc")]
 mod sshsig;
-#[cfg(feature = "ppk")]
-mod ppk;
 
 pub use crate::{
     algorithm::{Algorithm, EcdsaCurve, HashAlg, KdfAlg},

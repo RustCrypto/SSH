@@ -440,15 +440,6 @@ checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
 
 [[package]]
 name = "hmac"
-version = "0.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
-dependencies = [
- "digest 0.10.7",
-]
-
-[[package]]
-name = "hmac"
 version = "0.13.0-pre.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4b1fb14e4df79f9406b434b60acef9f45c26c50062cccf1346c6103b8c47d58"
@@ -745,7 +736,7 @@ version = "0.5.0-pre.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "871ee76a3eee98b0f805e5d1caf26929f4565073c580c053a55f886fc15dea49"
 dependencies = [
- "hmac 0.13.0-pre.4",
+ "hmac",
  "subtle",
 ]
 
@@ -922,7 +913,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "hex-literal",
- "hmac 0.12.1",
+ "hmac",
  "home",
  "num-bigint-dig",
  "p256",
