@@ -220,7 +220,7 @@ fn decode_padless_wonder_openssh() {
     assert_eq!("", key.comment());
 }
 
-#[cfg(feature = "ecdsa")]
+#[cfg(feature = "p384")]
 #[test]
 fn decode_ecdsa_p384_openssh() {
     let key = PrivateKey::from_openssh(OPENSSH_ECDSA_P384_EXAMPLE).unwrap();
