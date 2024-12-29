@@ -173,6 +173,7 @@ fn decode_ecdsa_p256_ppk_encrypted() {
     );
 }
 
+#[cfg(feature = "p256")]
 fn validate_ecdsa_p256(key: PrivateKey) {
     assert_eq!(
         Algorithm::Ecdsa {
@@ -360,6 +361,7 @@ fn decode_rsa_3072_ppk_encrypted() {
     );
 }
 
+#[cfg(feature = "rsa")]
 fn validate_rsa_3072(key: PrivateKey) {
     assert_eq!(Algorithm::Rsa { hash: None }, key.algorithm());
     assert_eq!(Cipher::None, key.cipher());
