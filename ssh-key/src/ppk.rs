@@ -6,17 +6,20 @@ use core::fmt::{Debug, Display};
 use core::num::ParseIntError;
 use core::str::FromStr;
 use hex::FromHex;
+use hmac::{Hmac, Mac};
+use sha2::digest::Digest;
+use sha2::Sha256;
 use std::collections::HashMap;
 use std::string::{String, ToString};
 use std::vec::Vec;
 
-use encoding::base64::{self, Base64, Encoding};
-use encoding::{Decode, LabelError, Reader};
-
 use crate::kdf::ArgonFlavor;
 use crate::private::{EcdsaKeypair, KeypairData};
 use crate::public::KeyData;
-use crate::{Algorithm, Error, Kdf, Mpint, PublicKey};
+use crate::{algorithm, Algorithm, Error, Kdf, Mpint, PublicKey};
+use encoding::base64::{self, Base64, Encoding};
+use encoding::{Decode, Encode, LabelError, Reader};
+use subtle::ConstantTimeEq;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum PpkEncryptionAlgorithm {
@@ -106,6 +109,7 @@ pub enum PpkParseError {
     ValueFormat { key: PpkKey, value: String },
     HexFormat(String), // FromHexError does not implement Eq
     InvalidInteger(ParseIntError),
+    IncorrectMac,
     UnknownKey(String),
     MissingValue(PpkKey),
     MissingPublicKey,
@@ -128,6 +132,7 @@ impl Display for PpkParseError {
             }
             Self::HexFormat(err) => write!(f, "invalid hex format: {}", err),
             Self::InvalidInteger(err) => write!(f, "invalid integer: {}", err),
+            Self::IncorrectMac => write!(f, "incorrect MAC"),
             Self::UnknownKey(key) => write!(f, "unknown key: {:?}", key),
             Self::MissingValue(key) => write!(f, "missing value for key: {:?}", key),
             Self::MissingPublicKey => write!(f, "missing public key"),
@@ -274,6 +279,42 @@ impl TryFrom<PpkWrapper> for PpkContainer {
 
         let public_key = ppk.public_key.ok_or(PpkParseError::MissingPublicKey)?;
         let private_key = ppk.private_key.ok_or(PpkParseError::MissingPrivateKey)?;
+        let comment = ppk.values.remove(&PpkKey::Comment);
+
+        let mac_buffer = {
+            let mut buf = vec![];
+            ppk.algorithm.encode(&mut buf)?;
+            ppk.values
+                .get(&PpkKey::Encryption)
+                .map(String::as_bytes)
+                .unwrap_or_default()
+                .encode(&mut buf)?;
+            comment
+                .as_ref()
+                .map(String::as_bytes)
+                .unwrap_or_default()
+                .encode(&mut buf)?;
+            public_key.encode(&mut buf)?;
+            match encryption {
+                None => private_key.encode(&mut buf)?,
+                Some(_) => todo!(),
+            }
+            buf
+        };
+        let hmac_key = match encryption {
+            None => [0; 64],
+            Some(_) => todo!(),
+        };
+
+        let expected_mac = {
+            let mut hmac = Hmac::<Sha256>::new(&hmac_key.try_into().unwrap()); //fixed length
+            hmac.update(&mac_buffer);
+            hmac.finalize()
+        };
+
+        if expected_mac.into_bytes().ct_ne(&mac).into() {
+            return Err(Error::Ppk(PpkParseError::IncorrectMac));
+        }
 
         let mut public_key = PublicKey::from_bytes(&public_key)?;
         let mut private_key_cursor = &private_key[..];
@@ -284,7 +325,6 @@ impl TryFrom<PpkWrapper> for PpkContainer {
             }
         };
 
-        let comment = ppk.values.remove(&PpkKey::Comment);
         public_key.comment = comment.unwrap_or_default();
 
         // todo verify mac
