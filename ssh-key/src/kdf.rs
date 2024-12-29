@@ -19,14 +19,6 @@ const DEFAULT_BCRYPT_ROUNDS: u32 = 16;
 #[cfg(feature = "encryption")]
 const DEFAULT_SALT_SIZE: usize = 16;
 
-#[cfg(feature = "ppk")]
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ArgonFlavor {
-    I,
-    D,
-    ID,
-}
-
 /// Key Derivation Functions (KDF).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
@@ -42,16 +34,6 @@ pub enum Kdf {
 
         /// Rounds
         rounds: u32,
-    },
-
-    /// Argon2 options.
-    #[cfg(feature = "ppk")]
-    Argon2 {
-        flavor: ArgonFlavor,
-        memory: u32,
-        passes: u32,
-        parallelism: u32,
-        salt: Vec<u8>,
     },
 }
 
@@ -80,8 +62,6 @@ impl Kdf {
             Self::None => KdfAlg::None,
             #[cfg(feature = "alloc")]
             Self::Bcrypt { .. } => KdfAlg::Bcrypt,
-            #[cfg(feature = "ppk")]
-            Self::Argon2 { .. } => todo!(),
         }
     }
 
@@ -94,8 +74,6 @@ impl Kdf {
                 bcrypt_pbkdf(password, salt, *rounds, output).map_err(|_| Error::Crypto)?;
                 Ok(())
             }
-            #[cfg(feature = "ppk")]
-            Self::Argon2 { .. } => todo!(),
         }
     }
 
@@ -185,8 +163,6 @@ impl Encode for Kdf {
             Self::None => 4,
             #[cfg(feature = "alloc")]
             Self::Bcrypt { salt, .. } => [12, salt.len()].checked_sum()?,
-            #[cfg(feature = "ppk")]
-            Self::Argon2 { .. } => todo!(),
         };
 
         [self.algorithm().encoded_len()?, kdfopts_prefixed_len].checked_sum()
@@ -203,8 +179,6 @@ impl Encode for Kdf {
                 salt.encode(writer)?;
                 rounds.encode(writer)?
             }
-            #[cfg(feature = "ppk")]
-            Self::Argon2 { .. } => todo!(),
         }
 
         Ok(())

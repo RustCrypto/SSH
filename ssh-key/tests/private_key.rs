@@ -101,14 +101,14 @@ fn decode_dsa_openssh() {
 #[cfg(all(feature = "ppk", feature = "alloc"))]
 #[test]
 fn decode_dsa_ppk() {
-    validate_dsa(PrivateKey::from_ppk(PPK_DSA_EXAMPLE).unwrap());
+    validate_dsa(PrivateKey::from_ppk(PPK_DSA_EXAMPLE, None).unwrap());
 }
 
-// #[cfg(all(feature = "ppk", feature = "alloc", feature = "encryption"))]
-// #[test]
-// fn decode_dsa_ppk_encrypted() {
-//     validate_dsa(PrivateKey::from_ppk(PPK_DSA_EXAMPLE_ENCRYPTED).unwrap());
-// }
+#[cfg(all(feature = "ppk", feature = "alloc", feature = "encryption"))]
+#[test]
+fn decode_dsa_ppk_encrypted() {
+    validate_dsa(PrivateKey::from_ppk(PPK_DSA_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap());
+}
 
 #[cfg(feature = "alloc")]
 fn validate_dsa(key: PrivateKey) {
@@ -162,14 +162,16 @@ fn decode_ecdsa_p256_openssh() {
 #[cfg(all(feature = "ppk", feature = "p256"))]
 #[test]
 fn decode_ecdsa_p256_ppk() {
-    validate_ecdsa_p256(PrivateKey::from_ppk(PPK_ECDSA_P256_EXAMPLE).unwrap());
+    validate_ecdsa_p256(PrivateKey::from_ppk(PPK_ECDSA_P256_EXAMPLE, None).unwrap());
 }
 
-// #[cfg(all(feature = "ppk", feature = "p256", feature = "encryption"))]
-// #[test]
-// fn decode_ecdsa_p256_ppk_encrypted() {
-//     validate_ecdsa_p256(PrivateKey::from_ppk(PPK_ECDSA_P256_EXAMPLE_ENCRYPTED).unwrap());
-// }
+#[cfg(all(feature = "ppk", feature = "p256", feature = "encryption"))]
+#[test]
+fn decode_ecdsa_p256_ppk_encrypted() {
+    validate_ecdsa_p256(
+        PrivateKey::from_ppk(PPK_ECDSA_P256_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap(),
+    );
+}
 
 fn validate_ecdsa_p256(key: PrivateKey) {
     assert_eq!(
@@ -299,14 +301,16 @@ fn decode_ed25519_openssh() {
 #[test]
 #[cfg(all(feature = "ppk", feature = "ed25519"))]
 fn decode_ed25519_ppk() {
-    validate_ed25519(PrivateKey::from_ppk(PPK_ED25519_EXAMPLE).unwrap());
+    validate_ed25519(PrivateKey::from_ppk(PPK_ED25519_EXAMPLE, None).unwrap());
 }
 
-// #[test]
-// #[cfg(all(feature = "ppk", feature="ed25519",feature = "encryption"))]
-// fn decode_ed25519_ppk_encrypted() {
-//     validate_ed25519(PrivateKey::from_ppk(PPK_ED25519_EXAMPLE_ENCRYPTED).unwrap());
-// }
+#[test]
+#[cfg(all(feature = "ppk", feature = "ed25519", feature = "encryption"))]
+fn decode_ed25519_ppk_encrypted() {
+    validate_ed25519(
+        PrivateKey::from_ppk(PPK_ED25519_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap(),
+    );
+}
 
 fn validate_ed25519(key: PrivateKey) {
     assert_eq!(Algorithm::Ed25519, key.algorithm());
@@ -345,14 +349,16 @@ fn decode_rsa_3072_openssh() {
 #[test]
 #[cfg(feature = "ppk")]
 fn decode_rsa_3072_ppk() {
-    validate_rsa_3072(PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE).unwrap());
+    validate_rsa_3072(PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE, None).unwrap());
 }
 
-// #[test]
-// #[cfg(feature = "ppk")]
-// fn decode_rsa_3072_ppk_encrypted() {
-//     validate_rsa_3072(PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE_ENCRYPTED).unwrap());
-// }
+#[test]
+#[cfg(feature = "ppk")]
+fn decode_rsa_3072_ppk_encrypted() {
+    validate_rsa_3072(
+        PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap(),
+    );
+}
 
 fn validate_rsa_3072(key: PrivateKey) {
     assert_eq!(Algorithm::Rsa { hash: None }, key.algorithm());

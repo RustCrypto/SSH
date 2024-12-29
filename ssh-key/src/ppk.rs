@@ -1,55 +1,116 @@
 // Format documentation:
 // https://tartarus.org/~simon/putty-snapshots/htmldoc/AppendixC.html
 
-use cipher::Cipher;
+use argon2::Argon2;
 use core::fmt::{Debug, Display};
 use core::num::ParseIntError;
 use core::str::FromStr;
 use hex::FromHex;
 use hmac::{Hmac, Mac};
-use sha2::digest::Digest;
 use sha2::Sha256;
 use std::collections::HashMap;
 use std::string::{String, ToString};
 use std::vec::Vec;
 
-use crate::kdf::ArgonFlavor;
 use crate::private::{EcdsaKeypair, KeypairData};
 use crate::public::KeyData;
-use crate::{algorithm, Algorithm, Error, Kdf, Mpint, PublicKey};
+use crate::{Algorithm, Error, Mpint, PublicKey};
 use encoding::base64::{self, Base64, Encoding};
 use encoding::{Decode, Encode, LabelError, Reader};
 use subtle::ConstantTimeEq;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum PpkEncryptionAlgorithm {
+#[derive(Debug)]
+pub enum Kdf {
+    Argon2 { kdf: Argon2<'static>, salt: Vec<u8> },
+}
+
+impl Kdf {
+    pub fn new(algorithm: &str, ppk: &PpkWrapper) -> Result<Self, PpkParseError> {
+        let argon_algorithm = match algorithm {
+            "Argon2i" => Ok(argon2::Algorithm::Argon2i),
+            "Argon2d" => Ok(argon2::Algorithm::Argon2d),
+            "Argon2id" => Ok(argon2::Algorithm::Argon2id),
+            _ => Err(PpkParseError::UnsupportedKdf(algorithm.into())),
+        }?;
+
+        let parse_int = |key: PpkKey| -> Result<u32, PpkParseError> {
+            ppk.values
+                .get(&key)
+                .ok_or(PpkParseError::MissingValue(key))
+                .and_then(|v| v.parse().map_err(PpkParseError::InvalidInteger))
+        };
+
+        let argon = Argon2::new(
+            argon_algorithm,
+            argon2::Version::V0x13,
+            argon2::Params::new(
+                parse_int(PpkKey::Argon2Memory)?,
+                parse_int(PpkKey::Argon2Passes)?,
+                parse_int(PpkKey::Argon2Parallelism)?,
+                None,
+            )
+            .map_err(PpkParseError::Argon2)?,
+        );
+
+        let salt = Vec::from_hex(
+            ppk.values
+                .get(&PpkKey::Argon2Salt)
+                .ok_or(PpkParseError::MissingValue(PpkKey::Argon2Salt))?,
+        )
+        .map_err(|e| PpkParseError::HexFormat(e.to_string()))?;
+
+        Ok(Self::Argon2 { kdf: argon, salt })
+    }
+
+    pub fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), argon2::Error> {
+        match self {
+            Kdf::Argon2 { kdf, salt } => kdf.hash_password_into(password, salt, output),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Cipher {
     Aes256Cbc,
 }
 
-impl From<PpkEncryptionAlgorithm> for Cipher {
-    fn from(algorithm: PpkEncryptionAlgorithm) -> Self {
-        match algorithm {
-            PpkEncryptionAlgorithm::Aes256Cbc => Cipher::Aes256Cbc,
+impl Cipher {
+    fn derive_aes_params(
+        kdf: &Kdf,
+        password: &str,
+    ) -> Result<([u8; 32], [u8; 16], [u8; 32]), Error> {
+        let mut key_iv_mac = vec![0; 80];
+        kdf.derive(password.as_bytes(), &mut key_iv_mac)
+            .map_err(PpkParseError::Argon2)?;
+        let key = &key_iv_mac[..32];
+        let iv = &key_iv_mac[32..48];
+        let mac_key = &key_iv_mac[48..80];
+        Ok((
+            key.try_into().unwrap(),     // const size
+            iv.try_into().unwrap(),      // const size
+            mac_key.try_into().unwrap(), // const size
+        ))
+    }
+
+    pub fn derive_mac_key(&self, kdf: &Kdf, password: &str) -> Result<[u8; 32], Error> {
+        Ok(Cipher::derive_aes_params(kdf, password)?.2)
+    }
+
+    pub fn decrypt(&self, buf: &mut [u8], kdf: &Kdf, password: &str) -> Result<(), Error> {
+        let (key, iv, _) = Cipher::derive_aes_params(kdf, password)?;
+        match self {
+            Cipher::Aes256Cbc => cipher::Cipher::Aes256Cbc
+                .decrypt(&key, &iv, buf, None)
+                .map_err(Into::into),
         }
     }
 }
 
-impl TryFrom<&str> for ArgonFlavor {
-    type Error = PpkParseError;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "Argon2i" => Ok(Self::I),
-            "Argon2d" => Ok(Self::D),
-            "Argon2id" => Ok(Self::ID),
-            _ => Err(PpkParseError::UnsupportedKdf(value.into())),
-        }
-    }
-}
-
+#[derive(Debug)]
 pub struct PpkEncryption {
-    pub algorithm: PpkEncryptionAlgorithm,
+    pub cipher: Cipher,
     pub kdf: Kdf,
+    pub passphrase: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -119,6 +180,8 @@ pub enum PpkParseError {
     UnsupportedFormatVersion(u8),
     UnsupportedEncryption(String),
     UnsupportedKdf(String),
+    Argon2(argon2::Error),
+    Encrypted,
 }
 
 impl Display for PpkParseError {
@@ -146,6 +209,8 @@ impl Display for PpkParseError {
                 write!(f, "unsupported encryption mode: {:?}", encryption)
             }
             Self::UnsupportedKdf(kdf) => write!(f, "unsupported KDF: {:?}", kdf),
+            Self::Argon2(err) => write!(f, "Argon2 error: {:?}", err),
+            Self::Encrypted => write!(f, "private key is encrypted"),
         }
     }
 }
@@ -224,46 +289,28 @@ impl TryFrom<&str> for PpkWrapper {
     }
 }
 
+#[derive(Debug)]
 pub struct PpkContainer {
-    pub version: u8,
-    pub encryption: Option<PpkEncryption>,
-    pub mac: Vec<u8>,
     pub public_key: PublicKey,
     pub keypair_data: KeypairData,
 }
 
-impl TryFrom<PpkWrapper> for PpkContainer {
-    type Error = Error;
-
-    fn try_from(mut ppk: PpkWrapper) -> Result<Self, Self::Error> {
+impl PpkContainer {
+    pub fn new(mut ppk: PpkWrapper, passphrase: Option<String>) -> Result<Self, Error> {
         let encryption = match ppk.values.get(&PpkKey::Encryption).map(String::as_str) {
             None | Some("none") => None,
             Some("aes256-cbc") => {
-                let parse_int = |key: PpkKey| -> Result<u32, PpkParseError> {
-                    ppk.values
-                        .get(&key)
-                        .ok_or(PpkParseError::MissingValue(key))
-                        .and_then(|v| v.parse().map_err(PpkParseError::InvalidInteger))
+                let Some(passphrase) = passphrase else {
+                    return Err(PpkParseError::Encrypted.into());
                 };
-
                 match ppk.values.get(&PpkKey::KeyDerivation).map(String::as_str) {
                     None => {
                         return Err(PpkParseError::MissingValue(PpkKey::KeyDerivation).into());
                     }
                     Some(kdf) => Some(PpkEncryption {
-                        algorithm: PpkEncryptionAlgorithm::Aes256Cbc,
-                        kdf: Kdf::Argon2 {
-                            flavor: ArgonFlavor::try_from(kdf)?,
-                            memory: parse_int(PpkKey::Argon2Memory)?,
-                            passes: parse_int(PpkKey::Argon2Passes)?,
-                            parallelism: parse_int(PpkKey::Argon2Parallelism)?,
-                            salt: Vec::from_hex(
-                                ppk.values
-                                    .get(&PpkKey::Argon2Salt)
-                                    .ok_or(PpkParseError::MissingValue(PpkKey::Argon2Salt))?,
-                            )
-                            .map_err(|e| PpkParseError::HexFormat(e.to_string()))?,
-                        },
+                        kdf: Kdf::new(kdf, &ppk)?,
+                        cipher: Cipher::Aes256Cbc,
+                        passphrase,
                     }),
                 }
             }
@@ -277,9 +324,14 @@ impl TryFrom<PpkWrapper> for PpkContainer {
         )
         .map_err(|e| PpkParseError::HexFormat(e.to_string()))?;
 
-        let public_key = ppk.public_key.ok_or(PpkParseError::MissingPublicKey)?;
-        let private_key = ppk.private_key.ok_or(PpkParseError::MissingPrivateKey)?;
         let comment = ppk.values.remove(&PpkKey::Comment);
+        let public_key = ppk.public_key.ok_or(PpkParseError::MissingPublicKey)?;
+        let mut private_key = ppk.private_key.ok_or(PpkParseError::MissingPrivateKey)?;
+
+        if let Some(enc) = &encryption {
+            enc.cipher
+                .decrypt(&mut private_key, &enc.kdf, &enc.passphrase)?;
+        }
 
         let mac_buffer = {
             let mut buf = vec![];
@@ -295,19 +347,17 @@ impl TryFrom<PpkWrapper> for PpkContainer {
                 .unwrap_or_default()
                 .encode(&mut buf)?;
             public_key.encode(&mut buf)?;
-            match encryption {
-                None => private_key.encode(&mut buf)?,
-                Some(_) => todo!(),
-            }
+            private_key.encode(&mut buf)?;
             buf
         };
-        let hmac_key = match encryption {
-            None => [0; 64],
-            Some(_) => todo!(),
+
+        let hmac_key = match &encryption {
+            None => [0; 32].into(),
+            Some(enc) => enc.cipher.derive_mac_key(&enc.kdf, &enc.passphrase)?,
         };
 
         let expected_mac = {
-            let mut hmac = Hmac::<Sha256>::new(&hmac_key.try_into().unwrap()); //fixed length
+            let mut hmac = Hmac::<Sha256>::new_from_slice(&hmac_key).unwrap(); //fixed length
             hmac.update(&mac_buffer);
             hmac.finalize()
         };
@@ -318,21 +368,12 @@ impl TryFrom<PpkWrapper> for PpkContainer {
 
         let mut public_key = PublicKey::from_bytes(&public_key)?;
         let mut private_key_cursor = &private_key[..];
-        let keypair_data = match encryption {
-            Some(_) => todo!(),
-            None => {
-                decode_private_key_as(&mut private_key_cursor, public_key.clone(), ppk.algorithm)?
-            }
-        };
+        let keypair_data =
+            decode_private_key_as(&mut private_key_cursor, public_key.clone(), ppk.algorithm)?;
 
         public_key.comment = comment.unwrap_or_default();
 
-        // todo verify mac
-
         Ok(PpkContainer {
-            version: ppk.version,
-            encryption,
-            mac,
             public_key,
             keypair_data,
         })
@@ -432,13 +473,5 @@ fn decode_private_key_as(
             Ok(keypair.into())
         }
         _ => Err(algorithm.unsupported_error()),
-    }
-}
-
-impl TryFrom<&str> for PpkContainer {
-    type Error = Error;
-
-    fn try_from(contents: &str) -> Result<Self, Self::Error> {
-        PpkWrapper::try_from(contents.as_ref())?.try_into()
     }
 }

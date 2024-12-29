@@ -241,20 +241,16 @@ impl PrivateKey {
     /// PuTTY-User-Key-File-<VERSION>: <ALGORITHM>
     /// ```
     #[cfg(feature = "ppk")]
-    pub fn from_ppk(ppk: impl AsRef<str>) -> Result<Self> {
+    pub fn from_ppk(ppk: impl AsRef<str>, passphrase: Option<String>) -> Result<Self> {
         use crate::ppk::PpkContainer;
 
-        let ppk: PpkContainer = PpkContainer::try_from(ppk.as_ref())?;
+        let ppk: PpkContainer = PpkContainer::new(ppk.as_ref().try_into()?, passphrase)?;
 
         Ok(Self {
             auth_tag: None,
             checkint: None,
-            cipher: ppk
-                .encryption
-                .as_ref()
-                .map(|e| e.algorithm.into())
-                .unwrap_or(Cipher::None),
-            kdf: ppk.encryption.map(|x| x.kdf).unwrap_or(Kdf::None),
+            cipher: Cipher::None,
+            kdf: Kdf::None,
             key_data: ppk.keypair_data,
             public_key: ppk.public_key,
         })
