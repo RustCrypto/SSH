@@ -341,20 +341,20 @@ fn decode_ed25519_openssh_64cols() {
     assert_eq!(key, other_key);
 }
 
-#[cfg(feature = "alloc")]
+#[cfg(all(feature = "rsa", feature = "alloc"))]
 #[test]
 fn decode_rsa_3072_openssh() {
     validate_rsa_3072(PrivateKey::from_openssh(OPENSSH_RSA_3072_EXAMPLE).unwrap());
 }
 
 #[test]
-#[cfg(feature = "ppk")]
+#[cfg(all(feature = "rsa", feature = "ppk"))]
 fn decode_rsa_3072_ppk() {
     validate_rsa_3072(PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE, None).unwrap());
 }
 
 #[test]
-#[cfg(feature = "ppk")]
+#[cfg(all(feature = "rsa", feature = "ppk"))]
 fn decode_rsa_3072_ppk_encrypted() {
     validate_rsa_3072(
         PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap(),
