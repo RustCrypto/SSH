@@ -1,6 +1,9 @@
 // Format documentation:
 // https://tartarus.org/~simon/putty-snapshots/htmldoc/AppendixC.html
 
+use alloc::collections::BTreeMap;
+use alloc::string::{String, ToString};
+use alloc::vec::Vec;
 use argon2::Argon2;
 use core::fmt::{Debug, Display};
 use core::num::ParseIntError;
@@ -9,9 +12,6 @@ use hex::FromHex;
 use hmac::digest::KeyInit;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
-use std::collections::HashMap;
-use std::string::{String, ToString};
-use std::vec::Vec;
 
 use crate::private::{EcdsaKeypair, KeypairData};
 use crate::public::KeyData;
@@ -75,11 +75,15 @@ pub enum Cipher {
     Aes256Cbc,
 }
 
+type Aes256CbcKey = [u8; 32];
+type Aes256CbcIv = [u8; 16];
+type HmacKey = [u8; 32];
+
 impl Cipher {
     fn derive_aes_params(
         kdf: &Kdf,
         password: &str,
-    ) -> Result<([u8; 32], [u8; 16], [u8; 32]), Error> {
+    ) -> Result<(Aes256CbcKey, Aes256CbcIv, HmacKey), Error> {
         let mut key_iv_mac = vec![0; 80];
         kdf.derive(password.as_bytes(), &mut key_iv_mac)
             .map_err(PpkParseError::Argon2)?;
@@ -87,13 +91,16 @@ impl Cipher {
         let iv = &key_iv_mac[32..48];
         let mac_key = &key_iv_mac[48..80];
         Ok((
-            key.try_into().unwrap(),     // const size
-            iv.try_into().unwrap(),      // const size
-            mac_key.try_into().unwrap(), // const size
+            #[allow(clippy::unwrap_used)] // const size
+            key.try_into().unwrap(),
+            #[allow(clippy::unwrap_used)] // const size
+            iv.try_into().unwrap(),
+            #[allow(clippy::unwrap_used)] // const size
+            mac_key.try_into().unwrap(),
         ))
     }
 
-    pub fn derive_mac_key(&self, kdf: &Kdf, password: &str) -> Result<[u8; 32], Error> {
+    pub fn derive_mac_key(&self, kdf: &Kdf, password: &str) -> Result<HmacKey, Error> {
         Ok(Cipher::derive_aes_params(kdf, password)?.2)
     }
 
@@ -114,7 +121,7 @@ pub struct PpkEncryption {
     pub passphrase: String,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PpkKey {
     Encryption,
     Comment,
@@ -149,7 +156,7 @@ pub struct PpkWrapper {
     pub algorithm: Algorithm,
     pub public_key: Option<Vec<u8>>,
     pub private_key: Option<Vec<u8>>,
-    pub values: HashMap<PpkKey, String>,
+    pub values: BTreeMap<PpkKey, String>,
 }
 
 impl Debug for PpkWrapper {
@@ -249,7 +256,7 @@ impl TryFrom<&str> for PpkWrapper {
         let mut public_key = None;
         let mut private_key = None;
 
-        let mut values = HashMap::new();
+        let mut values = BTreeMap::new();
         while let Some(line) = lines.next() {
             let (key, value) = line
                 .split_once(": ")
@@ -353,12 +360,13 @@ impl PpkContainer {
         };
 
         let hmac_key = match &encryption {
-            None => [0; 32].into(),
+            None => HmacKey::default(),
             Some(enc) => enc.cipher.derive_mac_key(&enc.kdf, &enc.passphrase)?,
         };
 
         let expected_mac = {
-            let mut hmac = Hmac::<Sha256>::new_from_slice(&hmac_key).unwrap(); //fixed length
+            #[allow(clippy::unwrap_used)] // const key length
+            let mut hmac = Hmac::<Sha256>::new_from_slice(&hmac_key).unwrap();
             hmac.update(&mac_buffer);
             hmac.finalize()
         };
@@ -417,17 +425,22 @@ fn decode_private_key_as(
             let mut buf = Zeroizing::new([0u8; Ed25519PrivateKey::BYTE_SIZE]);
             let e = Mpint::decode(reader)?;
             let e_bytes = e.as_bytes();
-            assert!(e_bytes.len() <= buf.len());
+
+            if e_bytes.len() > buf.len() {
+                return Err(Error::Crypto);
+            }
+
+            #[allow(clippy::arithmetic_side_effects)] // length checked
             buf[Ed25519PrivateKey::BYTE_SIZE - e_bytes.len()..].copy_from_slice(e_bytes);
 
             let private = Ed25519PrivateKey::from_bytes(&buf);
             Ok(KeypairData::Ed25519(Ed25519Keypair {
-                public: pk.clone(),
+                public: *pk,
                 private,
             }))
         }
 
-        #[cfg(feature = "ecdsa")]
+        #[cfg(any(feature = "p256", feature = "p384", feature = "p521"))]
         (Algorithm::Ecdsa { curve }, KeyData::Ecdsa(public)) => {
             // PPK encodes EcDSA private exponent as an mpint
             use crate::public::EcdsaPublicKey;
@@ -440,28 +453,28 @@ fn decode_private_key_as(
                 return Err(Error::Crypto);
             }
 
-            type EC = EcdsaCurve;
-            type EPK = EcdsaPublicKey;
-            type EKP = EcdsaKeypair;
+            type Ec = EcdsaCurve;
+            type Epk = EcdsaPublicKey;
+            type Ekp = EcdsaKeypair;
 
-            let keypair: EKP = match (curve, public) {
+            let keypair: Ekp = match (curve, public) {
                 #[cfg(feature = "p256")]
-                (EC::NistP256, EPK::NistP256(public)) => EKP::NistP256 {
-                    public: public.clone(),
+                (Ec::NistP256, Epk::NistP256(public)) => Ekp::NistP256 {
+                    public: *public,
                     private: p256::SecretKey::from_slice(e_bytes)
                         .map_err(|_| Error::Crypto)?
                         .into(),
                 },
                 #[cfg(feature = "p384")]
-                (EC::NistP384, EPK::NistP384(public)) => EKP::NistP384 {
-                    public: public.clone(),
+                (Ec::NistP384, Epk::NistP384(public)) => Ekp::NistP384 {
+                    public: *public,
                     private: p384::SecretKey::from_slice(e_bytes)
                         .map_err(|_| Error::Crypto)?
                         .into(),
                 },
                 #[cfg(feature = "p521")]
-                (EC::NistP521, EPK::NistP521(public)) => EKP::NistP521 {
-                    public: public.clone(),
+                (Ec::NistP521, Epk::NistP521(public)) => Ekp::NistP521 {
+                    public: *public,
                     private: p521::SecretKey::from_slice(e_bytes)
                         .map_err(|_| Error::Crypto)?
                         .into(),

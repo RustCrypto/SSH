@@ -82,7 +82,7 @@ getrandom = ["rand_core/getrandom"]
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 p521 = ["dep:p521", "ecdsa"]
-ppk = ["dep:hex", "alloc", "std", "dep:hmac", "dep:argon2", "encryption"]
+ppk = ["dep:hex", "alloc", "dep:hmac", "dep:argon2", "encryption"]
 rsa = ["dep:bigint", "dep:rsa", "alloc", "rand_core"]
 tdes = ["cipher/tdes", "encryption"]
 
