@@ -681,7 +681,7 @@ impl Signer<Signature> for (&RsaKeypair, Option<HashAlg>) {
 
         Ok(Signature {
             algorithm: Algorithm::Rsa {
-                hash: Some(HashAlg::Sha512),
+                hash: self.1,
             },
             data: data.to_vec(),
         })
