@@ -11,6 +11,7 @@ use core::str::FromStr;
 use hex::FromHex;
 use hmac::digest::KeyInit;
 use hmac::{Hmac, Mac};
+use sha1::{Digest, Sha1};
 use sha2::Sha256;
 
 use crate::private::KeypairData;
@@ -23,10 +24,15 @@ use subtle::ConstantTimeEq;
 #[derive(Debug)]
 pub enum Kdf {
     Argon2 { kdf: Argon2<'static>, salt: Vec<u8> },
+    PpkV2,
 }
 
 impl Kdf {
-    pub fn new(algorithm: &str, ppk: &PpkWrapper) -> Result<Self, PpkParseError> {
+    pub fn new_v2() -> Self {
+        Self::PpkV2
+    }
+
+    pub fn new_v3(algorithm: &str, ppk: &PpkWrapper) -> Result<Self, PpkParseError> {
         let argon_algorithm = match algorithm {
             "Argon2i" => Ok(argon2::Algorithm::Argon2i),
             "Argon2d" => Ok(argon2::Algorithm::Argon2d),
@@ -66,6 +72,7 @@ impl Kdf {
     pub fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), argon2::Error> {
         match self {
             Kdf::Argon2 { kdf, salt } => kdf.hash_password_into(password, salt, output),
+            Kdf::PpkV2 => Ok(()),
         }
     }
 }
@@ -77,27 +84,60 @@ pub enum Cipher {
 
 type Aes256CbcKey = [u8; 32];
 type Aes256CbcIv = [u8; 16];
-type HmacKey = [u8; 32];
+type HmacKey = Vec<u8>;
+
+const PPK_V2_MAC_PREFIX: &str = "putty-private-key-file-mac-key";
 
 impl Cipher {
     fn derive_aes_params(
         kdf: &Kdf,
         password: &str,
     ) -> Result<(Aes256CbcKey, Aes256CbcIv, HmacKey), Error> {
-        let mut key_iv_mac = vec![0; 80];
-        kdf.derive(password.as_bytes(), &mut key_iv_mac)
-            .map_err(PpkParseError::Argon2)?;
-        let key = &key_iv_mac[..32];
-        let iv = &key_iv_mac[32..48];
-        let mac_key = &key_iv_mac[48..80];
-        Ok((
-            #[allow(clippy::unwrap_used)] // const size
-            key.try_into().unwrap(),
-            #[allow(clippy::unwrap_used)] // const size
-            iv.try_into().unwrap(),
-            #[allow(clippy::unwrap_used)] // const size
-            mac_key.try_into().unwrap(),
-        ))
+        match &kdf {
+            Kdf::Argon2 { .. } => {
+                let mut key_iv_mac = vec![0; 80];
+                kdf.derive(password.as_bytes(), &mut key_iv_mac)
+                    .map_err(PpkParseError::Argon2)?;
+                let key = &key_iv_mac[..32];
+                let iv = &key_iv_mac[32..48];
+                let mac_key = &key_iv_mac[48..80];
+                Ok((
+                    #[allow(clippy::unwrap_used)] // const size
+                    key.try_into().unwrap(),
+                    #[allow(clippy::unwrap_used)] // const size
+                    iv.try_into().unwrap(),
+                    #[allow(clippy::unwrap_used)] // const size
+                    mac_key.try_into().unwrap(),
+                ))
+            }
+            Kdf::PpkV2 => {
+                let mut hashes = {
+                    let mut hash = Sha1::default();
+                    hash.update(&[0, 0, 0, 0]);
+                    hash.update(password.as_bytes());
+                    hash.finalize().to_vec()
+                };
+                hashes.extend_from_slice({
+                    let mut hash = Sha1::default();
+                    hash.update(&[0, 0, 0, 1]);
+                    hash.update(password.as_bytes());
+                    hash.finalize().as_slice()
+                });
+
+                let aes_key = hashes[..32].try_into().unwrap();
+                let iv = [0; 16];
+
+                let mac_key = {
+                    let mut hash = Sha1::default();
+                    hash.update(PPK_V2_MAC_PREFIX.as_bytes());
+                    hash.update(password.as_bytes());
+                    hash.finalize()
+                }
+                .to_vec();
+
+                Ok((aes_key, iv, mac_key))
+            }
+        }
     }
 
     pub fn derive_mac_key(&self, kdf: &Kdf, password: &str) -> Result<HmacKey, Error> {
@@ -248,7 +288,7 @@ impl TryFrom<&str> for PpkWrapper {
         let version = header_version
             .parse()
             .map_err(|_| PpkParseError::Header(header.into()))?;
-        if version != 3 {
+        if version != 3 && version != 2 {
             return Err(PpkParseError::UnsupportedFormatVersion(version));
         }
 
@@ -311,15 +351,23 @@ impl PpkContainer {
                 let Some(passphrase) = passphrase else {
                     return Err(PpkParseError::Encrypted.into());
                 };
-                match ppk.values.get(&PpkKey::KeyDerivation).map(String::as_str) {
-                    None => {
-                        return Err(PpkParseError::MissingValue(PpkKey::KeyDerivation).into());
-                    }
-                    Some(kdf) => Some(PpkEncryption {
-                        kdf: Kdf::new(kdf, &ppk)?,
+                match ppk.version {
+                    2 => Some(PpkEncryption {
+                        kdf: Kdf::new_v2(),
                         cipher: Cipher::Aes256Cbc,
                         passphrase,
                     }),
+                    3 => match ppk.values.get(&PpkKey::KeyDerivation).map(String::as_str) {
+                        None => {
+                            return Err(PpkParseError::MissingValue(PpkKey::KeyDerivation).into());
+                        }
+                        Some(kdf) => Some(PpkEncryption {
+                            kdf: Kdf::new_v3(kdf, &ppk)?,
+                            cipher: Cipher::Aes256Cbc,
+                            passphrase,
+                        }),
+                    },
+                    v => return Err(PpkParseError::UnsupportedFormatVersion(v).into()),
                 }
             }
             Some(v) => return Err(PpkParseError::UnsupportedEncryption(v.into()).into()),
@@ -360,18 +408,36 @@ impl PpkContainer {
         };
 
         let hmac_key = match &encryption {
-            None => HmacKey::default(),
+            None => match ppk.version {
+                2 => {
+                    let mut hash = Sha1::new();
+                    hash.update(PPK_V2_MAC_PREFIX.as_bytes());
+                    hash.finalize().to_vec()
+                }
+                3 => HmacKey::default(),
+                _ => unreachable!(),
+            },
             Some(enc) => enc.cipher.derive_mac_key(&enc.kdf, &enc.passphrase)?,
         };
 
         let expected_mac = {
             #[allow(clippy::unwrap_used)] // const key length
-            let mut hmac = Hmac::<Sha256>::new_from_slice(&hmac_key).unwrap();
-            hmac.update(&mac_buffer);
-            hmac.finalize()
+            match ppk.version {
+                3 => {
+                    let mut hmac = Hmac::<Sha256>::new_from_slice(&hmac_key).unwrap();
+                    hmac.update(&mac_buffer);
+                    hmac.finalize().into_bytes().to_vec()
+                }
+                2 => {
+                    let mut hmac = Hmac::<Sha1>::new_from_slice(&hmac_key).unwrap();
+                    hmac.update(&mac_buffer);
+                    hmac.finalize().into_bytes().to_vec()
+                }
+                _ => unreachable!(),
+            }
         };
 
-        if expected_mac.into_bytes().ct_ne(&mac).into() {
+        if expected_mac.ct_ne(&mac).into() {
             return Err(Error::Ppk(PpkParseError::IncorrectMac));
         }
 

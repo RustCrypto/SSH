@@ -73,6 +73,14 @@ const PPK_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072.ppk");
 #[cfg(all(feature = "ppk", feature = "rsa", feature = "encryption"))]
 const PPK_RSA_3072_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_rsa_3072_enc.ppk");
 
+/// Same key, converted by puttygen
+#[cfg(all(feature = "ppk", feature = "rsa"))]
+const PPK_V2_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072.ppk2");
+
+/// Same key, converted and encrypted by puttygen
+#[cfg(all(feature = "ppk", feature = "rsa", feature = "encryption"))]
+const PPK_V2_RSA_3072_EXAMPLE_ENCRYPTED: &str = include_str!("examples/id_rsa_3072_enc.ppk2");
+
 /// RSA (4096-bit) OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
 const OPENSSH_RSA_4096_EXAMPLE: &str = include_str!("examples/id_rsa_4096");
@@ -358,6 +366,20 @@ fn decode_rsa_3072_ppk() {
 fn decode_rsa_3072_ppk_encrypted() {
     validate_rsa_3072(
         PrivateKey::from_ppk(PPK_RSA_3072_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap(),
+    );
+}
+
+#[test]
+#[cfg(all(feature = "rsa", feature = "ppk"))]
+fn decode_rsa_3072_ppk_v2() {
+    validate_rsa_3072(PrivateKey::from_ppk(PPK_V2_RSA_3072_EXAMPLE, None).unwrap());
+}
+
+#[test]
+#[cfg(all(feature = "rsa", feature = "ppk"))]
+fn decode_rsa_3072_ppk_v2_encrypted() {
+    validate_rsa_3072(
+        PrivateKey::from_ppk(PPK_V2_RSA_3072_EXAMPLE_ENCRYPTED, Some("123".into())).unwrap(),
     );
 }
 
