@@ -680,9 +680,7 @@ impl Signer<Signature> for (&RsaKeypair, Option<HashAlg>) {
         .map_err(|_| signature::Error::new())?;
 
         Ok(Signature {
-            algorithm: Algorithm::Rsa {
-                hash: self.1,
-            },
+            algorithm: Algorithm::Rsa { hash: self.1 },
             data: data.to_vec(),
         })
     }
