@@ -106,24 +106,24 @@ impl Cipher {
                     key.try_into().unwrap(),
                     #[allow(clippy::unwrap_used)] // const size
                     iv.try_into().unwrap(),
-                    #[allow(clippy::unwrap_used)] // const size
-                    mac_key.try_into().unwrap(),
+                    mac_key.into(),
                 ))
             }
             Kdf::PpkV2 => {
                 let mut hashes = {
                     let mut hash = Sha1::default();
-                    hash.update(&[0, 0, 0, 0]);
+                    hash.update([0, 0, 0, 0]);
                     hash.update(password.as_bytes());
                     hash.finalize().to_vec()
                 };
                 hashes.extend_from_slice({
                     let mut hash = Sha1::default();
-                    hash.update(&[0, 0, 0, 1]);
+                    hash.update([0, 0, 0, 1]);
                     hash.update(password.as_bytes());
                     hash.finalize().as_slice()
                 });
 
+                #[allow(clippy::unwrap_used)] // known size
                 let aes_key = hashes[..32].try_into().unwrap();
                 let iv = [0; 16];
 
