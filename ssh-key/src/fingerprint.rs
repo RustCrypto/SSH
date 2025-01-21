@@ -43,7 +43,7 @@ use serde::{de, ser, Deserialize, Serialize};
 ///
 /// When the `serde` feature of this crate is enabled, this type receives impls
 /// of [`Deserialize`][`serde::Deserialize`] and [`Serialize`][`serde::Serialize`].
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
 #[non_exhaustive]
 pub enum Fingerprint {
     /// Fingerprints computed using SHA-256.
