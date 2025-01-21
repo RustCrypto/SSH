@@ -131,7 +131,7 @@ impl Signature {
 
     /// Placeholder signature used by the certificate builder.
     ///
-    /// This is guaranteed generate an error if anything attempts to encode it.
+    /// This is guaranteed to generate an error if anything attempts to encode it.
     pub(crate) fn placeholder() -> Self {
         Self {
             algorithm: Algorithm::default(),
