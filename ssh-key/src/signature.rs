@@ -13,7 +13,6 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
     bigint::BigUint,
-    sha1::Sha1,
     signature::{DigestSigner, DigestVerifier},
 };
 
@@ -31,6 +30,9 @@ use {
     crate::{private::RsaKeypair, public::RsaPublicKey, HashAlg},
     sha2::Sha512,
 };
+
+#[cfg(any(feature = "rsa-sha1", feature = "dsa"))]
+use sha1::Sha1;
 
 #[cfg(any(feature = "ed25519", feature = "rsa", feature = "p256"))]
 use sha2::Sha256;
@@ -680,15 +682,20 @@ impl Signer<Signature> for RsaKeypair {
 impl Verifier<Signature> for RsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
-            // TODO(tarcieri): optional off-by-default support for legacy SHA1 signatures?
-            Algorithm::Rsa { hash: Some(hash) } => {
+            Algorithm::Rsa { hash } => {
                 let signature = rsa::pkcs1v15::Signature::try_from(signature.data.as_ref())?;
 
                 match hash {
-                    HashAlg::Sha256 => rsa::pkcs1v15::VerifyingKey::<Sha256>::try_from(self)?
+                    #[cfg(not(feature = "rsa-sha1"))]
+                    None => Err(Algorithm::Rsa { hash: None }.unsupported_error().into()),
+                    #[cfg(feature = "rsa-sha1")]
+                    None => rsa::pkcs1v15::VerifyingKey::<Sha1>::try_from(self)?
                         .verify(message, &signature)
                         .map_err(|_| signature::Error::new()),
-                    HashAlg::Sha512 => rsa::pkcs1v15::VerifyingKey::<Sha512>::try_from(self)?
+                    Some(HashAlg::Sha256) => rsa::pkcs1v15::VerifyingKey::<Sha256>::try_from(self)?
+                        .verify(message, &signature)
+                        .map_err(|_| signature::Error::new()),
+                    Some(HashAlg::Sha512) => rsa::pkcs1v15::VerifyingKey::<Sha512>::try_from(self)?
                         .verify(message, &signature)
                         .map_err(|_| signature::Error::new()),
                 }
