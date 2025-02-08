@@ -184,7 +184,7 @@ pub use crate::{
     certificate::Certificate,
     known_hosts::KnownHosts,
     mpint::Mpint,
-    signature::{Signature, SigningKey},
+    signature::{AsyncSigner, AsyncSigningKey, Signature, SigningKey},
     sshsig::SshSig,
 };
 

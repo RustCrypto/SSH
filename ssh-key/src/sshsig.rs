@@ -1,6 +1,8 @@
 //! `sshsig` implementation.
 
-use crate::{public, Algorithm, Error, HashAlg, Result, Signature, SigningKey};
+use crate::{
+    public, signature::AsyncSigningKey, Algorithm, Error, HashAlg, Result, Signature, SigningKey,
+};
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
@@ -122,6 +124,21 @@ impl SshSig {
 
         let signed_data = Self::signed_data(namespace, hash_alg, msg)?;
         let signature = signing_key.try_sign(&signed_data)?;
+        Self::new(signing_key.public_key(), namespace, hash_alg, signature)
+    }
+
+    /// Sign the given message with the provided signing key.
+    pub async fn sign_async<S: AsyncSigningKey>(
+        signing_key: &S,
+        namespace: &str,
+        hash_alg: HashAlg,
+        msg: &[u8],
+    ) -> Result<Self> {
+        if namespace.is_empty() {
+            return Err(Error::Namespace);
+        }
+        let signed_data = Self::signed_data(namespace, hash_alg, msg)?;
+        let signature = signing_key.try_sign(&signed_data).await?;
         Self::new(signing_key.public_key(), namespace, hash_alg, signature)
     }
 
