@@ -6,7 +6,6 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
 use {
-    crate::private::RsaKeypair,
     rsa::{pkcs1v15, traits::PublicKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
@@ -29,7 +28,7 @@ pub struct RsaPublicKey {
 impl RsaPublicKey {
     /// Minimum allowed RSA key size.
     #[cfg(all(feature = "rsa", not(feature = "hazmat-allow-insecure-rsa-keys")))]
-    pub(crate) const MIN_KEY_SIZE: usize = RsaKeypair::MIN_KEY_SIZE;
+    pub(crate) const MIN_KEY_SIZE: usize = crate::private::RsaKeypair::MIN_KEY_SIZE;
 
     /// Create a new [`RsaPublicKey`] with the given components:
     ///

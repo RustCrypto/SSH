@@ -9,12 +9,12 @@ use zeroize::Zeroize;
 #[cfg(feature = "rsa")]
 use {
     rand_core::CryptoRngCore,
-    rsa::{
-        pkcs1v15,
-        traits::{PrivateKeyParts, PublicKeyParts},
-    },
+    rsa::{pkcs1v15, traits::PrivateKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
+
+#[cfg(all(feature = "rsa", not(feature = "hazmat-allow-insecure-rsa-keys")))]
+use rsa::traits::PublicKeyParts;
 
 /// RSA private key.
 #[derive(Clone)]
