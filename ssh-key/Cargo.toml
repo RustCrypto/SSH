@@ -76,6 +76,7 @@ encryption = [
     "rand_core"
 ]
 getrandom = ["rand_core/getrandom"]
+hazmat-allow-insecure-rsa-keys = []
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 p521 = ["dep:p521", "ecdsa"]
