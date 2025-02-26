@@ -6,6 +6,9 @@ use core::fmt;
 #[cfg(feature = "alloc")]
 use crate::certificate;
 
+#[cfg(feature = "ppk")]
+use crate::ppk::PpkParseError;
+
 /// Result type with `ssh-key`'s [`Error`] as the error type.
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -66,6 +69,10 @@ pub enum Error {
     /// Public key is incorrect.
     PublicKey,
 
+    /// PuTTY format parsing errors.
+    #[cfg(feature = "ppk")]
+    Ppk(PpkParseError),
+
     /// Invalid timestamp (e.g. in a certificate)
     Time,
 
@@ -104,6 +111,8 @@ impl fmt::Display for Error {
             #[cfg(feature = "std")]
             Error::Io(err) => write!(f, "I/O error: {}", std::io::Error::from(*err)),
             Error::Namespace => write!(f, "namespace invalid"),
+            #[cfg(feature = "ppk")]
+            Error::Ppk(err) => write!(f, "PPK parsing error: {err}"),
             Error::PublicKey => write!(f, "public key is incorrect"),
             Error::Time => write!(f, "invalid time"),
             Error::TrailingData { remaining } => write!(
