@@ -1,7 +1,11 @@
 //! OpenSSH certificate builder.
 
 use super::{CertType, Certificate, Field, OptionsMap};
-use crate::{public, Result, Signature, SigningKey};
+use crate::{
+    public::{self, KeyData},
+    signature::AsyncSigningKey,
+    Result, Signature, SigningKey,
+};
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "rand_core")]
@@ -264,10 +268,7 @@ impl Builder {
         Ok(self)
     }
 
-    /// Sign the certificate using the provided signer type.
-    ///
-    /// The [`PrivateKey`] type can be used as a signer.
-    pub fn sign<S: SigningKey>(self, signing_key: &S) -> Result<Certificate> {
+    fn placeholder_cert(self, signature_key: KeyData) -> Result<Certificate> {
         // Empty valid principals result in a "golden ticket", so this check
         // ensures that was explicitly configured via `all_principals_valid`.
         let valid_principals = match self.valid_principals {
@@ -275,7 +276,7 @@ impl Builder {
             None => return Err(Field::ValidPrincipals.invalid_error()),
         };
 
-        let mut cert = Certificate {
+        Ok(Certificate {
             nonce: self.nonce,
             public_key: self.public_key,
             serial: self.serial.unwrap_or_default(),
@@ -288,13 +289,35 @@ impl Builder {
             extensions: self.extensions,
             reserved: Vec::new(),
             comment: self.comment.unwrap_or_default(),
-            signature_key: signing_key.public_key(),
+            signature_key,
             signature: Signature::placeholder(),
-        };
+        })
+    }
 
+    /// Sign the certificate using the provided signer type.
+    ///
+    /// The [`PrivateKey`] type can be used as a signer.
+    pub fn sign<S: SigningKey>(self, signing_key: &S) -> Result<Certificate> {
+        let mut cert = self.placeholder_cert(signing_key.public_key())?;
         let mut tbs_cert = Vec::new();
         cert.encode_tbs(&mut tbs_cert)?;
         cert.signature = signing_key.try_sign(&tbs_cert)?;
+
+        #[cfg(debug_assertions)]
+        cert.validate_at(
+            cert.valid_after,
+            &[cert.signature_key.fingerprint(Default::default())],
+        )?;
+
+        Ok(cert)
+    }
+
+    /// Sign the certificate asynchronously using the provided signer type.
+    pub async fn sign_async<S: AsyncSigningKey>(self, signing_key: &S) -> Result<Certificate> {
+        let mut cert = self.placeholder_cert(signing_key.public_key())?;
+        let mut tbs_cert = Vec::new();
+        cert.encode_tbs(&mut tbs_cert)?;
+        cert.signature = signing_key.try_sign(&tbs_cert).await?;
 
         #[cfg(debug_assertions)]
         cert.validate_at(
