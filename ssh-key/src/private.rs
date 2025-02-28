@@ -176,7 +176,7 @@ const DEFAULT_RSA_KEY_SIZE: usize = 4096;
 const MAX_BLOCK_SIZE: usize = 16;
 
 /// Padding bytes to use.
-const PADDING_BYTES: [u8; MAX_BLOCK_SIZE - 1] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const PADDING_BYTES: [u8; MAX_BLOCK_SIZE] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 /// Unix file permissions for SSH private keys.
 #[cfg(all(unix, feature = "std"))]
@@ -377,10 +377,12 @@ impl PrivateKey {
         let mut buffer = Zeroizing::new(ciphertext.to_vec());
         self.cipher.decrypt(&key, &iv, &mut buffer, self.auth_tag)?;
 
+        #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
         Self::decode_privatekey_comment_pair(
             &mut &**buffer,
             self.public_key.key_data.clone(),
             self.cipher.block_size(),
+            self.cipher.block_size() - 1,
         )
     }
 
@@ -571,8 +573,10 @@ impl PrivateKey {
         reader: &mut impl Reader,
         public_key: public::KeyData,
         block_size: usize,
+        max_padding_size: usize,
     ) -> Result<Self> {
         debug_assert!(block_size <= MAX_BLOCK_SIZE);
+        debug_assert!(max_padding_size <= MAX_BLOCK_SIZE);
 
         // Ensure input data is padding-aligned
         if reader.remaining_len().checked_rem(block_size) != Some(0) {
@@ -598,7 +602,7 @@ impl PrivateKey {
 
         let padding_len = reader.remaining_len();
 
-        if padding_len >= block_size {
+        if padding_len > max_padding_size {
             return Err(encoding::Error::Length.into());
         }
 
@@ -756,7 +760,25 @@ impl Decode for PrivateKey {
         }
 
         reader.read_prefixed(|reader| {
-            Self::decode_privatekey_comment_pair(reader, public_key, cipher.block_size())
+            // PuTTYgen uses a non-standard block size of 16
+            // and _always_ adds a padding even if data length
+            // is divisible by 16 - for unencrypted keys
+            // in the OpenSSH format.
+            // We're only relaxing the exact length check, but will
+            // still validate that the contents of the padding area.
+            // In all other cases there can be up to (but not including)
+            // `block_size` padding bytes as per `PROTOCOL.key`.
+            let max_padding_size = match cipher {
+                Cipher::None => 16,
+                #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
+                _ => cipher.block_size() - 1,
+            };
+            Self::decode_privatekey_comment_pair(
+                reader,
+                public_key,
+                cipher.block_size(),
+                max_padding_size,
+            )
         })
     }
 }
