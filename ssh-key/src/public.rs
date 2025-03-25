@@ -81,6 +81,12 @@ use crate::PrivateKey;
 /// The serialization uses a binary encoding with binary formats like bincode
 /// and CBOR, and the OpenSSH string serialization when used with
 /// human-readable formats like JSON and TOML.
+///
+/// Note that since the `comment` is an artifact on the string serialization of
+/// a public key, it will be implicitly dropped when encoding as a binary
+/// format. To ensure it's always preserved even when using binary formats, you
+/// will first need to convert the [`PublicKey`] to a string using e.g.
+/// [`PublicKey::to_openssh`].
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct PublicKey {
     /// Key data.
