@@ -7,7 +7,18 @@ use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Ed25519 public key.
-// TODO(tarcieri): use `ed25519::PublicKey`? (doesn't exist yet)
+///
+/// Encodings for Ed25519 public keys are described in [RFC8709 § 4]:
+///
+/// > The "ssh-ed25519" key format has the following encoding:
+/// >
+/// > **string** "ssh-ed25519"
+/// >
+/// > **string** key
+/// >
+/// > Here, 'key' is the 32-octet public key described in RFC8032
+///
+/// [RFC8709 § 4]: https://datatracker.ietf.org/doc/html/rfc8709#section-4
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Ed25519PublicKey(pub [u8; Self::BYTE_SIZE]);
 
@@ -38,7 +49,7 @@ impl Encode for Ed25519PublicKey {
     }
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
-        self.0.encode(writer)?;
+        self.0.as_slice().encode(writer)?;
         Ok(())
     }
 }

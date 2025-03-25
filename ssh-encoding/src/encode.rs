@@ -158,6 +158,9 @@ impl Encode for [u8] {
 /// > data is sometimes represented as an array of bytes, written
 /// > `byte[n]`, where n is the number of bytes in the array.
 ///
+/// Note that unlike `string`, this type is encoded without a length prefix,
+/// but instead implicitly obtains its length as `N`.
+///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl<const N: usize> Encode for [u8; N] {
     fn encoded_len(&self) -> Result<usize, Error> {
@@ -165,7 +168,7 @@ impl<const N: usize> Encode for [u8; N] {
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_slice().encode(writer)
+        writer.write(self)
     }
 }
 
