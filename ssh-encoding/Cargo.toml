@@ -20,6 +20,7 @@ base64ct = { version = "1.7", optional = true }
 bytes = { version = "1", optional = true, default-features = false }
 digest = { version = "=0.11.0-pre.9", optional = true, default-features = false }
 pem-rfc7468 = { version = "1.0.0-rc.2", optional = true }
+ssh-derive = { version = "0.0.1-alpha", optional = true, path = "../ssh-derive" }
 
 [dev-dependencies]
 hex-literal = "0.4.1"
@@ -30,6 +31,7 @@ alloc = ["base64ct?/alloc", "pem-rfc7468?/alloc"]
 base64 = ["dep:base64ct"]
 bytes = ["alloc", "dep:bytes"]
 pem = ["base64", "dep:pem-rfc7468"]
+derive = ["ssh-derive"]
 
 [package.metadata.docs.rs]
 all-features = true

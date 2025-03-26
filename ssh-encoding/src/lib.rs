@@ -62,3 +62,8 @@ pub use digest;
 
 #[cfg(feature = "pem")]
 pub use crate::pem::{DecodePem, EncodePem};
+
+#[cfg(feature = "derive")]
+pub use ssh_derive::{Decode, Encode};
+#[cfg(feature = "derive")]
+pub mod derive;

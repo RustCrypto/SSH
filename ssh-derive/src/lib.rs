@@ -4,7 +4,7 @@
 //! Custom derive support for the [`ssh-encoding`] crate.
 //!
 //! Note that this crate shouldn't be used directly, but instead accessed
-//! by using the `derive` feature of the `der` crate, which re-exports this crate's
+//! by using the `derive` feature of the [`ssh-encoding`] crate, which re-exports this crate's
 //! macros from the toplevel.
 //!
 //! [`ssh-encoding`]: ../ssh-encoding
