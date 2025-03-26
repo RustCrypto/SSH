@@ -49,16 +49,19 @@ impl DeriveEncode {
         let (encoded_len_body, encode_body) = lowerer.into_tokens();
 
         quote! {
+            #[automatically_derived]
             impl #generics ::ssh_encoding::Encode for #ident #generics #where_clause {
-                fn encoded_len(&self) -> ssh_encoding::Result<usize> {
+                fn encoded_len(&self) -> ::ssh_encoding::Result<usize> {
+                    use ::ssh_encoding::CheckedSum;
+
                     [
-                        #(#encoded_len_body)*,
+                        #(#encoded_len_body),*
                     ]
                     .checked_sum()
                 }
 
-                fn encode(&self, writer: &mut impl Writer) -> ssh_encoding::Result<()> {
-                    #(#encode_body)*;
+                fn encode(&self, writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
+                    #(#encode_body)*
                     Ok(())
                 }
             }
@@ -88,10 +91,10 @@ impl FieldLowerer {
     fn add_field(&mut self, field: &FieldIr) {
         let ident = field.ident.clone();
 
-        let field_length = quote! { self.#ident.encoded_len()? };
+        let field_length = quote! { ::ssh_encoding::Encode::encoded_len(&self.#ident)? };
         self.encoded_len_body.push(field_length);
 
-        let field_encoder = quote! { self.#ident.encode()? };
+        let field_encoder = quote! { ::ssh_encoding::Encode::encode(&self.#ident, writer)?; };
         self.encode_body.push(field_encoder);
     }
 
