@@ -155,7 +155,7 @@ impl Encode for [u8] {
     }
 }
 
-/// Encodes `[u8; N]` into `byte[N]` as described in [RFC4251 § 5]:
+/// Encodes byte array using `byte[n]` encoding as described in [RFC4251 § 5]:
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
