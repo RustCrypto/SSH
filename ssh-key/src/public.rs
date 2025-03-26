@@ -149,12 +149,12 @@ impl PublicKey {
 
     /// Encode OpenSSH-formatted public key.
     pub fn encode_openssh<'o>(&self, out: &'o mut [u8]) -> Result<&'o str> {
-        SshFormat::encode(
-            self.algorithm().as_str(),
-            &self.key_data,
-            self.comment_str_lossy(),
-            out,
-        )
+        #[cfg(not(feature = "alloc"))]
+        let comment = "";
+        #[cfg(feature = "alloc")]
+        let comment = self.comment_str_lossy();
+
+        SshFormat::encode(self.algorithm().as_str(), &self.key_data, comment, out)
     }
 
     /// Encode an OpenSSH-formatted public key, allocating a [`String`] for

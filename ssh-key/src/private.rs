@@ -474,6 +474,12 @@ impl PrivateKey {
     }
 
     /// Comment on the key (e.g. email address).
+    #[cfg(not(feature = "alloc"))]
+    pub fn comment_bytes(&self) -> &[u8] {
+        b""
+    }
+
+    /// Comment on the key (e.g. email address).
     ///
     /// Since comments can contain arbitrary binary data when decoded from a
     /// private key, this returns the raw bytes of the comment.
