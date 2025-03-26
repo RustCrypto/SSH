@@ -446,7 +446,7 @@ impl PpkContainer {
         let keypair_data =
             decode_private_key_as(&mut private_key_cursor, public_key.clone(), ppk.algorithm)?;
 
-        public_key.comment = comment.unwrap_or_default();
+        public_key.comment = comment.unwrap_or_default().into();
 
         Ok(PpkContainer {
             public_key,
