@@ -155,7 +155,7 @@ impl Encode for [u8] {
     }
 }
 
-/// Encodes `[u8; N]` into `byte[n]` as described in [RFC4251 § 5]:
+/// Encodes byte array using `byte[n]` encoding as described in [RFC4251 § 5]:
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
@@ -167,7 +167,7 @@ impl Encode for [u8] {
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl<const N: usize> Encode for [u8; N] {
     fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_slice().encoded_len()
+        Ok(N)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
