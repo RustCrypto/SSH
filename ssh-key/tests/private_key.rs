@@ -99,6 +99,10 @@ const OPENSSH_PADLESS_WONDER_EXAMPLE: &str = include_str!("examples/padless_wond
 #[cfg(feature = "ed25519")]
 const OPENSSH_OVERPADDED_PUTTYGEN_EXAMPLE: &str = include_str!("examples/puttygen_overpadded");
 
+/// OpenSSH-formatted private key with a non-UTF-8 comment
+#[cfg(feature = "alloc")]
+const OPENSSH_NON_UTF8_COMMENT_EXAMPLE: &str = include_str!("examples/non_utf8_comment");
+
 /// Get a path into the `tests/scratch` directory.
 #[cfg(feature = "std")]
 pub fn scratch_path(filename: &str) -> PathBuf {
@@ -163,7 +167,7 @@ fn validate_dsa(key: PrivateKey) {
         &hex!("0c377ac449e770d89a3557743cbd050396114b62"),
         dsa_keypair.private().as_bytes()
     );
-    assert_eq!("user@example.com", key.comment());
+    assert_eq!(b"user@example.com", key.comment_bytes());
 }
 
 #[cfg(feature = "p256")]
@@ -213,7 +217,7 @@ fn validate_ecdsa_p256(key: PrivateKey) {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!("user@example.com", key.comment());
+    assert_eq!(b"user@example.com", key.comment_bytes());
 }
 
 #[cfg(feature = "p384")]
@@ -231,7 +235,7 @@ fn decode_padless_wonder_openssh() {
     assert!(key.kdf().is_none());
 
     #[cfg(feature = "alloc")]
-    assert_eq!("", key.comment());
+    assert_eq!(b"", key.comment_bytes());
 }
 
 #[cfg(feature = "ed25519")]
@@ -244,7 +248,7 @@ fn decode_overpadded_puttygen_openssh() {
     assert!(key.kdf().is_none());
 
     #[cfg(feature = "alloc")]
-    assert_eq!("eddsa-key-20241227a1234567890", key.comment());
+    assert_eq!(b"eddsa-key-20241227a1234567890", key.comment_bytes());
 }
 
 #[cfg(feature = "p384")]
@@ -280,7 +284,7 @@ fn decode_ecdsa_p384_openssh() {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!("user@example.com", key.comment());
+    assert_eq!(b"user@example.com", key.comment_bytes());
 }
 
 #[cfg(feature = "p521")]
@@ -317,7 +321,7 @@ fn decode_ecdsa_p521_openssh() {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!("user@example.com", key.comment());
+    assert_eq!(b"user@example.com", key.comment_bytes());
 }
 
 #[test]
@@ -356,7 +360,7 @@ fn validate_ed25519(key: PrivateKey) {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!(key.comment(), "user@example.com");
+    assert_eq!(key.comment_bytes(), b"user@example.com");
 }
 
 /// Test alternative PEM line wrappings (64 columns).
@@ -469,7 +473,7 @@ fn validate_rsa_3072(key: PrivateKey) {
         ),
         rsa_keypair.private().q().as_bytes()
     );
-    assert_eq!("user@example.com", key.comment());
+    assert_eq!(b"user@example.com", key.comment_bytes());
 }
 
 #[cfg(feature = "alloc")]
@@ -551,7 +555,7 @@ fn decode_rsa_4096_openssh() {
         ),
         rsa_keypair.private().q().as_bytes()
     );
-    assert_eq!("user@example.com", key.comment());
+    assert_eq!(b"user@example.com", key.comment_bytes());
 }
 
 #[cfg(feature = "rsa")]
@@ -589,7 +593,23 @@ fn decode_custom_algorithm_openssh() {
         opaque_keypair.private.as_ref(),
     );
 
-    assert_eq!(key.comment(), "comment@example.com");
+    assert_eq!(key.comment_bytes(), b"comment@example.com");
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn round_trip_non_utf8_comment_openssh() {
+    let private_key = PrivateKey::from_openssh(OPENSSH_NON_UTF8_COMMENT_EXAMPLE).unwrap();
+    assert_eq!(
+        private_key.comment_bytes(),
+        b"star_@\xB2\xDC\xC8\xF1\xC8\xF1\xC8\xF1\xB5\xC4\xB5\xE7\xC4\xD4"
+    );
+    assert_eq!(private_key.comment_str_lossy(), "star_@");
+    assert!(private_key.comment_str().is_err());
+    assert_eq!(
+        &*private_key.to_openssh(Default::default()).unwrap(),
+        OPENSSH_NON_UTF8_COMMENT_EXAMPLE
+    );
 }
 
 #[cfg(feature = "alloc")]
