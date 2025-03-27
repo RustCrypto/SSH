@@ -44,7 +44,7 @@ serde = { version = "1.0.16", optional = true }
 sha1 = { version = "=0.11.0-pre.4", optional = true, default-features = false, features = ["oid"] }
 
 [dev-dependencies]
-hex-literal = "0.4.1"
+hex-literal = "1.0.0"
 rand_chacha = "0.3"
 
 [features]
