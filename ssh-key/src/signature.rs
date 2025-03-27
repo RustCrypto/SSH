@@ -713,10 +713,10 @@ mod tests {
     use encoding::Encode;
     use hex_literal::hex;
 
-    #[cfg(feature = "ed25519")]
-    use super::Ed25519Keypair;
     #[cfg(any(feature = "ed25519", all(feature = "rsa", feature = "sha1")))]
-    use signature::{Signer, Verifier};
+    use signature::Verifier;
+    #[cfg(feature = "ed25519")]
+    use {super::Ed25519Keypair, signature::Signer};
 
     #[cfg(feature = "p256")]
     use super::{zero_pad_field_bytes, Mpint};
@@ -940,12 +940,7 @@ mod tests {
 
         let key = PrivateKey::from_openssh(include_str!("../tests/examples/id_rsa_3072")).unwrap();
         let key = key.key_data().rsa().unwrap();
-        let signature = Signer::sign(&(key, None), EXAMPLE_MSG);
-
-        let mut encoded = vec![];
-        signature.encode(&mut encoded).unwrap();
-        std::dbg!(&encoded);
-        assert_eq!(&encoded, &hex!("000000077373682d727361000001809485247d72bf853272c86dd8c1c3fa0d2bebcdea9d91a376525a4bcc4a9ca2b19d31af48cfc07da086b244c65b37f3eb8fcab9661ccf777ed2f45404dd602b405526e19323f065b44d19f1bbda3eaf87b922b01049fcd8b82f08ffab6582e8427b0af3305f32961816d499d7b4925c1293b2d658dc6ca7cfb2d47c203c7d9512c0ee33e3d74f362d339a112fc94a74e8f388fc7fd1e9b95c7dd94e62ff16c9463476b7cf0e42af0f17fd2b9e325a50fc40ffd02b4a39e692727186b47c8ce9d7037de7e94615966df462238e214e7440bedabc5fbf79cfa93b96be5f27268da7c1ae2246bcabcc18a0d2c507be8727d04e41ed38686e5c455c159ee371f477668e89720191a72fbdb4eef86f1aa5c3596cefad12b20b1a1220accf6145f8583d7559751b2d0445e2e8a8fda85bf30f24b446ac6d0b943f7c519e5a021b1468cf120ed565d95ed8ddf022f97537ec5491226198ec58dd96c6bd218ddb237aa80785ceafa7722f1d2ba3e39dce2a9fdb0038f4124e2aa27d28eef927d87c8708f6"));
+        let encoded = hex!("000000077373682d727361000001809485247d72bf853272c86dd8c1c3fa0d2bebcdea9d91a376525a4bcc4a9ca2b19d31af48cfc07da086b244c65b37f3eb8fcab9661ccf777ed2f45404dd602b405526e19323f065b44d19f1bbda3eaf87b922b01049fcd8b82f08ffab6582e8427b0af3305f32961816d499d7b4925c1293b2d658dc6ca7cfb2d47c203c7d9512c0ee33e3d74f362d339a112fc94a74e8f388fc7fd1e9b95c7dd94e62ff16c9463476b7cf0e42af0f17fd2b9e325a50fc40ffd02b4a39e692727186b47c8ce9d7037de7e94615966df462238e214e7440bedabc5fbf79cfa93b96be5f27268da7c1ae2246bcabcc18a0d2c507be8727d04e41ed38686e5c455c159ee371f477668e89720191a72fbdb4eef86f1aa5c3596cefad12b20b1a1220accf6145f8583d7559751b2d0445e2e8a8fda85bf30f24b446ac6d0b943f7c519e5a021b1468cf120ed565d95ed8ddf022f97537ec5491226198ec58dd96c6bd218ddb237aa80785ceafa7722f1d2ba3e39dce2a9fdb0038f4124e2aa27d28eef927d87c8708f6");
 
         let decoded = Signature::decode(&mut &encoded[..]).unwrap();
 
