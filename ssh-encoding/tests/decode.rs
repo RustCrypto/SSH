@@ -52,8 +52,8 @@ fn reject_oversize_usize() {
 }
 
 #[test]
-fn decode_byte_slice() {
-    let mut bytes = hex!("000000076578616d706c65").as_slice();
+fn decode_byte_array() {
+    let mut bytes = hex!("6578616d706c65").as_slice();
     let ret = <[u8; 7]>::decode(&mut bytes).unwrap();
     assert_eq!(&ret, b"example");
 }
