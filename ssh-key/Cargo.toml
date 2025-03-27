@@ -39,7 +39,7 @@ p384 = { version = "=0.14.0-pre.1", optional = true, default-features = false, f
 p521 = { version = "=0.14.0-pre.1", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.6.4", optional = true, default-features = false }
 rsa = { version = "=0.10.0-pre.3", optional = true, default-features = false, features = ["sha2"] }
-sec1 = { version = "0.8.0-rc.3", optional = true, default-features = false, features = ["point"] }
+sec1 = { version = "0.8.0-rc.4", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1.0.16", optional = true }
 sha1 = { version = "=0.11.0-pre.4", optional = true, default-features = false, features = ["oid"] }
 
