@@ -41,9 +41,16 @@ fn encode_usize() {
 }
 
 #[test]
-fn encode_byte_slice() {
+fn encode_byte_array() {
     let mut out = Vec::new();
     b"example".encode(&mut out).unwrap();
+    assert_eq!(out, hex!("6578616d706c65"));
+}
+
+#[test]
+fn encode_byte_slice() {
+    let mut out = Vec::new();
+    b"example".as_slice().encode(&mut out).unwrap();
     assert_eq!(out, hex!("000000076578616d706c65"));
 }
 

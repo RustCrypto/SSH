@@ -176,7 +176,7 @@ const DEFAULT_RSA_KEY_SIZE: usize = 4096;
 const MAX_BLOCK_SIZE: usize = 16;
 
 /// Padding bytes to use.
-const PADDING_BYTES: [u8; MAX_BLOCK_SIZE - 1] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
+const PADDING_BYTES: [u8; MAX_BLOCK_SIZE] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
 
 /// Unix file permissions for SSH private keys.
 #[cfg(all(unix, feature = "std"))]
@@ -212,7 +212,7 @@ impl PrivateKey {
     ///
     /// On `no_std` platforms, use `PrivateKey::from(key_data)` instead.
     #[cfg(feature = "alloc")]
-    pub fn new(key_data: KeypairData, comment: impl Into<String>) -> Result<Self> {
+    pub fn new(key_data: KeypairData, comment: impl Into<Vec<u8>>) -> Result<Self> {
         if key_data.is_encrypted() {
             return Err(Error::Encrypted);
         }
@@ -231,6 +231,29 @@ impl PrivateKey {
     /// ```
     pub fn from_openssh(pem: impl AsRef<[u8]>) -> Result<Self> {
         Self::decode_pem(pem)
+    }
+
+    /// Parse a PuTTY PPK private key.
+    ///
+    /// PPK-formatted private keys begin with the following:
+    ///
+    /// ```text
+    /// PuTTY-User-Key-File-<VERSION>: <ALGORITHM>
+    /// ```
+    #[cfg(feature = "ppk")]
+    pub fn from_ppk(ppk: impl AsRef<str>, passphrase: Option<String>) -> Result<Self> {
+        use crate::ppk::PpkContainer;
+
+        let ppk: PpkContainer = PpkContainer::new(ppk.as_ref().try_into()?, passphrase)?;
+
+        Ok(Self {
+            auth_tag: None,
+            checkint: None,
+            cipher: Cipher::None,
+            kdf: Kdf::None,
+            key_data: ppk.keypair_data,
+            public_key: ppk.public_key,
+        })
     }
 
     /// Parse a raw binary SSH private key.
@@ -354,10 +377,12 @@ impl PrivateKey {
         let mut buffer = Zeroizing::new(ciphertext.to_vec());
         self.cipher.decrypt(&key, &iv, &mut buffer, self.auth_tag)?;
 
+        #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
         Self::decode_privatekey_comment_pair(
             &mut &**buffer,
             self.public_key.key_data.clone(),
             self.cipher.block_size(),
+            self.cipher.block_size() - 1,
         )
     }
 
@@ -439,8 +464,44 @@ impl PrivateKey {
     }
 
     /// Comment on the key (e.g. email address).
+    #[cfg(feature = "alloc")]
+    #[deprecated(
+        since = "0.7.0",
+        note = "please use `comment_bytes`, `comment_str`, or `comment_str_lossy` instead"
+    )]
     pub fn comment(&self) -> &str {
-        self.public_key.comment()
+        self.comment_str_lossy()
+    }
+
+    /// Comment on the key (e.g. email address).
+    #[cfg(not(feature = "alloc"))]
+    pub fn comment_bytes(&self) -> &[u8] {
+        b""
+    }
+
+    /// Comment on the key (e.g. email address).
+    ///
+    /// Since comments can contain arbitrary binary data when decoded from a
+    /// private key, this returns the raw bytes of the comment.
+    #[cfg(feature = "alloc")]
+    pub fn comment_bytes(&self) -> &[u8] {
+        self.public_key.comment_bytes()
+    }
+
+    /// Comment on the key (e.g. email address).
+    ///
+    /// This returns a UTF-8 interpretation of the comment when valid.
+    #[cfg(feature = "alloc")]
+    pub fn comment_str(&self) -> core::result::Result<&str, str::Utf8Error> {
+        self.public_key.comment_str()
+    }
+
+    /// Comment on the key (e.g. email address).
+    ///
+    /// This returns as much data as can be interpreted as valid UTF-8.
+    #[cfg(feature = "alloc")]
+    pub fn comment_str_lossy(&self) -> &str {
+        self.public_key.comment_str_lossy()
     }
 
     /// Cipher algorithm (a.k.a. `ciphername`).
@@ -514,7 +575,7 @@ impl PrivateKey {
 
     /// Set the comment on the key.
     #[cfg(feature = "alloc")]
-    pub fn set_comment(&mut self, comment: impl Into<String>) {
+    pub fn set_comment(&mut self, comment: impl Into<Vec<u8>>) {
         self.public_key.set_comment(comment);
     }
 
@@ -548,8 +609,10 @@ impl PrivateKey {
         reader: &mut impl Reader,
         public_key: public::KeyData,
         block_size: usize,
+        max_padding_size: usize,
     ) -> Result<Self> {
         debug_assert!(block_size <= MAX_BLOCK_SIZE);
+        debug_assert!(max_padding_size <= MAX_BLOCK_SIZE);
 
         // Ensure input data is padding-aligned
         if reader.remaining_len().checked_rem(block_size) != Some(0) {
@@ -575,7 +638,7 @@ impl PrivateKey {
 
         let padding_len = reader.remaining_len();
 
-        if padding_len >= block_size {
+        if padding_len > max_padding_size {
             return Err(encoding::Error::Length.into());
         }
 
@@ -618,7 +681,7 @@ impl PrivateKey {
         checkint.encode(writer)?;
         checkint.encode(writer)?;
         self.key_data.encode(writer)?;
-        self.comment().encode(writer)?;
+        self.comment_bytes().encode(writer)?;
         writer.write(&PADDING_BYTES[..padding_len])?;
         Ok(())
     }
@@ -641,7 +704,7 @@ impl PrivateKey {
         [
             8, // 2 x uint32 checkints,
             self.key_data.encoded_len()?,
-            self.comment().encoded_len()?,
+            self.comment_bytes().encoded_len()?,
         ]
         .checked_sum()
     }
@@ -733,7 +796,25 @@ impl Decode for PrivateKey {
         }
 
         reader.read_prefixed(|reader| {
-            Self::decode_privatekey_comment_pair(reader, public_key, cipher.block_size())
+            // PuTTYgen uses a non-standard block size of 16
+            // and _always_ adds a padding even if data length
+            // is divisible by 16 - for unencrypted keys
+            // in the OpenSSH format.
+            // We're only relaxing the exact length check, but will
+            // still validate that the contents of the padding area.
+            // In all other cases there can be up to (but not including)
+            // `block_size` padding bytes as per `PROTOCOL.key`.
+            let max_padding_size = match cipher {
+                Cipher::None => 16,
+                #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
+                _ => cipher.block_size() - 1,
+            };
+            Self::decode_privatekey_comment_pair(
+                reader,
+                public_key,
+                cipher.block_size(),
+                max_padding_size,
+            )
         })
     }
 }

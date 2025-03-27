@@ -134,11 +134,14 @@ impl Encode for usize {
     }
 }
 
-/// Encodes `[u8]` into `byte[n]` as described in [RFC4251 § 5]:
+/// Encodes `[u8]` into `string` as described in [RFC4251 § 5]:
 ///
-/// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
-/// > data is sometimes represented as an array of bytes, written
-/// > `byte[n]`, where n is the number of bytes in the array.
+/// > Arbitrary length binary string.  Strings are allowed to contain
+/// > arbitrary binary data, including null characters and 8-bit
+/// > characters.  They are stored as a uint32 containing its length
+/// > (number of bytes that follow) and zero (= empty string) or more
+/// > bytes that are the value of the string.  Terminating null
+/// > characters are not used.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl Encode for [u8] {
@@ -152,20 +155,23 @@ impl Encode for [u8] {
     }
 }
 
-/// Encodes `[u8; N]` into `byte[n]` as described in [RFC4251 § 5]:
+/// Encodes byte array using `byte[n]` encoding as described in [RFC4251 § 5]:
 ///
 /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
 /// > data is sometimes represented as an array of bytes, written
 /// > `byte[n]`, where n is the number of bytes in the array.
 ///
+/// Note that unlike `string`, this type is encoded without a length prefix,
+/// but instead implicitly obtains its length as `N`.
+///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl<const N: usize> Encode for [u8; N] {
     fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_slice().encoded_len()
+        Ok(N)
     }
 
     fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_slice().encode(writer)
+        writer.write(self)
     }
 }
 

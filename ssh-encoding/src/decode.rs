@@ -116,16 +116,17 @@ impl Decode for usize {
 /// > data is sometimes represented as an array of bytes, written
 /// > `byte[n]`, where n is the number of bytes in the array.
 ///
+/// Note that unlike `string`, this type is encoded without a length prefix,
+/// but instead implicitly obtains its length as `N`.
+///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 impl<const N: usize> Decode for [u8; N] {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        reader.read_prefixed(|reader| {
-            let mut result = [(); N].map(|_| 0);
-            reader.read(&mut result)?;
-            Ok(result)
-        })
+        let mut result = [0u8; N];
+        reader.read(&mut result)?;
+        Ok(result)
     }
 }
 
@@ -178,11 +179,14 @@ impl Decode for Vec<String> {
     }
 }
 
-/// Decodes `Bytes` from `byte[n]` as described in [RFC4251 § 5]:
+/// Decodes `Bytes` from `string` as described in [RFC4251 § 5]:
 ///
-/// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
-/// > data is sometimes represented as an array of bytes, written
-/// > `byte[n]`, where n is the number of bytes in the array.
+/// > Arbitrary length binary string.  Strings are allowed to contain
+/// > arbitrary binary data, including null characters and 8-bit
+/// > characters.  They are stored as a uint32 containing its length
+/// > (number of bytes that follow) and zero (= empty string) or more
+/// > bytes that are the value of the string.  Terminating null
+/// > characters are not used.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 #[cfg(feature = "bytes")]

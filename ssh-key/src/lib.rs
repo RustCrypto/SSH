@@ -160,6 +160,8 @@ mod kdf;
 mod dot_ssh;
 #[cfg(feature = "alloc")]
 mod mpint;
+#[cfg(feature = "ppk")]
+mod ppk;
 #[cfg(feature = "alloc")]
 mod signature;
 #[cfg(feature = "alloc")]

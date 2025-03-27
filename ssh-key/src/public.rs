@@ -30,7 +30,7 @@ pub use self::{ecdsa::EcdsaPublicKey, sk::SkEcdsaSha2NistP256};
 pub(crate) use self::ssh_format::SshFormat;
 
 use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
-use core::str::FromStr;
+use core::str::{self, FromStr};
 use encoding::{Base64Reader, Decode, Reader};
 
 #[cfg(feature = "alloc")]
@@ -81,14 +81,25 @@ use crate::PrivateKey;
 /// The serialization uses a binary encoding with binary formats like bincode
 /// and CBOR, and the OpenSSH string serialization when used with
 /// human-readable formats like JSON and TOML.
+///
+/// Note that since the `comment` is an artifact on the string serialization of
+/// a public key, it will be implicitly dropped when encoding as a binary
+/// format. To ensure it's always preserved even when using binary formats, you
+/// will first need to convert the [`PublicKey`] to a string using e.g.
+/// [`PublicKey::to_openssh`].
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct PublicKey {
     /// Key data.
     pub(crate) key_data: KeyData,
 
     /// Comment on the key (e.g. email address)
+    ///
+    /// Note that when a [`PublicKey`] is serialized in a private key, the
+    /// comment is encoded as an RFC4251 `string` which may contain arbitrary
+    /// binary data, so `Vec<u8>` is used to store the comment to ensure keys
+    /// containing such comments successfully round-trip.
     #[cfg(feature = "alloc")]
-    pub(crate) comment: String,
+    pub(crate) comment: Vec<u8>,
 }
 
 impl PublicKey {
@@ -96,7 +107,7 @@ impl PublicKey {
     ///
     /// On `no_std` platforms, use `PublicKey::from(key_data)` instead.
     #[cfg(feature = "alloc")]
-    pub fn new(key_data: KeyData, comment: impl Into<String>) -> Self {
+    pub fn new(key_data: KeyData, comment: impl Into<Vec<u8>>) -> Self {
         Self {
             key_data,
             comment: comment.into(),
@@ -123,7 +134,7 @@ impl PublicKey {
         let public_key = Self {
             key_data,
             #[cfg(feature = "alloc")]
-            comment: encapsulation.comment.to_owned(),
+            comment: encapsulation.comment.to_owned().into(),
         };
 
         Ok(reader.finish(public_key)?)
@@ -138,19 +149,23 @@ impl PublicKey {
 
     /// Encode OpenSSH-formatted public key.
     pub fn encode_openssh<'o>(&self, out: &'o mut [u8]) -> Result<&'o str> {
-        SshFormat::encode(
-            self.algorithm().as_str(),
-            &self.key_data,
-            self.comment(),
-            out,
-        )
+        #[cfg(not(feature = "alloc"))]
+        let comment = "";
+        #[cfg(feature = "alloc")]
+        let comment = self.comment_str_lossy();
+
+        SshFormat::encode(self.algorithm().as_str(), &self.key_data, comment, out)
     }
 
     /// Encode an OpenSSH-formatted public key, allocating a [`String`] for
     /// the result.
     #[cfg(feature = "alloc")]
     pub fn to_openssh(&self) -> Result<String> {
-        SshFormat::encode_string(self.algorithm().as_str(), &self.key_data, self.comment())
+        SshFormat::encode_string(
+            self.algorithm().as_str(),
+            &self.key_data,
+            self.comment_str_lossy(),
+        )
     }
 
     /// Serialize SSH public key as raw bytes.
@@ -243,15 +258,46 @@ impl PublicKey {
     }
 
     /// Comment on the key (e.g. email address).
-    #[cfg(not(feature = "alloc"))]
+    ///
+    /// This is a deprecated alias for [`PublicKey::comment_str_lossy`].
+    #[cfg(feature = "alloc")]
+    #[deprecated(
+        since = "0.7.0",
+        note = "please use `comment_bytes`, `comment_str`, or `comment_str_lossy` instead"
+    )]
     pub fn comment(&self) -> &str {
-        ""
+        self.comment_str_lossy()
     }
 
     /// Comment on the key (e.g. email address).
+    ///
+    /// Since comments can contain arbitrary binary data when decoded from a
+    /// private key, this returns the raw bytes of the comment.
     #[cfg(feature = "alloc")]
-    pub fn comment(&self) -> &str {
+    pub fn comment_bytes(&self) -> &[u8] {
         &self.comment
+    }
+
+    /// Comment on the key (e.g. email address).
+    ///
+    /// This returns a UTF-8 interpretation of the comment when valid.
+    #[cfg(feature = "alloc")]
+    pub fn comment_str(&self) -> core::result::Result<&str, str::Utf8Error> {
+        str::from_utf8(&self.comment)
+    }
+
+    /// Comment on the key (e.g. email address).
+    ///
+    /// This returns as much data as can be interpreted as valid UTF-8.
+    #[cfg(feature = "alloc")]
+    pub fn comment_str_lossy(&self) -> &str {
+        for i in (1..=self.comment.len()).rev() {
+            if let Ok(s) = str::from_utf8(&self.comment[..i]) {
+                return s;
+            }
+        }
+
+        ""
     }
 
     /// Public key data.
@@ -268,7 +314,7 @@ impl PublicKey {
 
     /// Set the comment on the key.
     #[cfg(feature = "alloc")]
-    pub fn set_comment(&mut self, comment: impl Into<String>) {
+    pub fn set_comment(&mut self, comment: impl Into<Vec<u8>>) {
         self.comment = comment.into();
     }
 
@@ -284,7 +330,7 @@ impl PublicKey {
     /// Decode comment (e.g. email address)
     #[cfg(feature = "alloc")]
     pub(crate) fn decode_comment(&mut self, reader: &mut impl Reader) -> Result<()> {
-        self.comment = String::decode(reader)?;
+        self.comment = Vec::decode(reader)?;
         Ok(())
     }
 }
@@ -294,7 +340,7 @@ impl From<KeyData> for PublicKey {
         PublicKey {
             key_data,
             #[cfg(feature = "alloc")]
-            comment: String::new(),
+            comment: Vec::new(),
         }
     }
 }

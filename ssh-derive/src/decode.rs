@@ -49,12 +49,13 @@ impl DeriveDecode {
         let body = lowerer.into_tokens();
 
         quote! {
+            #[automatically_derived]
             impl #generics ::ssh_encoding::Decode for #ident #generics #where_clause {
                 type Error = ::ssh_encoding::Error;
 
-                fn decode(reader: &mut impl Reader) -> Result<Self, Self::Error> {
+                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> Result<Self, Self::Error> {
                     Ok(Self {
-                        #(#body)*,
+                        #(#body),*
                     })
                 }
             }
@@ -80,8 +81,8 @@ impl FieldLowerer {
     fn add_field(&mut self, field: &FieldIr) {
         let ident = field.ident.clone();
         let ty = field.ty.clone();
-        let field = quote! { #ident: #ty::decode()? };
-        self.body.push(field)
+        let field = quote! { #ident: <#ty as ::ssh_encoding::Decode>::decode(reader)? };
+        self.body.push(field);
     }
 
     /// Return the resulting tokens.
