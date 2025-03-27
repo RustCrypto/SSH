@@ -31,7 +31,7 @@ use {
     sha2::Sha512,
 };
 
-#[cfg(any(feature = "rsa-sha1", feature = "dsa"))]
+#[cfg(any(all(feature = "sha1", feature = "rsa"), feature = "dsa"))]
 use sha1::Sha1;
 
 #[cfg(any(feature = "ed25519", feature = "rsa", feature = "p256"))]
@@ -672,9 +672,9 @@ impl Signer<Signature> for (&RsaKeypair, Option<HashAlg>) {
             Some(HashAlg::Sha256) => {
                 rsa::pkcs1v15::SigningKey::<Sha256>::try_from(self.0)?.try_sign(message)
             }
-            #[cfg(feature = "rsa-sha1")]
+            #[cfg(all(feature = "rsa", feature = "sha1"))]
             None => rsa::pkcs1v15::SigningKey::<Sha1>::try_from(self.0)?.try_sign(message),
-            #[cfg(not(feature = "rsa-sha1"))]
+            #[cfg(not(all(feature = "rsa", feature = "sha1")))]
             None => return Err(Algorithm::Rsa { hash: None }.unsupported_error().into()),
         }
         .map_err(|_| signature::Error::new())?;
@@ -701,9 +701,9 @@ impl Verifier<Signature> for RsaPublicKey {
                 let signature = rsa::pkcs1v15::Signature::try_from(signature.data.as_ref())?;
 
                 match hash {
-                    #[cfg(not(feature = "rsa-sha1"))]
+                    #[cfg(not(all(feature = "rsa", feature = "sha1")))]
                     None => Err(Algorithm::Rsa { hash: None }.unsupported_error().into()),
-                    #[cfg(feature = "rsa-sha1")]
+                    #[cfg(all(feature = "rsa", feature = "sha1"))]
                     None => rsa::pkcs1v15::VerifyingKey::<Sha1>::try_from(self)?
                         .verify(message, &signature)
                         .map_err(|_| signature::Error::new()),
