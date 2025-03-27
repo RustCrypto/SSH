@@ -13,7 +13,6 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
     bigint::BigUint,
-    sha1::Sha1,
     signature::{DigestSigner, DigestVerifier},
 };
 
@@ -31,6 +30,9 @@ use {
     crate::{private::RsaKeypair, public::RsaPublicKey, HashAlg},
     sha2::Sha512,
 };
+
+#[cfg(any(all(feature = "sha1", feature = "rsa"), feature = "dsa"))]
+use sha1::Sha1;
 
 #[cfg(any(feature = "ed25519", feature = "rsa", feature = "p256"))]
 use sha2::Sha256;
@@ -680,15 +682,20 @@ impl Signer<Signature> for RsaKeypair {
 impl Verifier<Signature> for RsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
-            // TODO(tarcieri): optional off-by-default support for legacy SHA1 signatures?
-            Algorithm::Rsa { hash: Some(hash) } => {
+            Algorithm::Rsa { hash } => {
                 let signature = rsa::pkcs1v15::Signature::try_from(signature.data.as_ref())?;
 
                 match hash {
-                    HashAlg::Sha256 => rsa::pkcs1v15::VerifyingKey::<Sha256>::try_from(self)?
+                    #[cfg(not(all(feature = "rsa", feature = "sha1")))]
+                    None => Err(Algorithm::Rsa { hash: None }.unsupported_error().into()),
+                    #[cfg(all(feature = "rsa", feature = "sha1"))]
+                    None => rsa::pkcs1v15::VerifyingKey::<Sha1>::try_from(self)?
                         .verify(message, &signature)
                         .map_err(|_| signature::Error::new()),
-                    HashAlg::Sha512 => rsa::pkcs1v15::VerifyingKey::<Sha512>::try_from(self)?
+                    Some(HashAlg::Sha256) => rsa::pkcs1v15::VerifyingKey::<Sha256>::try_from(self)?
+                        .verify(message, &signature)
+                        .map_err(|_| signature::Error::new()),
+                    Some(HashAlg::Sha512) => rsa::pkcs1v15::VerifyingKey::<Sha512>::try_from(self)?
                         .verify(message, &signature)
                         .map_err(|_| signature::Error::new()),
                 }
@@ -706,11 +713,10 @@ mod tests {
     use encoding::Encode;
     use hex_literal::hex;
 
+    #[cfg(any(feature = "ed25519", all(feature = "rsa", feature = "sha1")))]
+    use signature::Verifier;
     #[cfg(feature = "ed25519")]
-    use {
-        super::Ed25519Keypair,
-        signature::{Signer, Verifier},
-    };
+    use {super::Ed25519Keypair, signature::Signer};
 
     #[cfg(feature = "p256")]
     use super::{zero_pad_field_bytes, Mpint};
@@ -722,7 +728,7 @@ mod tests {
     const RSA_SHA512_SIGNATURE: &[u8] = &hex!("0000000c7273612d736861322d3531320000018085a4ad1a91a62c00c85de7bb511f38088ff2bce763d76f4786febbe55d47624f9e2cffce58a680183b9ad162c7f0191ea26cab001ac5f5055743eced58e9981789305c208fc98d2657954e38eb28c7e7f3fbe92393a14324ed77aebb772a41aa7a107b38cb9bd1d9ad79b275135d1d7e019bb1d56d74f2450be6db0771f48f6707d3fcf9789592ca2e55595acc16b6e8d0139b56c5d1360b3a1e060f4151a3d7841df2c2a8c94d6f8a1bf633165ee0bcadac5642763df0dd79d3235ae5506595145f199d8abe8f9980411bf70a16e30f273736324d047043317044c36374d6a5ed34cac251e01c6795e4578393f9090bf4ae3e74a0009275a197315fc9c62f1c9aec1ba3b2d37c3b207e5500df19e090e7097ebc038fb9c9e35aea9161479ba6b5190f48e89e1abe51e8ec0e120ef89776e129687ca52d1892c8e88e6ef062a7d96b8a87682ca6a42ff1df0cdf5815c3645aeed7267ca7093043db0565e0f109b796bf117b9d2bb6d6debc0c67a4c9fb3aae3e29b00c7bd70f6c11cf53c295ff");
 
     /// Example test vector for signing.
-    #[cfg(feature = "ed25519")]
+    #[cfg(any(feature = "ed25519", all(feature = "rsa", feature = "sha1")))]
     const EXAMPLE_MSG: &[u8] = b"Hello, world!";
 
     #[cfg(feature = "p256")]
@@ -923,5 +929,21 @@ mod tests {
             placeholder.encode(&mut writer),
             Err(encoding::Error::Length)
         );
+    }
+
+    #[cfg(all(feature = "rsa", feature = "sha1"))]
+    #[test]
+    fn sign_and_verify_rsa_sha1() {
+        use encoding::Decode;
+
+        use crate::PrivateKey;
+
+        let key = PrivateKey::from_openssh(include_str!("../tests/examples/id_rsa_3072")).unwrap();
+        let key = key.key_data().rsa().unwrap();
+        let encoded = hex!("000000077373682d727361000001809485247d72bf853272c86dd8c1c3fa0d2bebcdea9d91a376525a4bcc4a9ca2b19d31af48cfc07da086b244c65b37f3eb8fcab9661ccf777ed2f45404dd602b405526e19323f065b44d19f1bbda3eaf87b922b01049fcd8b82f08ffab6582e8427b0af3305f32961816d499d7b4925c1293b2d658dc6ca7cfb2d47c203c7d9512c0ee33e3d74f362d339a112fc94a74e8f388fc7fd1e9b95c7dd94e62ff16c9463476b7cf0e42af0f17fd2b9e325a50fc40ffd02b4a39e692727186b47c8ce9d7037de7e94615966df462238e214e7440bedabc5fbf79cfa93b96be5f27268da7c1ae2246bcabcc18a0d2c507be8727d04e41ed38686e5c455c159ee371f477668e89720191a72fbdb4eef86f1aa5c3596cefad12b20b1a1220accf6145f8583d7559751b2d0445e2e8a8fda85bf30f24b446ac6d0b943f7c519e5a021b1468cf120ed565d95ed8ddf022f97537ec5491226198ec58dd96c6bd218ddb237aa80785ceafa7722f1d2ba3e39dce2a9fdb0038f4124e2aa27d28eef927d87c8708f6");
+
+        let decoded = Signature::decode(&mut &encoded[..]).unwrap();
+
+        assert!(Verifier::verify(key.public(), EXAMPLE_MSG, &decoded).is_ok());
     }
 }
