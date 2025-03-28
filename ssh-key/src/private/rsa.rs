@@ -9,12 +9,12 @@ use zeroize::Zeroize;
 #[cfg(feature = "rsa")]
 use {
     rand_core::CryptoRngCore,
-    rsa::{
-        pkcs1v15,
-        traits::{PrivateKeyParts, PublicKeyParts},
-    },
+    rsa::{pkcs1v15, traits::PrivateKeyParts},
     sha2::{digest::const_oid::AssociatedOid, Digest},
 };
+
+#[cfg(all(feature = "rsa", not(feature = "hazmat-allow-insecure-rsa-keys")))]
+use rsa::traits::PublicKeyParts;
 
 /// RSA private key.
 #[derive(Clone)]
@@ -138,17 +138,17 @@ pub struct RsaKeypair {
 
 impl RsaKeypair {
     /// Minimum allowed RSA key size.
-    #[cfg(feature = "rsa")]
+    #[cfg(all(feature = "rsa", not(feature = "hazmat-allow-insecure-rsa-keys")))]
     pub(crate) const MIN_KEY_SIZE: usize = 2048;
 
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
     pub fn random(rng: &mut impl CryptoRngCore, bit_size: usize) -> Result<Self> {
-        if bit_size >= Self::MIN_KEY_SIZE {
-            rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
-        } else {
-            Err(Error::Crypto)
+        #[cfg(not(feature = "hazmat-allow-insecure-rsa-keys"))]
+        if bit_size < Self::MIN_KEY_SIZE {
+            return Err(Error::Crypto);
         }
+        rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
     }
 
     /// Create a new keypair from the given `public` and `private` key components.
@@ -260,11 +260,12 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
             ],
         )?;
 
-        if ret.size().saturating_mul(8) >= RsaKeypair::MIN_KEY_SIZE {
-            Ok(ret)
-        } else {
-            Err(Error::Crypto)
+        #[cfg(not(feature = "hazmat-allow-insecure-rsa-keys"))]
+        if ret.size().saturating_mul(8) < RsaKeypair::MIN_KEY_SIZE {
+            return Err(Error::Crypto);
         }
+
+        Ok(ret)
     }
 }
 
