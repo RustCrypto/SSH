@@ -35,6 +35,9 @@ pub enum Error {
         /// Number of bytes of remaining data at end of message.
         remaining: usize,
     },
+
+    /// Invalid discriminant value in message.
+    InvalidDiscriminant(u128),
 }
 
 impl core::error::Error for Error {
@@ -65,6 +68,9 @@ impl fmt::Display for Error {
                 f,
                 "unexpected trailing data at end of message ({remaining} bytes)",
             ),
+            Error::InvalidDiscriminant(discriminant) => {
+                write!(f, "invalid discriminant value: {discriminant}")
+            }
         }
     }
 }
