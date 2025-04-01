@@ -21,7 +21,7 @@ fn try_derive_decode_for_struct(
     let container_attributes = ContainerAttributes::try_from(input)?;
     let struct_name = &input.ident;
     let body = derive_for_fields(fields, quote! { Self })?;
-    let body = maybe_length_prefixed(container_attributes.length_prefixed, &body);
+    let body = maybe_length_prefixed_result(container_attributes.length_prefixed, &body);
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
 
     Ok(quote! {
@@ -78,7 +78,7 @@ fn try_derive_decode_for_enum(
             _ => return Err(::ssh_encoding::Error::InvalidDiscriminant(discriminant.into()).into()),
         }
     };
-    let body = maybe_length_prefixed(container_attributes.length_prefixed, &body);
+    let body = maybe_length_prefixed_result(container_attributes.length_prefixed, &body);
 
     Ok(quote! {
         #[automatically_derived]
@@ -130,7 +130,7 @@ fn derive_for_fields(
     Ok(body)
 }
 
-fn maybe_length_prefixed(length_prefix: bool, body: &TokenStream) -> TokenStream {
+fn maybe_length_prefixed_result(length_prefix: bool, body: &TokenStream) -> TokenStream {
     if length_prefix {
         quote! {
             reader.read_prefixed(|reader| {
@@ -139,5 +139,153 @@ fn maybe_length_prefixed(length_prefix: bool, body: &TokenStream) -> TokenStream
         }
     } else {
         quote! { Ok({#body}) }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use quote::quote;
+
+    macro_rules! assert_eq_tokens {
+        ($left:expr, $right:expr) => {
+            assert_eq!($left.to_string(), $right.to_string());
+        };
+    }
+
+    #[test]
+    fn test_maybe_length_prefixed() {
+        let actual = maybe_length_prefixed_result(true, &quote! { () });
+        let expected = quote! {
+            reader.read_prefixed(|reader| {
+                Ok::<_, ::ssh_encoding::Error>({()})
+            })
+        };
+        assert_eq_tokens!(actual, expected);
+
+        let actual = maybe_length_prefixed_result(false, &quote! { () });
+        let expected = quote! { Ok({()}) };
+        assert_eq_tokens!(actual, expected);
+    }
+
+    #[test]
+    fn test_derive_for_fields_named() {
+        let fields: syn::FieldsNamed = syn::parse_quote! ({
+            a: u32,
+            b: String,
+            #[ssh(length_prefixed)]
+            c: bool
+        });
+        let actual = derive_for_fields(&syn::Fields::Named(fields), quote! { Self }).unwrap();
+        let expected = quote! {
+            Self {
+                a: <u32 as ::ssh_encoding::Decode>::decode(reader)?,
+                b: <String as ::ssh_encoding::Decode>::decode(reader)?,
+                c: reader.read_prefixed(|reader| <bool as ::ssh_encoding::Decode>::decode(reader))?
+            }
+        };
+        assert_eq_tokens!(actual, expected);
+    }
+
+    #[test]
+    fn test_derive_for_fields_unnamed() {
+        let fields: syn::FieldsUnnamed = syn::parse_quote!((
+            u32,
+            #[ssh(length_prefixed)]
+            String,
+            bool
+        ));
+        let actual = derive_for_fields(&syn::Fields::Unnamed(fields), quote! { Self }).unwrap();
+        let expected = quote! {
+            Self (
+                <u32 as ::ssh_encoding::Decode>::decode(reader)?,
+                reader.read_prefixed(|reader| <String as ::ssh_encoding::Decode>::decode(reader))?,
+                <bool as ::ssh_encoding::Decode>::decode(reader)?
+            )
+        };
+        assert_eq_tokens!(actual, expected);
+    }
+
+    #[test]
+    fn test_derive_for_fields_unit() {
+        let actual = derive_for_fields(&syn::Fields::Unit, quote! { Self }).unwrap();
+        let expected = quote! { Self };
+        assert_eq_tokens!(actual, expected);
+    }
+
+    #[test]
+    fn test_derive_for_fields_bad_attribute() {
+        let fields: syn::FieldsNamed = syn::parse_quote! ({
+            #[ssh(not_a_valid_attribute)]
+            a: u32,
+        });
+        let actual = derive_for_fields(&syn::Fields::Named(fields), quote! { Self });
+        assert!(actual.is_err());
+        assert!(actual
+            .unwrap_err()
+            .to_string()
+            .contains("unknown attribute"));
+    }
+
+    #[test]
+    fn test_try_derive_decode_for_struct() {
+        let input = syn::parse_quote! {
+            struct Foo {
+                #[ssh(length_prefixed)]
+                a: u32,
+                b: String,
+            }
+        };
+        let actual = try_derive_decode(input).unwrap();
+        let expected = quote! {
+            #[automatically_derived]
+            impl ::ssh_encoding::Decode for Foo {
+                type Error = ::ssh_encoding::Error;
+
+                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+                    Ok({
+                        Self {
+                            a: reader.read_prefixed(|reader| <u32 as ::ssh_encoding::Decode>::decode(reader))?,
+                            b: <String as ::ssh_encoding::Decode>::decode(reader)?
+                        }
+                    })
+                }
+            }
+        };
+        assert_eq!(actual.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn test_try_derive_decode_for_enum() {
+        let input = syn::parse_quote! {
+            #[ssh(length_prefixed)]
+            #[repr(u8)]
+            enum Foo {
+                A = 0,
+                B = 1,
+            }
+        };
+        let actual = try_derive_decode(input).unwrap();
+        let expected = quote! {
+            #[automatically_derived]
+            impl ::ssh_encoding::Decode for Foo {
+                type Error = ::ssh_encoding::Error;
+
+                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+                    reader.read_prefixed(|reader| {
+                        Ok::<_, ::ssh_encoding::Error>({
+                            let discriminant = <u8 as ::ssh_encoding::Decode>::decode(reader)?;
+                            match discriminant {
+                                0 => { Foo :: A },
+                                1 => { Foo :: B },
+                                _ => return Err(::ssh_encoding::Error::InvalidDiscriminant(discriminant.into()).into()),
+                            }
+                        })
+                    })
+                }
+            }
+        };
+        assert_eq!(actual.to_string(), expected.to_string());
     }
 }

@@ -219,3 +219,282 @@ fn fields_variables(fields: &syn::Fields, use_self: bool) -> Vec<TokenStream> {
             .collect(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use proc_macro2::Span;
+    use quote::quote;
+
+    macro_rules! assert_eq_tokens {
+        ($left:expr, $right:expr) => {
+            assert_eq!($left.to_string(), $right.to_string());
+        };
+    }
+
+    #[test]
+    fn test_field_variables_unit() {
+        let fields = syn::Fields::Unit;
+        assert!(fields_variables(&fields, true).is_empty());
+        assert!(fields_variables(&fields, false).is_empty());
+    }
+
+    #[test]
+    fn test_field_variables_named() {
+        let fields = syn::Fields::Named(syn::parse_quote! {{ a: u8, b: &u8 }});
+        let names = fields_variables(&fields, true);
+        assert_eq_tokens!(names[0], quote! { &self.a });
+        assert_eq_tokens!(names[1], quote! { self.b });
+        let names = fields_variables(&fields, false);
+        assert_eq_tokens!(names[0], quote! { a });
+        assert_eq_tokens!(names[1], quote! { b });
+    }
+
+    #[test]
+    fn test_field_variables_unnamed() {
+        let fields = syn::Fields::Unnamed(syn::parse_quote! { (u8, &u8) });
+        let names = fields_variables(&fields, true);
+        assert_eq_tokens!(names[0], quote! { &self.0 });
+        assert_eq_tokens!(names[1], quote! { self.1 });
+        let names = fields_variables(&fields, false);
+        assert_eq_tokens!(names[0], quote! { field_0 });
+        assert_eq_tokens!(names[1], quote! { field_1 });
+    }
+
+    #[test]
+    fn test_maybe_length_prefix() {
+        let (len, encoder) = maybe_length_prefix(true);
+        assert_eq_tokens!(
+            len,
+            quote! { ::ssh_encoding::Encode::encoded_len(&0usize)?, }
+        );
+        assert_eq_tokens!(
+            encoder,
+            quote! {{
+                let len = ::ssh_encoding::Encode::encoded_len(self)? - ::ssh_encoding::Encode::encoded_len(&0usize)?;
+                ::ssh_encoding::Encode::encode(&len, writer)?;
+            }}
+        );
+
+        let (len, encoder) = maybe_length_prefix(false);
+        assert_eq_tokens!(len, quote! {});
+        assert_eq_tokens!(encoder, quote! {});
+    }
+
+    #[test]
+    fn test_derive_for_fields() {
+        let fields =
+            syn::Fields::Named(syn::parse_quote! {{ a: u8, #[ssh(length_prefixed)] b: &u8 }});
+        let names = fields_variables(&fields, true);
+        let (lengths, encoders) = derive_for_fields(&fields, names).unwrap();
+        assert_eq_tokens!(
+            lengths[0],
+            quote! { ::ssh_encoding::Encode::encoded_len(&self.a)? }
+        );
+        assert_eq_tokens!(
+            encoders[0],
+            quote! { ::ssh_encoding::Encode::encode(&self.a, writer)?; }
+        );
+        assert_eq_tokens!(
+            lengths[1],
+            quote! { ::ssh_encoding::Encode::encoded_len_prefixed(self.b)? }
+        );
+        assert_eq_tokens!(
+            encoders[1],
+            quote! { ::ssh_encoding::Encode::encode_prefixed(self.b, writer)?; }
+        );
+    }
+
+    #[test]
+    fn test_derive_for_fields_bad_attribute() {
+        let fields = syn::Fields::Named(syn::parse_quote! {{ #[ssh(not_an_attribute)] a: u8 }});
+        let names = fields_variables(&fields, true);
+        let err = derive_for_fields(&fields, names).unwrap_err();
+        assert_eq!(err.to_string(), "unknown attribute");
+    }
+
+    #[test]
+    fn test_derive_for_variants_no_repr() {
+        let variant: syn::Variant = syn::parse_quote! { Bar };
+        let enum_name = syn::Ident::new("Foo", variant.span());
+        let container_attributes = ContainerAttributes {
+            discriminant_type: None,
+            length_prefixed: false,
+        };
+        let err = derive_for_variants(&container_attributes, std::iter::once(&variant), &enum_name)
+            .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "enum must have a repr attribute to derive `Encode`"
+        );
+    }
+
+    #[test]
+    fn test_derive_for_variants_no_explicit_discriminant() {
+        let variant: syn::Variant = syn::parse_quote! { Bar }; // Variant without ` = 123` discriminant.
+        let enum_name = syn::Ident::new("Foo", variant.span());
+        let container_attributes = ContainerAttributes {
+            discriminant_type: Some(quote! { u8 }),
+            length_prefixed: false,
+        };
+        let err = derive_for_variants(&container_attributes, std::iter::once(&variant), &enum_name)
+            .unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "enum variants must have an explicit discriminant to derive `Encode`"
+        );
+    }
+
+    #[test]
+    fn test_derive_for_variants() {
+        let variants: [syn::Variant; 2] = [
+            syn::parse_quote! { Foo(u8, u8) = 1 },
+            syn::parse_quote! { Bar { a: u8, #[ssh(length_prefixed)] b: &u8 } = 2 },
+        ];
+        let enum_name = syn::Ident::new("Enum", Span::call_site());
+        let container_attributes = ContainerAttributes {
+            discriminant_type: Some(quote! { u8 }),
+            length_prefixed: false,
+        };
+        let (length_arms, encode_arms) =
+            derive_for_variants(&container_attributes, variants.iter(), &enum_name).unwrap();
+        assert_eq_tokens!(
+            length_arms[0],
+            quote! {
+                Enum::Foo (field_0, field_1) => {
+                    [
+                        ::core::mem::size_of::<u8>(),
+                        ::ssh_encoding::Encode::encoded_len(field_0)?,
+                        ::ssh_encoding::Encode::encoded_len(field_1)?
+                    ].checked_sum()
+                }
+            }
+        );
+        assert_eq_tokens!(
+            encode_arms[0],
+            quote! {
+                Enum::Foo(field_0, field_1) => {
+                    ::ssh_encoding::Encode::encode(&(1 as u8), writer)?;
+                    ::ssh_encoding::Encode::encode(field_0, writer)?;
+                    ::ssh_encoding::Encode::encode(field_1, writer)?;
+                }
+            }
+        );
+        assert_eq_tokens!(
+            length_arms[1],
+            quote! {
+                Enum::Bar {a, b} => {
+                    [
+                        ::core::mem::size_of::<u8>(),
+                        ::ssh_encoding::Encode::encoded_len(a)?,
+                        ::ssh_encoding::Encode::encoded_len_prefixed(b)?
+                    ].checked_sum()
+                }
+            }
+        );
+        assert_eq_tokens!(
+            encode_arms[1],
+            quote! {
+                Enum::Bar {a, b} => {
+                    ::ssh_encoding::Encode::encode(&(2 as u8), writer)?;
+                    ::ssh_encoding::Encode::encode(a, writer)?;
+                    ::ssh_encoding::Encode::encode_prefixed(b, writer)?;
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_for_struct() {
+        let input: DeriveInput = syn::parse_quote! {
+            #[ssh(length_prefixed)]
+            struct Foo {
+                a: u8,
+                #[ssh(length_prefixed)]
+                b: &u8,
+            }
+        };
+        let output = try_derive_encode(input).unwrap();
+        assert_eq_tokens!(
+            output,
+            quote! {
+                #[automatically_derived]
+                impl ::ssh_encoding::Encode for Foo {
+                    fn encoded_len(&self) -> ::ssh_encoding::Result<usize> {
+                        use ::ssh_encoding::CheckedSum;
+                        [
+                            ::ssh_encoding::Encode::encoded_len(&0usize)?,
+                            ::ssh_encoding::Encode::encoded_len(&self.a)?,
+                            ::ssh_encoding::Encode::encoded_len_prefixed(self.b)?
+                        ].checked_sum()
+                    }
+
+                    fn encode(&self, writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
+                        {
+                            let len = ::ssh_encoding::Encode::encoded_len(self)? - ::ssh_encoding::Encode::encoded_len(&0usize)?;
+                            ::ssh_encoding::Encode::encode(&len, writer)?;
+                        }
+                        ::ssh_encoding::Encode::encode(&self.a, writer)?;
+                        ::ssh_encoding::Encode::encode_prefixed(self.b, writer)?;
+                        Ok(())
+                    }
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_for_enum() {
+        let input: DeriveInput = syn::parse_quote! {
+            #[repr(u8)]
+            enum Enum {
+                Foo(u8, u8) = 1,
+                Bar { a: u8, #[ssh(length_prefixed)] b: &u8 } = 2,
+            }
+        };
+        let output = try_derive_encode(input).unwrap();
+        assert_eq_tokens!(
+            output,
+            quote! {
+                #[automatically_derived]
+                impl ::ssh_encoding::Encode for Enum {
+                    fn encoded_len(&self) -> ::ssh_encoding::Result<usize> {
+                        use ::ssh_encoding::CheckedSum;
+                        match self {
+                            Enum::Foo (field_0, field_1) => {
+                                [
+                                    ::core::mem::size_of::<u8>(),
+                                    ::ssh_encoding::Encode::encoded_len(field_0)?,
+                                    ::ssh_encoding::Encode::encoded_len(field_1)?
+                                ].checked_sum()
+                            }
+                            Enum::Bar {a, b} => {
+                                [
+                                    ::core::mem::size_of::<u8>(),
+                                    ::ssh_encoding::Encode::encoded_len(a)?,
+                                    ::ssh_encoding::Encode::encoded_len_prefixed(b)?
+                                ].checked_sum()
+                            }
+                        }
+                    }
+                    fn encode(&self, writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
+                        match self {
+                            Enum::Foo(field_0, field_1) => {
+                                ::ssh_encoding::Encode::encode(&(1 as u8), writer)?;
+                                ::ssh_encoding::Encode::encode(field_0, writer)?;
+                                ::ssh_encoding::Encode::encode(field_1, writer)?;
+                            }
+                            Enum::Bar {a, b} => {
+                                ::ssh_encoding::Encode::encode(&(2 as u8), writer)?;
+                                ::ssh_encoding::Encode::encode(a, writer)?;
+                                ::ssh_encoding::Encode::encode_prefixed(b, writer)?;
+                            }
+                        }
+                        Ok(())
+                    }
+                }
+            }
+        );
+    }
+}
