@@ -3,6 +3,7 @@
 use crate::{private, public, Algorithm, EcdsaCurve, Error, Mpint, PrivateKey, PublicKey, Result};
 use alloc::vec::Vec;
 use core::fmt;
+use core::future::Future;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use signature::{SignatureEncoding, Signer, Verifier};
 
@@ -63,6 +64,26 @@ where
     fn public_key(&self) -> public::KeyData {
         self.into()
     }
+}
+
+/// Sign the provided message bytestring using `Self` (e.g. a cryptographic key
+/// or connection to an HSM), returning a digital signature.
+pub trait AsyncSigner<S> {
+    // Using an associated type here to force the implementor to be explicit with Send/Sync
+    /// Future type which will be returned by `try_sign`
+    type SignFuture: Future<Output = signature::Result<S>>;
+    /// Attempt to sign the given message, returning a digital signature on
+    /// success, or an error if something went wrong.
+    ///
+    /// The main intended use case for signing errors is when communicating
+    /// with external signers, e.g. cloud KMS, HSMs, or other hardware tokens.
+    fn try_sign(&self, msg: &[u8]) -> Self::SignFuture;
+}
+
+/// Async pendant to the sync [`Signer`] trait
+pub trait AsyncSigningKey: AsyncSigner<Signature> {
+    /// Get the [`public::KeyData`] for this signing key.
+    fn public_key(&self) -> public::KeyData;
 }
 
 /// Low-level digital signature (e.g. DSA, ECDSA, Ed25519).

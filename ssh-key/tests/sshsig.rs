@@ -3,7 +3,11 @@
 #![cfg(feature = "alloc")]
 
 use hex_literal::hex;
-use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
+use signature::Signer;
+use ssh_key::{
+    Algorithm, AsyncSigner, AsyncSigningKey, HashAlg, LineEnding, PublicKey, Signature, SigningKey,
+    SshSig,
+};
 
 #[cfg(any(
     feature = "dsa",
@@ -11,7 +15,7 @@ use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
     feature = "p256",
     feature = "rsa"
 ))]
-use {encoding::Decode, signature::Verifier, ssh_key::PrivateKey, ssh_key::Signature};
+use {encoding::Decode, signature::Verifier, ssh_key::PrivateKey};
 
 #[cfg(feature = "ed25519")]
 use ssh_key::Error;
@@ -337,5 +341,42 @@ fn verify_sk_ed25519() {
     assert_eq!(
         verifying_key.verify(NAMESPACE_EXAMPLE, b"bogus!", &signature),
         Err(Error::Crypto)
+    );
+}
+
+#[tokio::test]
+#[cfg(feature = "p256")]
+async fn sign_async() {
+    struct AsyncSignerEnvelope<S: Signer<Signature>>(S);
+    impl<S: Signer<Signature> + SigningKey> AsyncSigningKey for AsyncSignerEnvelope<S> {
+        fn public_key(&self) -> ssh_key::public::KeyData {
+            self.0.public_key()
+        }
+    }
+    impl<S: Signer<Signature>> AsyncSigner<Signature> for AsyncSignerEnvelope<S> {
+        type SignFuture = std::future::Ready<signature::Result<Signature>>;
+
+        fn try_sign(&self, msg: &[u8]) -> Self::SignFuture {
+            std::future::ready(self.0.try_sign(msg))
+        }
+    }
+
+    let signing_key = PrivateKey::from_openssh(ECDSA_P256_PRIVATE_KEY).unwrap();
+    let verifying_key = ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
+
+    let async_signer = AsyncSignerEnvelope(signing_key);
+
+    let signature = SshSig::sign_async(
+        &async_signer,
+        NAMESPACE_EXAMPLE,
+        HashAlg::Sha512,
+        MSG_EXAMPLE,
+    )
+    .await
+    .unwrap();
+
+    assert_eq!(
+        verifying_key.verify(NAMESPACE_EXAMPLE, MSG_EXAMPLE, &signature),
+        Ok(())
     );
 }
