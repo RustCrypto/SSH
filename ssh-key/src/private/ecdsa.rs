@@ -50,9 +50,7 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
 
             let mut bytes = [0u8; SIZE];
             if len < SIZE {
-                let mut temp = vec![0u8; len];
-                reader.read(&mut temp)?;
-                bytes[0..len].copy_from_slice(&temp);
+                reader.read(&mut bytes[0..len])?;
             } else {
                 reader.read(&mut bytes)?;
             }

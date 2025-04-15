@@ -714,6 +714,7 @@ fn encoding_integration_test(private_key: PrivateKey) {
     assert_eq!(&public_key, private_key.public_key());
 }
 
+#[cfg(all(feature = "alloc", feature = "p521"))]
 #[test]
 fn paramiko_ecdsa_key() {
     let key_data = r#"-----BEGIN OPENSSH PRIVATE KEY-----
