@@ -713,3 +713,30 @@ fn encoding_integration_test(private_key: PrivateKey) {
     // Ensure ssh-keygen successfully parsed our public key
     assert_eq!(&public_key, private_key.public_key());
 }
+
+#[test]
+fn paramiko_ecdsa_key() {
+    let key_data = r#"-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAArAAAABNlY2RzYS
+1zaGEyLW5pc3RwNTIxAAAACG5pc3RwNTIxAAAAhQQBf1mOQFzzGhb+5d4dEzPRbrHrrV+G
+ODWR5lOkdlhXpljXb/aPfFGD1RcsrD+WMo510xKHUN4MblVCa//W24EAwbAApVKdO2tte1
+72+L2JfNuaJWTU+7QfSWnCDqNFg+XIQSL3UN8nbgOl8Uqd+vF/Z6NqIhyVACLmsm5h3Z3c
+blUsh0gAAAEQpYZBIaWGQSEAAAATZWNkc2Etc2hhMi1uaXN0cDUyMQAAAAhuaXN0cDUyMQ
+AAAIUEAX9ZjkBc8xoW/uXeHRMz0W6x661fhjg1keZTpHZYV6ZY12/2j3xRg9UXLKw/ljKO
+ddMSh1DeDG5VQmv/1tuBAMGwAKVSnTtrbXte9vi9iXzbmiVk1Pu0H0lpwg6jRYPlyEEi91
+DfJ24DpfFKnfrxf2ejaiIclQAi5rJuYd2d3G5VLIdIAAAAQQ9lo6iDFKZNqcdQtVY5teUy
+2uAhY8gEm4tacIWp4k+PLPuz7l7fLe+V9JgZ6D32zoaVskogcJOXKw5fdF0D7VDUAAAAE3
+phY3prb3dzQGwtemFjemtvd3M=
+-----END OPENSSH PRIVATE KEY-----"#;
+
+    let key = PrivateKey::from_openssh(key_data);
+    assert!(key.is_ok());
+    let key = key.unwrap();
+    assert!(!key.is_encrypted());
+    assert_eq!(
+        key.algorithm(),
+        Algorithm::Ecdsa {
+            curve: ssh_key::EcdsaCurve::NistP521
+        }
+    );
+}

@@ -39,7 +39,8 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         reader.read_prefixed(|reader| {
-            if reader.remaining_len() == SIZE.checked_add(1).ok_or(encoding::Error::Length)? {
+            let len = reader.remaining_len();
+            if len == SIZE.checked_add(1).ok_or(encoding::Error::Length)? {
                 // Strip leading zero
                 // TODO(tarcieri): make sure leading zero was necessary
                 if u8::decode(reader)? != 0 {
@@ -48,7 +49,13 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
             }
 
             let mut bytes = [0u8; SIZE];
-            reader.read(&mut bytes)?;
+            if len < SIZE {
+                let mut temp = vec![0u8; len];
+                reader.read(&mut temp)?;
+                bytes[0..len].copy_from_slice(&temp);
+            } else {
+                reader.read(&mut bytes)?;
+            }
             Ok(Self { bytes })
         })
     }
