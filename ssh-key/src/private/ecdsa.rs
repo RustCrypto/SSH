@@ -49,7 +49,7 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
             }
 
             let mut bytes = [0u8; SIZE];
-                reader.read(&mut bytes[0..std::cmp::min(len, SIZE)])?;
+            reader.read(&mut bytes[0..std::cmp::min(len, SIZE)])?;
             Ok(Self { bytes })
         })
     }
