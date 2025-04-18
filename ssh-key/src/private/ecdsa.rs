@@ -49,7 +49,17 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
             }
 
             let mut bytes = [0u8; SIZE];
-            reader.read(&mut bytes[..core::cmp::min(len, SIZE)])?;
+            if SIZE == 66 {
+                // https://stackoverflow.com/questions/50002149/why-p-521-public-key-x-y-some-time-is-65-bytes-some-time-is-66-bytes
+                // although lower keys than 64 are vanishingly possible, but lets stop here
+                if len > 63 {
+                    reader.read(&mut bytes[..core::cmp::min(len, SIZE)])?;
+                } else {
+                    return Err(encoding::Error::Length.into());
+                }
+            } else {
+                reader.read(&mut bytes)?;
+            }
             Ok(Self { bytes })
         })
     }
