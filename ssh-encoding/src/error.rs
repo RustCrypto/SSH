@@ -43,9 +43,8 @@ pub enum Error {
 impl core::error::Error for Error {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
-            // TODO(tarcieri): re-add support when `base64ct` uses `core::error`
-            //#[cfg(feature = "base64")]
-            //Self::Base64(err) => Some(err),
+            #[cfg(feature = "base64")]
+            Self::Base64(err) => Some(err),
             #[cfg(feature = "pem")]
             Self::Pem(err) => Some(err),
             _ => None,
