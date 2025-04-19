@@ -663,18 +663,33 @@ impl Verifier<Signature> for EcdsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-impl Signer<Signature> for RsaKeypair {
+impl Signer<Signature> for (&RsaKeypair, Option<HashAlg>) {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
-        let data = rsa::pkcs1v15::SigningKey::<Sha512>::try_from(self)?
-            .try_sign(message)
-            .map_err(|_| signature::Error::new())?;
+        let data = match self.1 {
+            Some(HashAlg::Sha512) => {
+                rsa::pkcs1v15::SigningKey::<Sha512>::try_from(self.0)?.try_sign(message)
+            }
+            Some(HashAlg::Sha256) => {
+                rsa::pkcs1v15::SigningKey::<Sha256>::try_from(self.0)?.try_sign(message)
+            }
+            #[cfg(all(feature = "rsa", feature = "sha1"))]
+            None => rsa::pkcs1v15::SigningKey::<Sha1>::try_from(self.0)?.try_sign(message),
+            #[cfg(not(all(feature = "rsa", feature = "sha1")))]
+            None => return Err(Algorithm::Rsa { hash: None }.unsupported_error().into()),
+        }
+        .map_err(|_| signature::Error::new())?;
 
         Ok(Signature {
-            algorithm: Algorithm::Rsa {
-                hash: Some(HashAlg::Sha512),
-            },
+            algorithm: Algorithm::Rsa { hash: self.1 },
             data: data.to_vec(),
         })
+    }
+}
+
+#[cfg(feature = "rsa")]
+impl Signer<Signature> for RsaKeypair {
+    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+        (self, Some(HashAlg::Sha512)).try_sign(message)
     }
 }
 
