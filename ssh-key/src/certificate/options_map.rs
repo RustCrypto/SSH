@@ -69,20 +69,18 @@ impl Decode for OptionsMap {
 
 impl Encode for OptionsMap {
     fn encoded_len(&self) -> encoding::Result<usize> {
-        self.iter()
-            .try_fold(4, |acc, (name, data)| {
-                [
-                    acc,
-                    name.encoded_len()?,
-                    if data.is_empty() {
-                        4
-                    } else {
-                        data.encoded_len_prefixed()?
-                    },
-                ]
-                .checked_sum()
-            })
-            .map_err(Into::into)
+        self.iter().try_fold(4, |acc, (name, data)| {
+            [
+                acc,
+                name.encoded_len()?,
+                if data.is_empty() {
+                    4
+                } else {
+                    data.encoded_len_prefixed()?
+                },
+            ]
+            .checked_sum()
+        })
     }
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {

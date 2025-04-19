@@ -4,7 +4,7 @@ use crate::{Cipher, Error, Result};
 use cipher::KeyIvInit;
 
 #[cfg(feature = "aes-ctr")]
-use crate::{encryptor::ctr_encrypt as ctr_decrypt, Ctr128BE};
+use crate::{Ctr128BE, encryptor::ctr_encrypt as ctr_decrypt};
 
 #[cfg(feature = "tdes")]
 use des::TdesEde3;

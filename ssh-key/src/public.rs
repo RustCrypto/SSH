@@ -45,7 +45,7 @@ use {
 };
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
-use serde::{de, ser, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de, ser};
 
 #[cfg(feature = "std")]
 use std::{fs, path::Path};

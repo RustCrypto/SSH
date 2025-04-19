@@ -2,7 +2,7 @@
 //!
 //! Edwards Digital Signature Algorithm (EdDSA) over Curve25519.
 
-use crate::{public::Ed25519PublicKey, Error, Result};
+use crate::{Error, Result, public::Ed25519PublicKey};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};

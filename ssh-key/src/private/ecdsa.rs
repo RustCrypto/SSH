@@ -1,6 +1,6 @@
 //! Elliptic Curve Digital Signature Algorithm (ECDSA) private keys.
 
-use crate::{public::EcdsaPublicKey, Algorithm, EcdsaCurve, Error, Result};
+use crate::{Algorithm, EcdsaCurve, Error, Result, public::EcdsaPublicKey};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use sec1::consts::{U32, U48, U66};

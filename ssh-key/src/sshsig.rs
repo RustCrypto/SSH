@@ -1,11 +1,11 @@
 //! `sshsig` implementation.
 
-use crate::{public, Algorithm, Error, HashAlg, Result, Signature, SigningKey};
+use crate::{Algorithm, Error, HashAlg, Result, Signature, SigningKey, public};
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
-    pem::{LineEnding, PemLabel},
     CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
+    pem::{LineEnding, PemLabel},
 };
 use signature::Verifier;
 
@@ -15,7 +15,7 @@ use crate::{PrivateKey, PublicKey};
 type Version = u32;
 
 #[cfg(feature = "serde")]
-use serde::{de, ser, Deserialize, Serialize};
+use serde::{Deserialize, Serialize, de, ser};
 
 /// `sshsig` provides a general-purpose signature format based on SSH keys and
 /// wire formats.
@@ -205,7 +205,6 @@ impl SshSig {
     }
 
     /// Get the hash algorithm used to produce this signature.
-
     ///
     /// Data to be signed is first hashed with the specified `hash_alg`.
     /// This is done to limit the amount of data presented to the signature
@@ -321,7 +320,7 @@ struct SignedData<'a> {
     hash: &'a [u8],
 }
 
-impl<'a> SignedData<'a> {
+impl SignedData<'_> {
     fn to_bytes(self) -> Result<Vec<u8>> {
         let mut signed_bytes = Vec::with_capacity(self.encoded_len()?);
         self.encode(&mut signed_bytes)?;

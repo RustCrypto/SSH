@@ -6,7 +6,7 @@ use cipher::{Block, BlockCipher, BlockCipherEncrypt, KeyIvInit};
 #[cfg(feature = "aes-ctr")]
 use {
     crate::Ctr128BE,
-    cipher::{array::sizes::U16, StreamCipherCore},
+    cipher::{StreamCipherCore, array::sizes::U16},
 };
 
 #[cfg(feature = "tdes")]

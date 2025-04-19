@@ -1,7 +1,7 @@
 //! Private key pairs.
 
 use super::ed25519::Ed25519Keypair;
-use crate::{public, Algorithm, Error, Result};
+use crate::{Algorithm, Error, Result, public};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
 

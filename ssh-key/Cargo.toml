@@ -14,8 +14,8 @@ repository = "https://github.com/RustCrypto/SSH"
 categories = ["authentication", "cryptography", "encoding", "no-std", "parser-implementations"]
 keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
 readme = "README.md"
-edition = "2021"
-rust-version = "1.81"
+edition = "2024"
+rust-version = "1.85"
 
 [dependencies]
 cipher = { package = "ssh-cipher", version = "=0.3.0-pre.2", features = ["zeroize"], path = "../ssh-cipher" }

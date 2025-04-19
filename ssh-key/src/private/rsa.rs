@@ -1,6 +1,6 @@
 //! Rivest–Shamir–Adleman (RSA) private keys.
 
-use crate::{public::RsaPublicKey, Error, Mpint, Result};
+use crate::{Error, Mpint, Result, public::RsaPublicKey};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
@@ -13,7 +13,7 @@ use {
         pkcs1v15,
         traits::{PrivateKeyParts, PublicKeyParts},
     },
-    sha2::{digest::const_oid::AssociatedOid, Digest},
+    sha2::{Digest, digest::const_oid::AssociatedOid},
 };
 
 /// RSA private key.

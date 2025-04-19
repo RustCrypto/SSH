@@ -1,4 +1,4 @@
-use super::{writer::PemWriter, LineEnding, PemLabel};
+use super::{LineEnding, PemLabel, writer::PemWriter};
 use crate::{Encode, Error};
 use core::str;
 
@@ -22,10 +22,10 @@ pub trait EncodePem: Encode + PemLabel {
 
 impl<T: Encode + PemLabel> EncodePem for T {
     fn encode_pem<'o>(&self, line_ending: LineEnding, out: &'o mut [u8]) -> Result<&'o str, Error> {
-        let mut writer = PemWriter::new(Self::PEM_LABEL, line_ending, out).map_err(Error::from)?;
+        let mut writer = PemWriter::new(Self::PEM_LABEL, line_ending, out)?;
         self.encode(&mut writer)?;
 
-        let encoded_len = writer.finish().map_err(Error::from)?;
+        let encoded_len = writer.finish()?;
         str::from_utf8(&out[..encoded_len]).map_err(Error::from)
     }
 

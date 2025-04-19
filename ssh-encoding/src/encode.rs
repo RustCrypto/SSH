@@ -3,7 +3,7 @@
 //!
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 
-use crate::{checked::CheckedSum, writer::Writer, Error};
+use crate::{Error, checked::CheckedSum, writer::Writer};
 use core::str;
 
 #[cfg(feature = "alloc")]

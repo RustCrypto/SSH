@@ -7,8 +7,8 @@
 ))]
 
 use hex_literal::hex;
-use rand_chacha::{rand_core::SeedableRng, ChaCha8Rng};
-use ssh_key::{certificate, Algorithm, PrivateKey};
+use rand_chacha::{ChaCha8Rng, rand_core::SeedableRng};
+use ssh_key::{Algorithm, PrivateKey, certificate};
 
 #[cfg(feature = "p256")]
 use ssh_key::EcdsaCurve;
@@ -199,11 +199,13 @@ fn new_with_validity_times() {
     let issued_at = SystemTime::now();
     let expires_at = issued_at + Duration::from_secs(3600);
 
-    assert!(certificate::Builder::new_with_validity_times(
-        nonce,
-        subject_key.public_key(),
-        issued_at,
-        expires_at
-    )
-    .is_ok());
+    assert!(
+        certificate::Builder::new_with_validity_times(
+            nonce,
+            subject_key.public_key(),
+            issued_at,
+            expires_at
+        )
+        .is_ok()
+    );
 }

@@ -1,8 +1,8 @@
 //! Support for deriving the `Encode` trait on structs.
 
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
-use syn::{spanned::Spanned, DataEnum, DataStruct, DeriveInput};
+use quote::{ToTokens, quote};
+use syn::{DataEnum, DataStruct, DeriveInput, spanned::Spanned};
 
 use crate::attributes::{ContainerAttributes, FieldAttributes};
 

@@ -14,12 +14,12 @@ fn decode_u8() {
 fn decode_boolean() {
     let mut bytes = hex!("01").as_slice();
     let ret = bool::decode(&mut bytes).unwrap();
-    assert_eq!(ret, true);
+    assert!(ret);
 
     // "All non-zero values MUST be interpreted as TRUE"
     let mut bytes = hex!("FF").as_slice();
     let ret = bool::decode(&mut bytes).unwrap();
-    assert_eq!(ret, true);
+    assert!(ret);
 }
 
 #[test]
