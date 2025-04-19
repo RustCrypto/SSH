@@ -23,12 +23,14 @@
 
 //! ## Conventions used in this crate
 //!
-//! This crate uses the following type labels which are described in
-//! [RFC4251 § 5]:
+//! This crate uses the following type labels which are described in [RFC4251 § 5], and also lists
+//! types with [`Decode`]/[`Encode`] trait impls which are compatible with this format:
 //!
-//! #### `byte`, `byte[n]`, `byte[]`
-//!  
-//! A byte represents an arbitrary 8-bit value (octet).
+//! ### `byte`, `byte[n]`, `byte[]`: arbitrary 8-bit value (octet) or sequence thereof
+//! #### [`Decode`]/[`Encode`] trait impls:
+//! - `byte`: `u8`
+//! - `byte[n]`: `[u8; N]`
+//! - `byte[]`: `Vec<u8>`, `bytes::Bytes` (requires `bytes` crate feature)
 //!
 //! Fixed length data is sometimes represented as an array of bytes, written
 //! `byte[n]` where `n` is the number of bytes in the array.
@@ -37,52 +39,52 @@
 //! length bytestrings (similar to `string`, see below) but identifies data
 //! which is inherently binary in nature, as opposed to text.
 //!
-//! #### `boolean`
-//!  
-//! A boolean value is stored as a single byte.
+//!
+//! ### `boolean`: boolean value stored as a single byte
+//! #### [`Decode`]/[`Encode`] trait impls: `bool`
 //!
 //! The value 0 represents FALSE, and the value 1 represents TRUE.  All non-zero
 //! values MUST be interpreted as TRUE; however, applications MUST NOT
 //! store values other than 0 and 1.
-//!  
-//! #### `uint32`
-//!  
-//! Represents a 32-bit unsigned integer.
+//!
+//! ### `uint32`: 32-bit unsigned integer
+//! #### [`Decode`]/[`Encode`] trait impls: `u32`, `usize`
 //!
 //! Stored as four bytes in the order of decreasing significance (network byte order).
 //!
 //! For example: the value `699921578` (`0x29b7f4aa`) is stored as
 //! `29 b7 f4 aa`.
 //!
-//! #### `uint64`
-//!
-//! Represents a 64-bit unsigned integer.
+//! ### `uint64`: 64-bit unsigned integer
+//! #### [`Decode`]/[`Encode`] trait impls: `u64`
 //!
 //! Stored as eight bytes in the order of decreasing significance (network byte order).
 //!
-//! #### `string`
+//! ### `string`: arbitrary length *binary* string
+//! #### [`Decode`]/[`Encode`] trait impls: `Vec<u8>`, `String`, `bytes::Bytes` (requires `bytes` crate feature)
 //!
-//! Arbitrary length binary string.
+//! *NOTE: `string` is effectively equivalent to `byte[]`, however the latter is not defined in
+//! [RFC4251] and so trait impls in this crate for bytestring types like `[u8; N]` and `Vec<u8>`
+//! are described as being impls of `string`*.
 //!
 //! Strings are allowed to contain arbitrary binary data, including null characters and 8-bit
 //! characters.
 //!
-//! They are stored as a `uint32` containing its length
-//! (number of bytes that follow) and zero (= empty string) or more
-//! bytes that are the value of the string.  Terminating null
+//! They are stored as a `uint32` containing its length (number of bytes that follow) and
+//! zero (= empty string) or more bytes that are the value of the string.  Terminating null
 //! characters are not used.
 //!
-//! Strings are also used to store text.  In that case, US-ASCII is
-//! used for internal names, and ISO-10646 UTF-8 for text that might
-//! be displayed to the user.  The terminating null character SHOULD
-//! NOT normally be stored in the string.  For example: the US-ASCII
-//! string "testing" is represented as `00 00 00 07 t e s t i n g`.  The
-//! UTF-8 mapping does not alter the encoding of US-ASCII characters.
+//! Strings are also used to store text.  In that case, US-ASCII is used for internal names, and
+//! ISO-10646 UTF-8 for text that might be displayed to the user.
 //!
-//! #### `mpint`
+//! The terminating null character SHOULD  NOT normally be stored in the string.
 //!
-//! Represents multiple precision integers in two's complement format,
-//! stored as a string, 8 bits per byte, MSB first.
+//! For example: the US-ASCII string "testing" is represented as `00 00 00 07 t e s t i n g`.
+//! The UTF-8 mapping does not alter the encoding of US-ASCII characters.
+//!
+//! ### `mpint`: multiple precision integers in two's complement format
+//!
+//! Stored as a byte string, 8 bits per byte, MSB first (a.k.a. big endian).
 //!
 //! Negative numbers have the value 1 as the most significant bit of the first byte of
 //! the data partition.  If the most significant bit would be set for
@@ -94,7 +96,7 @@
 //! By convention, a number that is used in modular computations in
 //! `Z_n` SHOULD be represented in the range `0 <= x < n`.
 //!
-//! Examples:
+//! #### Examples:
 //!
 //! value (hex)        | representation (hex)
 //! -------------------|---------------------
@@ -104,9 +106,8 @@
 //! `-1234`            | `00 00 00 02 ed cc`
 //! `-deadbeef`        | `00 00 00 05 ff 21 52 41 11`
 //!
-//! #### `name-list`
-//!
-//! A string containing a comma-separated list of names.
+//! ### `name-list`: string containing a comma-separated list of names
+//! #### [`Decode`]/[`Encode`] trait impls: `Vec<String>`
 //!
 //! A `name-list` is represented as a `uint32` containing its length
 //! (number of bytes that follow) followed by a comma-separated list of zero or more
@@ -125,7 +126,7 @@
 //! Terminating null characters MUST NOT be used, neither
 //! for the individual names, nor for the list as a whole.
 //!
-//! Examples:
+//! #### Examples:
 //!
 //! value                      | representation (hex)
 //! ---------------------------|---------------------
@@ -134,6 +135,7 @@
 //! `("zlib,none")`            | `00 00 00 09 7a 6c 69 62 2c 6e 6f 6e 65`
 //!
 //! [RFC3066]: https://datatracker.ietf.org/doc/html/rfc3066
+//! [RFC4251]: https://datatracker.ietf.org/doc/html/rfc4251
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 //!
 //! ## Deriving [`Decode`] and [`Encode`]
@@ -247,3 +249,6 @@ pub use crate::pem::{DecodePem, EncodePem};
 
 #[cfg(feature = "derive")]
 pub use ssh_derive::{Decode, Encode};
+
+#[cfg(all(doc, feature = "alloc"))]
+use alloc::vec::Vec;
