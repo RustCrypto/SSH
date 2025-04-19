@@ -1,19 +1,18 @@
 //! Multiple precision integer
 
-use crate::{Error, Result};
+use crate::{CheckedSum, Decode, Encode, Error, Reader, Result, Writer};
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt;
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use subtle::{Choice, ConstantTimeEq};
-use zeroize::Zeroize;
 
-#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg(feature = "subtle")]
+use subtle::{Choice, ConstantTimeEq};
+
+#[cfg(any(feature = "bigint", feature = "zeroize"))]
+use zeroize::Zeroize;
+#[cfg(feature = "bigint")]
 use zeroize::Zeroizing;
 
-/// Multiple precision integer, a.k.a. "mpint".
-///
-/// This type is used for representing the big integer components of
-/// DSA and RSA keys.
+/// Multiple precision integer, a.k.a. `mpint`.
 ///
 /// Described in [RFC4251 § 5](https://datatracker.ietf.org/doc/html/rfc4251#section-5):
 ///
@@ -38,7 +37,8 @@ use zeroize::Zeroizing;
 /// | 80              | `00 00 00 02 00 80`
 /// |-1234            | `00 00 00 02 ed cc`
 /// | -deadbeef       | `00 00 00 05 ff 21 52 41 11`
-#[derive(Clone, PartialOrd, Ord)]
+#[cfg_attr(not(feature = "subtle"), derive(Clone))]
+#[cfg_attr(feature = "subtle", derive(Clone, Ord, PartialOrd))] // TODO: constant time (Partial)`Ord`?
 pub struct Mpint {
     /// Inner big endian-serialized integer value
     inner: Box<[u8]>,
@@ -109,14 +109,17 @@ impl AsRef<[u8]> for Mpint {
     }
 }
 
+#[cfg(feature = "subtle")]
 impl ConstantTimeEq for Mpint {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.as_ref().ct_eq(other.as_ref())
     }
 }
 
+#[cfg(feature = "subtle")]
 impl Eq for Mpint {}
 
+#[cfg(feature = "subtle")]
 impl PartialEq for Mpint {
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).into()
@@ -132,11 +135,11 @@ impl Decode for Mpint {
 }
 
 impl Encode for Mpint {
-    fn encoded_len(&self) -> encoding::Result<usize> {
+    fn encoded_len(&self) -> Result<usize> {
         [4, self.as_bytes().len()].checked_sum()
     }
 
-    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
+    fn encode(&self, writer: &mut impl Writer) -> Result<()> {
         self.as_bytes().encode(writer)?;
         Ok(())
     }
@@ -156,14 +159,15 @@ impl TryFrom<Box<[u8]>> for Mpint {
     fn try_from(bytes: Box<[u8]>) -> Result<Self> {
         match &*bytes {
             // Unnecessary leading 0
-            [0x00] => Err(Error::FormatEncoding),
+            [0x00] => Err(Error::MpintEncoding),
             // Unnecessary leading 0
-            [0x00, n, ..] if *n < 0x80 => Err(Error::FormatEncoding),
+            [0x00, n, ..] if *n < 0x80 => Err(Error::MpintEncoding),
             _ => Ok(Self { inner: bytes }),
         }
     }
 }
 
+#[cfg(feature = "zeroize")]
 impl Zeroize for Mpint {
     fn zeroize(&mut self) {
         self.inner.zeroize();
@@ -200,7 +204,7 @@ impl fmt::UpperHex for Mpint {
     }
 }
 
-#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg(feature = "bigint")]
 impl TryFrom<bigint::BigUint> for Mpint {
     type Error = Error;
 
@@ -209,7 +213,7 @@ impl TryFrom<bigint::BigUint> for Mpint {
     }
 }
 
-#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg(feature = "bigint")]
 impl TryFrom<&bigint::BigUint> for Mpint {
     type Error = Error;
 
@@ -219,7 +223,7 @@ impl TryFrom<&bigint::BigUint> for Mpint {
     }
 }
 
-#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg(feature = "bigint")]
 impl TryFrom<Mpint> for bigint::BigUint {
     type Error = Error;
 
@@ -228,7 +232,7 @@ impl TryFrom<Mpint> for bigint::BigUint {
     }
 }
 
-#[cfg(any(feature = "dsa", feature = "rsa"))]
+#[cfg(feature = "bigint")]
 impl TryFrom<&Mpint> for bigint::BigUint {
     type Error = Error;
 
@@ -236,7 +240,7 @@ impl TryFrom<&Mpint> for bigint::BigUint {
         mpint
             .as_positive_bytes()
             .map(bigint::BigUint::from_bytes_be)
-            .ok_or(Error::Crypto)
+            .ok_or(Error::MpintEncoding)
     }
 }
 

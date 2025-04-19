@@ -860,8 +860,11 @@ dependencies = [
  "bytes",
  "digest",
  "hex-literal",
+ "num-bigint-dig",
  "pem-rfc7468",
  "ssh-derive",
+ "subtle",
+ "zeroize",
 ]
 
 [[package]]

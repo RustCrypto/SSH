@@ -23,6 +23,10 @@ pub enum Error {
     /// Invalid length.
     Length,
 
+    /// `mpint` encoding errors.
+    #[cfg(feature = "alloc")]
+    MpintEncoding,
+
     /// Overflow errors.
     Overflow,
 
@@ -60,6 +64,8 @@ impl fmt::Display for Error {
             Error::CharacterEncoding => write!(f, "character encoding invalid"),
             Error::Label(err) => write!(f, "{}", err),
             Error::Length => write!(f, "length invalid"),
+            #[cfg(feature = "alloc")]
+            Error::MpintEncoding => write!(f, "`mpint` encoding invalid"),
             Error::Overflow => write!(f, "internal overflow error"),
             #[cfg(feature = "pem")]
             Error::Pem(err) => write!(f, "{err}"),

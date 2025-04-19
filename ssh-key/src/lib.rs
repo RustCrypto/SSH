@@ -158,8 +158,6 @@ mod kdf;
 
 #[cfg(feature = "std")]
 mod dot_ssh;
-#[cfg(feature = "alloc")]
-mod mpint;
 #[cfg(feature = "ppk")]
 mod ppk;
 #[cfg(feature = "alloc")]
@@ -181,13 +179,15 @@ pub use encoding::pem::LineEnding;
 pub use sha2;
 
 #[cfg(feature = "alloc")]
-pub use crate::{
-    algorithm::AlgorithmName,
-    certificate::Certificate,
-    known_hosts::KnownHosts,
-    mpint::Mpint,
-    signature::{Signature, SigningKey},
-    sshsig::SshSig,
+pub use {
+    crate::{
+        algorithm::AlgorithmName,
+        certificate::Certificate,
+        known_hosts::KnownHosts,
+        signature::{Signature, SigningKey},
+        sshsig::SshSig,
+    },
+    encoding::Mpint,
 };
 
 #[cfg(feature = "ecdsa")]

@@ -97,7 +97,7 @@ impl TryFrom<DsaPrivateKey> for dsa::BigUint {
     type Error = Error;
 
     fn try_from(key: DsaPrivateKey) -> Result<dsa::BigUint> {
-        dsa::BigUint::try_from(&key.inner)
+        Ok(dsa::BigUint::try_from(&key.inner)?)
     }
 }
 
@@ -106,7 +106,7 @@ impl TryFrom<&DsaPrivateKey> for dsa::BigUint {
     type Error = Error;
 
     fn try_from(key: &DsaPrivateKey) -> Result<dsa::BigUint> {
-        dsa::BigUint::try_from(&key.inner)
+        Ok(dsa::BigUint::try_from(&key.inner)?)
     }
 }
 

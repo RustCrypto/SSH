@@ -83,6 +83,7 @@
 //! The UTF-8 mapping does not alter the encoding of US-ASCII characters.
 //!
 //! ### `mpint`: multiple precision integers in two's complement format
+//! #### [`Decode`]/[`Encode`] trait impls: `Mpint`
 //!
 //! Stored as a byte string, 8 bits per byte, MSB first (a.k.a. big endian).
 //!
@@ -214,6 +215,8 @@ mod decode;
 mod encode;
 mod error;
 mod label;
+#[cfg(feature = "alloc")]
+mod mpint;
 #[macro_use]
 mod reader;
 mod writer;
@@ -232,6 +235,9 @@ pub use crate::{
     reader::Reader,
     writer::Writer,
 };
+
+#[cfg(feature = "alloc")]
+pub use crate::mpint::Mpint;
 
 #[cfg(feature = "base64")]
 pub use crate::{base64::Base64Reader, base64::Base64Writer};
