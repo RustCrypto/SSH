@@ -23,7 +23,7 @@ pem-rfc7468 = { version = "1.0.0-rc.2", optional = true }
 ssh-derive = { version = "0.0.1-alpha", optional = true, path = "../ssh-derive" }
 
 [dev-dependencies]
-hex-literal = "0.4.1"
+hex-literal = "1"
 
 [features]
 alloc = ["base64ct?/alloc", "pem-rfc7468?/alloc"]
