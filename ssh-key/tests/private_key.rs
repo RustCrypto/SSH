@@ -737,7 +737,15 @@ phY3prb3dzQGwtemFjemtvd3M=
     assert_eq!(
         key.algorithm(),
         Algorithm::Ecdsa {
-            curve: ssh_key::EcdsaCurve::NistP521
+            curve: EcdsaCurve::NistP521
         }
+    );
+
+    let keypair_data = key.key_data().ecdsa().unwrap();
+    assert_eq!(
+        keypair_data.private_key_bytes(),
+        hex!(
+            "000f65a3a88314a64da9c750b55639b5e532dae02163c8049b8b5a7085a9e24f8f2cfbb3ee5edf2def95f49819e83df6ce8695b24a207093972b0e5f745d03ed50d4"
+        )
     );
 }
