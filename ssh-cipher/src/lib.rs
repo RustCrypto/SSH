@@ -39,13 +39,13 @@ pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
 #[cfg(feature = "chacha20poly1305")]
 pub use crate::chacha20poly1305::{ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaNonce};
 
-use cipher::array::{typenum::U16, Array};
+use cipher::array::{Array, typenum::U16};
 use core::{fmt, str};
 use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes-gcm")]
 use {
-    aead::{array::typenum::U12, AeadInPlace},
+    aead::{AeadInPlace, array::typenum::U12},
     aes_gcm::{Aes128Gcm, Aes256Gcm},
 };
 

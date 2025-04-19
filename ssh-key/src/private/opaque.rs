@@ -9,8 +9,8 @@
 //! [RFC4251 § 6]: https://www.rfc-editor.org/rfc/rfc4251.html#section-6
 
 use crate::{
-    public::{OpaquePublicKey, OpaquePublicKeyBytes},
     Algorithm, Error, Result,
+    public::{OpaquePublicKey, OpaquePublicKeyBytes},
 };
 use alloc::vec::Vec;
 use core::fmt;

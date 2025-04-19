@@ -4,8 +4,8 @@ pub use chacha20::ChaCha20Legacy as ChaCha20;
 
 use crate::Tag;
 use aead::{
-    array::typenum::{U0, U16, U32, U8},
     AeadCore, Error, KeyInit, KeySizeUser, Result,
+    array::typenum::{U0, U8, U16, U32},
 };
 use cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
 use poly1305::Poly1305;

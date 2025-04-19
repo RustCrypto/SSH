@@ -1,6 +1,6 @@
 //! Digital Signature Algorithm (DSA) private keys.
 
-use crate::{public::DsaPublicKey, Error, Mpint, Result};
+use crate::{Error, Mpint, Result, public::DsaPublicKey};
 use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};

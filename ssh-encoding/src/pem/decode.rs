@@ -1,4 +1,4 @@
-use super::{reader::PemReader, PemLabel};
+use super::{PemLabel, reader::PemReader};
 use crate::{Decode, Reader};
 
 /// Decoding trait for PEM documents.
@@ -13,7 +13,7 @@ pub trait DecodePem: Decode + PemLabel + Sized {
 
 impl<T: Decode + PemLabel + Sized> DecodePem for T {
     fn decode_pem(pem: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
-        let mut reader = PemReader::new(pem.as_ref()).map_err(crate::Error::from)?;
+        let mut reader = PemReader::new(pem.as_ref())?;
         Self::validate_pem_label(reader.type_label()).map_err(crate::Error::from)?;
 
         let ret = Self::decode(&mut reader)?;

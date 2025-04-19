@@ -15,8 +15,8 @@ repository = "https://github.com/RustCrypto/SSH"
 categories = ["cryptography", "no-std"]
 keywords = ["crypto", "encryption", "openssh", "ssh"]
 readme = "README.md"
-edition = "2021"
-rust-version = "1.81"
+edition = "2024"
+rust-version = "1.85"
 
 [dependencies]
 cipher = "=0.5.0-pre.6"

@@ -121,8 +121,10 @@ fn decode_segment<'a>(bytes: &mut &'a [u8]) -> Result<&'a [u8]> {
 
     loop {
         match *bytes {
-            [b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'-' | b'/' | b'=' | b'@' | b'.', rest @ ..] =>
-            {
+            [
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'+' | b'-' | b'/' | b'=' | b'@' | b'.',
+                rest @ ..,
+            ] => {
                 // Valid character; continue
                 *bytes = rest;
                 len = len.checked_add(1).ok_or(encoding::Error::Length)?;

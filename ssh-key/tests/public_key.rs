@@ -313,7 +313,7 @@ fn new_sk_ecdsa_p256() {
         0x9e, 0xcd, 0x8d, 0x93, 0x1e,
     ];
 
-    let ec_point = sec1::EncodedPoint::<U32>::from_bytes(&EXAMPLE_EC_POINT).unwrap();
+    let ec_point = sec1::EncodedPoint::<U32>::from_bytes(EXAMPLE_EC_POINT).unwrap();
     let sk_key = SkEcdsaSha2NistP256::new(ec_point, "ssh:".to_string());
     let key = PublicKey::from_openssh(OPENSSH_SK_ECDSA_P256_EXAMPLE).unwrap();
 
@@ -346,13 +346,11 @@ fn decode_sk_ed25519_openssh() {
 #[cfg(feature = "alloc")]
 #[test]
 fn new_sk_ed25519_openssh() {
-    const EXAMPLE_PUBKEY: Ed25519PublicKey = Ed25519PublicKey {
-        0: [
-            0x21, 0x68, 0xfe, 0x4e, 0x4b, 0x53, 0xcf, 0x3a, 0xde, 0xee, 0xba, 0x60, 0x2f, 0x5e,
-            0x50, 0xed, 0xb5, 0xef, 0x44, 0x1d, 0xba, 0x88, 0x4f, 0x51, 0x19, 0x10, 0x9d, 0xb2,
-            0xda, 0xfd, 0xd7, 0x33,
-        ],
-    };
+    const EXAMPLE_PUBKEY: Ed25519PublicKey = Ed25519PublicKey([
+        0x21, 0x68, 0xfe, 0x4e, 0x4b, 0x53, 0xcf, 0x3a, 0xde, 0xee, 0xba, 0x60, 0x2f, 0x5e, 0x50,
+        0xed, 0xb5, 0xef, 0x44, 0x1d, 0xba, 0x88, 0x4f, 0x51, 0x19, 0x10, 0x9d, 0xb2, 0xda, 0xfd,
+        0xd7, 0x33,
+    ]);
 
     let sk_key = SkEd25519::new(EXAMPLE_PUBKEY, "ssh:".to_string());
     let key = PublicKey::from_openssh(OPENSSH_SK_ED25519_EXAMPLE).unwrap();
@@ -436,7 +434,7 @@ fn encode_rsa_4096_openssh() {
 fn public_keys_are_hashable() {
     let key = PublicKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let set = HashSet::from([&key]);
-    assert_eq!(true, set.contains(&key));
+    assert!(set.contains(&key));
 }
 
 #[cfg(feature = "std")]

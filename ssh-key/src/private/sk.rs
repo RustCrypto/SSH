@@ -2,7 +2,7 @@
 //!
 //! [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
 
-use crate::{public, Error, Result};
+use crate::{Error, Result, public};
 use alloc::vec::Vec;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 

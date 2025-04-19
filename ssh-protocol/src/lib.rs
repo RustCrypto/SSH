@@ -24,6 +24,6 @@
 pub use cipher::{self, Cipher};
 pub use encoding::{self, Decode, Encode, Reader, Writer};
 pub use key::{
-    self, certificate::Certificate, private::PrivateKey, public::PublicKey, Algorithm, Fingerprint,
-    HashAlg, Kdf, KdfAlg, Signature,
+    self, Algorithm, Fingerprint, HashAlg, Kdf, KdfAlg, Signature, certificate::Certificate,
+    private::PrivateKey, public::PublicKey,
 };

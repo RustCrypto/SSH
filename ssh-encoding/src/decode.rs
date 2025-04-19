@@ -3,7 +3,7 @@
 //!
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 
-use crate::{reader::Reader, Error, Result};
+use crate::{Error, Result, reader::Reader};
 
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};

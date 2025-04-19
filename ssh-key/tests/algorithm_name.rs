@@ -40,7 +40,7 @@ fn invalid_algorithm_name() {
 
     for name in INVALID_NAMES {
         assert!(
-            AlgorithmName::from_str(&name).is_err(),
+            AlgorithmName::from_str(name).is_err(),
             "{:?} should be an invalid algorithm name",
             name
         );
@@ -48,7 +48,7 @@ fn invalid_algorithm_name() {
 
     for name in INVALID_CERT_STRS {
         assert!(
-            AlgorithmName::from_certificate_type(&name).is_err(),
+            AlgorithmName::from_certificate_type(name).is_err(),
             "{:?} should be an invalid certificate str",
             name
         );

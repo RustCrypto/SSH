@@ -120,7 +120,7 @@ impl fmt::Debug for UnixTime {
 
 #[cfg(test)]
 mod tests {
-    use super::{UnixTime, MAX_SECS};
+    use super::{MAX_SECS, UnixTime};
     use crate::Error;
 
     #[test]

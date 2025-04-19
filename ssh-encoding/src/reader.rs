@@ -1,6 +1,6 @@
 //! Reader trait and associated implementations.
 
-use crate::{decode::Decode, Error, Result};
+use crate::{Error, Result, decode::Decode};
 use core::str;
 
 /// Reader trait which decodes the binary SSH protocol serialization from

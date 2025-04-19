@@ -1,4 +1,4 @@
-use super::{LineEnding, LINE_WIDTH};
+use super::{LINE_WIDTH, LineEnding};
 use crate::{Result, Writer};
 
 /// Inner PEM encoder.
@@ -33,7 +33,7 @@ impl<'o> PemWriter<'o> {
     }
 }
 
-impl<'o> Writer for PemWriter<'o> {
+impl Writer for PemWriter<'_> {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
         Ok(self.inner.encode(bytes)?)
     }

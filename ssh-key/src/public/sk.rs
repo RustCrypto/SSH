@@ -10,7 +10,7 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use alloc::{borrow::ToOwned, string::String};
 
 #[cfg(feature = "ecdsa")]
-use crate::{public::ecdsa::EcdsaNistP256PublicKey, EcdsaCurve};
+use crate::{EcdsaCurve, public::ecdsa::EcdsaNistP256PublicKey};
 
 /// Default FIDO/U2F Security Key application string.
 const DEFAULT_APPLICATION_STRING: &str = "ssh:";

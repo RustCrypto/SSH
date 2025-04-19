@@ -8,7 +8,7 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use {
     crate::private::RsaKeypair,
     rsa::{pkcs1v15, traits::PublicKeyParts},
-    sha2::{digest::const_oid::AssociatedOid, Digest},
+    sha2::{Digest, digest::const_oid::AssociatedOid},
 };
 
 /// RSA public key.

@@ -2,7 +2,7 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{spanned::Spanned, DataEnum, DataStruct, DeriveInput};
+use syn::{DataEnum, DataStruct, DeriveInput, spanned::Spanned};
 
 use crate::attributes::{ContainerAttributes, FieldAttributes};
 
@@ -222,10 +222,12 @@ mod tests {
         });
         let actual = derive_for_fields(&syn::Fields::Named(fields), quote! { Self });
         assert!(actual.is_err());
-        assert!(actual
-            .unwrap_err()
-            .to_string()
-            .contains("unknown attribute"));
+        assert!(
+            actual
+                .unwrap_err()
+                .to_string()
+                .contains("unknown attribute")
+        );
     }
 
     #[test]
