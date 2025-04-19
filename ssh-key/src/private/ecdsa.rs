@@ -39,7 +39,8 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
         reader.read_prefixed(|reader| {
-            if reader.remaining_len() == SIZE.checked_add(1).ok_or(encoding::Error::Length)? {
+            let len = reader.remaining_len();
+            if len == SIZE.checked_add(1).ok_or(encoding::Error::Length)? {
                 // Strip leading zero
                 // TODO(tarcieri): make sure leading zero was necessary
                 if u8::decode(reader)? != 0 {
@@ -48,7 +49,17 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
             }
 
             let mut bytes = [0u8; SIZE];
-            reader.read(&mut bytes)?;
+            if SIZE == 66 {
+                // https://stackoverflow.com/questions/50002149/why-p-521-public-key-x-y-some-time-is-65-bytes-some-time-is-66-bytes
+                // although lower keys than 64 are vanishingly possible, but lets stop here
+                if len > 63 {
+                    reader.read(&mut bytes[..core::cmp::min(len, SIZE)])?;
+                } else {
+                    return Err(encoding::Error::Length.into());
+                }
+            } else {
+                reader.read(&mut bytes)?;
+            }
             Ok(Self { bytes })
         })
     }
