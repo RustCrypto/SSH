@@ -4,7 +4,7 @@
 //! Custom derive support for the [`ssh-encoding`] crate.
 //!
 //! Note that this crate shouldn't be used directly, but instead accessed
-//! by using the `derive` feature of the `der` crate, which re-exports this crate's
+//! by using the `derive` feature of the [`ssh-encoding`] crate, which re-exports this crate's
 //! macros from the toplevel.
 //!
 //! [`ssh-encoding`]: ../ssh-encoding
@@ -24,11 +24,10 @@ macro_rules! abort {
     };
 }
 
+mod attributes;
 mod decode;
 mod encode;
-mod field_ir;
 
-use crate::{decode::DeriveDecode, encode::DeriveEncode, field_ir::FieldIr};
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, DeriveInput};
 
@@ -38,8 +37,8 @@ use syn::{parse_macro_input, DeriveInput};
 #[proc_macro_derive(Decode, attributes(ssh))]
 pub fn derive_decode(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    match DeriveDecode::new(input) {
-        Ok(t) => t.to_tokens().into(),
+    match decode::try_derive_decode(input) {
+        Ok(t) => t.into(),
         Err(e) => e.to_compile_error().into(),
     }
 }
@@ -50,8 +49,8 @@ pub fn derive_decode(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Encode, attributes(ssh))]
 pub fn derive_encode(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    match DeriveEncode::new(input) {
-        Ok(t) => t.to_tokens().into(),
+    match encode::try_derive_encode(input) {
+        Ok(t) => t.into(),
         Err(e) => e.to_compile_error().into(),
     }
 }

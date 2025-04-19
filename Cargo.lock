@@ -861,6 +861,7 @@ dependencies = [
  "digest",
  "hex-literal",
  "pem-rfc7468",
+ "ssh-derive",
 ]
 
 [[package]]
