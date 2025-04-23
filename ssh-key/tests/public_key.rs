@@ -94,7 +94,7 @@ fn decode_dsa_openssh() {
         dsa_key.y().as_bytes(),
     );
 
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
     assert_eq!(
         "SHA256:Nh0Me49Zh9fDw/VYUfq43IJmI1T+XrjiYONPND8GzaM",
         &key.fingerprint(Default::default()).to_string(),
@@ -123,7 +123,7 @@ fn decode_ecdsa_p256_openssh() {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:JQ6FV0rf7qqJHZqIj4zNH8eV0oB8KLKh9Pph3FTD98g",
@@ -154,7 +154,7 @@ fn decode_ecdsa_p384_openssh() {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:nkGE8oV7pHvOiPKHtQRs67WUPiVLRxbNu//gV/k4Vjw",
@@ -186,7 +186,7 @@ fn decode_ecdsa_p521_openssh() {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:l3AUUMK6Q2BbuiqvMx2fs97f8LUYq7sWCAx7q5m3S6M",
@@ -205,7 +205,7 @@ fn decode_ed25519_openssh() {
     );
 
     #[cfg(feature = "alloc")]
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:UCUiLr7Pjs9wFFJMDByLgc3NrtdU344OgUM45wZPcIQ",
@@ -236,7 +236,7 @@ fn decode_rsa_3072_openssh() {
         ),
         rsa_key.n().as_bytes(),
     );
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
     assert_eq!(
         "SHA256:Fmxts/GcV77PakFnf1Ueki5mpU4ZjUQWGRjZGAo3n/I",
         &key.fingerprint(Default::default()).to_string(),
@@ -269,7 +269,7 @@ fn decode_rsa_4096_openssh() {
         ),
         rsa_key.n().as_bytes(),
     );
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
     assert_eq!(
         "SHA256:FKAyeywtQNZLl1YTzIzCV/ThadBlnWMaD7jHQYDseEY",
         &key.fingerprint(Default::default()).to_string(),
@@ -294,7 +294,7 @@ fn decode_sk_ecdsa_p256_openssh() {
     assert_eq!("ssh:", ecdsa_key.application());
 
     #[cfg(feature = "alloc")]
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:UINe2WXFh3SiqwLxsBv34fBO2ei+g7uOeJJXVEK95iE",
@@ -335,7 +335,7 @@ fn decode_sk_ed25519_openssh() {
     assert_eq!("ssh:", ed25519_key.application());
 
     #[cfg(feature = "alloc")]
-    assert_eq!(b"user@example.com", key.comment_bytes());
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:6WZVJ44bqhAWLVP4Ns0TDkoSQSsZo/h2K+mEvOaNFbw",
@@ -373,7 +373,7 @@ fn decode_custom_algorithm_openssh() {
         opaque_key.as_ref(),
     );
 
-    assert_eq!(b"comment@example.com", key.comment_bytes());
+    assert_eq!(b"comment@example.com", key.comment().as_bytes());
 
     assert_eq!(
         "SHA256:8GV7v5qOHG9invseKCx0NVwFocNL0MwdyRC9bfjTFGs",

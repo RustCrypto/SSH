@@ -124,7 +124,7 @@ pub use self::{
 
 #[cfg(feature = "alloc")]
 pub use crate::{
-    SshSig,
+    Comment, SshSig,
     private::{
         dsa::{DsaKeypair, DsaPrivateKey},
         opaque::{OpaqueKeypair, OpaqueKeypairBytes, OpaquePrivateKeyBytes},
@@ -212,7 +212,7 @@ impl PrivateKey {
     ///
     /// On `no_std` platforms, use `PrivateKey::from(key_data)` instead.
     #[cfg(feature = "alloc")]
-    pub fn new(key_data: KeypairData, comment: impl Into<Vec<u8>>) -> Result<Self> {
+    pub fn new(key_data: KeypairData, comment: impl Into<Comment>) -> Result<Self> {
         if key_data.is_encrypted() {
             return Err(Error::Encrypted);
         }
@@ -465,43 +465,8 @@ impl PrivateKey {
 
     /// Comment on the key (e.g. email address).
     #[cfg(feature = "alloc")]
-    #[deprecated(
-        since = "0.7.0",
-        note = "please use `comment_bytes`, `comment_str`, or `comment_str_lossy` instead"
-    )]
-    pub fn comment(&self) -> &str {
-        self.comment_str_lossy()
-    }
-
-    /// Comment on the key (e.g. email address).
-    #[cfg(not(feature = "alloc"))]
-    pub fn comment_bytes(&self) -> &[u8] {
-        b""
-    }
-
-    /// Comment on the key (e.g. email address).
-    ///
-    /// Since comments can contain arbitrary binary data when decoded from a
-    /// private key, this returns the raw bytes of the comment.
-    #[cfg(feature = "alloc")]
-    pub fn comment_bytes(&self) -> &[u8] {
-        self.public_key.comment_bytes()
-    }
-
-    /// Comment on the key (e.g. email address).
-    ///
-    /// This returns a UTF-8 interpretation of the comment when valid.
-    #[cfg(feature = "alloc")]
-    pub fn comment_str(&self) -> core::result::Result<&str, str::Utf8Error> {
-        self.public_key.comment_str()
-    }
-
-    /// Comment on the key (e.g. email address).
-    ///
-    /// This returns as much data as can be interpreted as valid UTF-8.
-    #[cfg(feature = "alloc")]
-    pub fn comment_str_lossy(&self) -> &str {
-        self.public_key.comment_str_lossy()
+    pub fn comment(&self) -> &Comment {
+        self.public_key.comment()
     }
 
     /// Cipher algorithm (a.k.a. `ciphername`).
@@ -575,7 +540,7 @@ impl PrivateKey {
 
     /// Set the comment on the key.
     #[cfg(feature = "alloc")]
-    pub fn set_comment(&mut self, comment: impl Into<Vec<u8>>) {
+    pub fn set_comment(&mut self, comment: impl Into<Comment>) {
         self.public_key.set_comment(comment);
     }
 
@@ -681,7 +646,13 @@ impl PrivateKey {
         checkint.encode(writer)?;
         checkint.encode(writer)?;
         self.key_data.encode(writer)?;
-        self.comment_bytes().encode(writer)?;
+
+        // Serialize comment
+        #[cfg(not(feature = "alloc"))]
+        b"".encode(writer)?;
+        #[cfg(feature = "alloc")]
+        self.comment().encode(writer)?;
+
         writer.write(&PADDING_BYTES[..padding_len])?;
         Ok(())
     }
@@ -701,10 +672,15 @@ impl PrivateKey {
         // This method is intended for use with unencrypted keys only
         debug_assert!(!self.is_encrypted(), "called on encrypted key");
 
+        #[cfg(not(feature = "alloc"))]
+        let comment_len = 0;
+        #[cfg(feature = "alloc")]
+        let comment_len = self.comment().encoded_len()?;
+
         [
             8, // 2 x uint32 checkints,
             self.key_data.encoded_len()?,
-            self.comment_bytes().encoded_len()?,
+            comment_len,
         ]
         .checked_sum()
     }

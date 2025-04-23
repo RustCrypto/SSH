@@ -51,7 +51,7 @@
 //!
 //! // Key attributes
 //! assert_eq!(public_key.algorithm(), ssh_key::Algorithm::Ed25519);
-//! assert_eq!(public_key.comment(), "user@example.com");
+//! assert_eq!(public_key.comment().as_bytes(), b"user@example.com");
 //!
 //! // Key data: in this example an Ed25519 key
 //! if let Some(ed25519_public_key) = public_key.key_data().ed25519() {
@@ -100,7 +100,7 @@
 //!
 //! // Key attributes
 //! assert_eq!(private_key.algorithm(), ssh_key::Algorithm::Ed25519);
-//! assert_eq!(private_key.comment(), "user@example.com");
+//! assert_eq!(private_key.comment().as_bytes(), b"user@example.com");
 //!
 //! // Key data: in this example an Ed25519 key
 //! if let Some(ed25519_keypair) = private_key.key_data().ed25519() {
@@ -156,6 +156,8 @@ mod error;
 mod fingerprint;
 mod kdf;
 
+#[cfg(feature = "alloc")]
+mod comment;
 #[cfg(feature = "std")]
 mod dot_ssh;
 #[cfg(feature = "ppk")]
@@ -183,6 +185,7 @@ pub use {
     crate::{
         algorithm::AlgorithmName,
         certificate::Certificate,
+        comment::Comment,
         known_hosts::KnownHosts,
         signature::{Signature, SigningKey},
         sshsig::SshSig,
