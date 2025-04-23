@@ -35,7 +35,7 @@ use encoding::{Base64Reader, Decode, Reader};
 
 #[cfg(feature = "alloc")]
 use {
-    crate::SshSig,
+    crate::{Comment, SshSig},
     alloc::{
         borrow::ToOwned,
         string::{String, ToString},
@@ -67,7 +67,7 @@ use crate::PrivateKey;
 ///
 /// 1. Algorithm identifier (in this example `ssh-ed25519`)
 /// 2. Key data encoded as Base64
-/// 3. Comment (optional): arbitrary label describing a key. Usually an email address
+/// 3. [`Comment`] (optional): arbitrary label describing a key. Usually an email address
 ///
 /// The [`PublicKey::from_openssh`] and [`PublicKey::to_openssh`] methods can be
 /// used to decode/encode public keys, or alternatively, the [`FromStr`] and
@@ -99,7 +99,7 @@ pub struct PublicKey {
     /// binary data, so `Vec<u8>` is used to store the comment to ensure keys
     /// containing such comments successfully round-trip.
     #[cfg(feature = "alloc")]
-    pub(crate) comment: Vec<u8>,
+    pub(crate) comment: Comment,
 }
 
 impl PublicKey {
@@ -107,7 +107,7 @@ impl PublicKey {
     ///
     /// On `no_std` platforms, use `PublicKey::from(key_data)` instead.
     #[cfg(feature = "alloc")]
-    pub fn new(key_data: KeyData, comment: impl Into<Vec<u8>>) -> Self {
+    pub fn new(key_data: KeyData, comment: impl Into<Comment>) -> Self {
         Self {
             key_data,
             comment: comment.into(),
@@ -152,7 +152,7 @@ impl PublicKey {
         #[cfg(not(feature = "alloc"))]
         let comment = "";
         #[cfg(feature = "alloc")]
-        let comment = self.comment_str_lossy();
+        let comment = self.comment.as_str_lossy();
 
         SshFormat::encode(self.algorithm().as_str(), &self.key_data, comment, out)
     }
@@ -164,7 +164,7 @@ impl PublicKey {
         SshFormat::encode_string(
             self.algorithm().as_str(),
             &self.key_data,
-            self.comment_str_lossy(),
+            self.comment.as_str_lossy(),
         )
     }
 
@@ -258,46 +258,9 @@ impl PublicKey {
     }
 
     /// Comment on the key (e.g. email address).
-    ///
-    /// This is a deprecated alias for [`PublicKey::comment_str_lossy`].
     #[cfg(feature = "alloc")]
-    #[deprecated(
-        since = "0.7.0",
-        note = "please use `comment_bytes`, `comment_str`, or `comment_str_lossy` instead"
-    )]
-    pub fn comment(&self) -> &str {
-        self.comment_str_lossy()
-    }
-
-    /// Comment on the key (e.g. email address).
-    ///
-    /// Since comments can contain arbitrary binary data when decoded from a
-    /// private key, this returns the raw bytes of the comment.
-    #[cfg(feature = "alloc")]
-    pub fn comment_bytes(&self) -> &[u8] {
+    pub fn comment(&self) -> &Comment {
         &self.comment
-    }
-
-    /// Comment on the key (e.g. email address).
-    ///
-    /// This returns a UTF-8 interpretation of the comment when valid.
-    #[cfg(feature = "alloc")]
-    pub fn comment_str(&self) -> core::result::Result<&str, str::Utf8Error> {
-        str::from_utf8(&self.comment)
-    }
-
-    /// Comment on the key (e.g. email address).
-    ///
-    /// This returns as much data as can be interpreted as valid UTF-8.
-    #[cfg(feature = "alloc")]
-    pub fn comment_str_lossy(&self) -> &str {
-        for i in (1..=self.comment.len()).rev() {
-            if let Ok(s) = str::from_utf8(&self.comment[..i]) {
-                return s;
-            }
-        }
-
-        ""
     }
 
     /// Public key data.
@@ -314,7 +277,7 @@ impl PublicKey {
 
     /// Set the comment on the key.
     #[cfg(feature = "alloc")]
-    pub fn set_comment(&mut self, comment: impl Into<Vec<u8>>) {
+    pub fn set_comment(&mut self, comment: impl Into<Comment>) {
         self.comment = comment.into();
     }
 
@@ -330,7 +293,7 @@ impl PublicKey {
     /// Decode comment (e.g. email address)
     #[cfg(feature = "alloc")]
     pub(crate) fn decode_comment(&mut self, reader: &mut impl Reader) -> Result<()> {
-        self.comment = Vec::decode(reader)?;
+        self.comment = Comment::decode(reader)?;
         Ok(())
     }
 }
@@ -340,7 +303,7 @@ impl From<KeyData> for PublicKey {
         PublicKey {
             key_data,
             #[cfg(feature = "alloc")]
-            comment: Vec::new(),
+            comment: Comment::default(),
         }
     }
 }
