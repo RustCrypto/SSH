@@ -45,7 +45,7 @@ use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes-gcm")]
 use {
-    aead::{AeadInPlace, array::typenum::U12},
+    aead::{AeadInOut, array::typenum::U12},
     aes_gcm::{Aes128Gcm, Aes256Gcm},
 };
 
@@ -236,7 +236,7 @@ impl Cipher {
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
                 cipher
-                    .decrypt_in_place_detached(nonce, &[], buffer, &tag)
+                    .decrypt_inout_detached(nonce, &[], buffer.into(), &tag)
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(())
@@ -247,7 +247,7 @@ impl Cipher {
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
                 cipher
-                    .decrypt_in_place_detached(nonce, &[], buffer, &tag)
+                    .decrypt_inout_detached(nonce, &[], buffer.into(), &tag)
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(())
@@ -300,7 +300,7 @@ impl Cipher {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = cipher
-                    .encrypt_in_place_detached(nonce, &[], buffer)
+                    .encrypt_inout_detached(nonce, &[], buffer.into())
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(Some(tag))
@@ -310,7 +310,7 @@ impl Cipher {
                 let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = cipher
-                    .encrypt_in_place_detached(nonce, &[], buffer)
+                    .encrypt_inout_detached(nonce, &[], buffer.into())
                     .map_err(|_| Error::Crypto)?;
 
                 Ok(Some(tag))

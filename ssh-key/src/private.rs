@@ -65,10 +65,10 @@
     doc = " ```ignore"
 )]
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use ssh_key::{Algorithm, PrivateKey, rand_core::OsRng};
+//! use ssh_key::{Algorithm, PrivateKey, rand_core::{OsRng, TryRngCore}};
 //!
 //! // Generate a random key
-//! let unencrypted_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519)?;
+//! let unencrypted_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
 //!
 //! // WARNING: don't hardcode passwords, and this one's bad anyway
 //! let password = "hunter42";
@@ -97,9 +97,9 @@
     doc = " ```ignore"
 )]
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
-//! use ssh_key::{Algorithm, PrivateKey, rand_core::OsRng};
+//! use ssh_key::{Algorithm, PrivateKey, rand_core::{OsRng, TryRngCore}};
 //!
-//! let private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519)?;
+//! let private_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -154,8 +154,11 @@ use {
     zeroize::Zeroizing,
 };
 
+#[cfg(feature = "encryption")]
+use rand_core::TryCryptoRng;
+
 #[cfg(feature = "rand_core")]
-use rand_core::CryptoRngCore;
+use rand_core::CryptoRng;
 
 #[cfg(feature = "std")]
 use std::{fs, path::Path};
@@ -395,9 +398,9 @@ impl PrivateKey {
     ///
     /// Returns [`Error::Encrypted`] if the private key is already encrypted.
     #[cfg(feature = "encryption")]
-    pub fn encrypt(
+    pub fn encrypt<R: TryCryptoRng + ?Sized>(
         &self,
-        rng: &mut impl CryptoRngCore,
+        rng: &mut R,
         password: impl AsRef<[u8]>,
     ) -> Result<Self> {
         self.encrypt_with_cipher(rng, Cipher::Aes256Ctr, password)
@@ -408,13 +411,13 @@ impl PrivateKey {
     ///
     /// Returns [`Error::Encrypted`] if the private key is already encrypted.
     #[cfg(feature = "encryption")]
-    pub fn encrypt_with_cipher(
+    pub fn encrypt_with_cipher<R: TryCryptoRng + ?Sized>(
         &self,
-        rng: &mut impl CryptoRngCore,
+        rng: &mut R,
         cipher: Cipher,
         password: impl AsRef<[u8]>,
     ) -> Result<Self> {
-        let checkint = rng.next_u32();
+        let checkint = rng.try_next_u32().map_err(|_| Error::RngFailure)?;
 
         self.encrypt_with(
             cipher,
@@ -511,8 +514,9 @@ impl PrivateKey {
     /// - `Error::AlgorithmUnknown` if the algorithm is unsupported.
     #[cfg(feature = "rand_core")]
     #[allow(unreachable_code, unused_variables)]
-    pub fn random(rng: &mut impl CryptoRngCore, algorithm: Algorithm) -> Result<Self> {
+    pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, algorithm: Algorithm) -> Result<Self> {
         let checkint = rng.next_u32();
+
         let key_data = match algorithm {
             #[cfg(feature = "dsa")]
             Algorithm::Dsa => KeypairData::from(DsaKeypair::random(rng)?),

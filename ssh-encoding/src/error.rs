@@ -119,6 +119,13 @@ impl From<base64ct::InvalidLengthError> for Error {
     }
 }
 
+#[cfg(feature = "bigint")]
+impl From<bigint::DecodeError> for Error {
+    fn from(_: bigint::DecodeError) -> Error {
+        Error::MpintEncoding
+    }
+}
+
 #[cfg(feature = "pem")]
 impl From<pem_rfc7468::Error> for Error {
     fn from(err: pem_rfc7468::Error) -> Error {

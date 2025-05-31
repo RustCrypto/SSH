@@ -73,6 +73,10 @@ pub enum Error {
     #[cfg(feature = "ppk")]
     Ppk(PpkParseError),
 
+    /// Random number generator errors.
+    #[cfg(feature = "rand_core")]
+    RngFailure,
+
     /// Invalid timestamp (e.g. in a certificate)
     Time,
 
@@ -114,6 +118,8 @@ impl fmt::Display for Error {
             #[cfg(feature = "ppk")]
             Error::Ppk(err) => write!(f, "PPK parsing error: {err}"),
             Error::PublicKey => write!(f, "public key is incorrect"),
+            #[cfg(feature = "rand_core")]
+            Error::RngFailure => write!(f, "random number generator failure"),
             Error::Time => write!(f, "invalid time"),
             Error::TrailingData { remaining } => write!(
                 f,
@@ -177,15 +183,14 @@ impl From<encoding::pem::Error> for Error {
     }
 }
 
-// TODO(tarcieri): avoid special casing this when `signature` supports `core::error::Error`
-#[cfg(not(feature = "std"))]
+#[cfg(not(feature = "alloc"))]
 impl From<signature::Error> for Error {
     fn from(_: signature::Error) -> Error {
         Error::Crypto
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl From<signature::Error> for Error {
     fn from(err: signature::Error) -> Error {
         use core::error::Error as _;
@@ -196,15 +201,14 @@ impl From<signature::Error> for Error {
     }
 }
 
-// TODO(tarcieri): avoid special casing this when `signature` supports `core::error::Error`
-#[cfg(not(feature = "std"))]
+#[cfg(not(feature = "alloc"))]
 impl From<Error> for signature::Error {
     fn from(_: Error) -> signature::Error {
         signature::Error::new()
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "alloc")]
 impl From<Error> for signature::Error {
     fn from(err: Error) -> signature::Error {
         signature::Error::from_source(err)
@@ -222,6 +226,13 @@ impl From<alloc::string::FromUtf8Error> for Error {
 impl From<sec1::Error> for Error {
     fn from(err: sec1::Error) -> Error {
         Error::Ecdsa(err)
+    }
+}
+
+#[cfg(any(feature = "dsa", feature = "rsa"))]
+impl From<encoding::bigint::DecodeError> for Error {
+    fn from(err: encoding::bigint::DecodeError) -> Error {
+        encoding::Error::from(err).into()
     }
 }
 

@@ -295,11 +295,11 @@ fn encode_openssh_aes256_gcm() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes128_cbc() {
-    use rand_core::OsRng;
+    use rand_core::{OsRng, TryRngCore};
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes128Cbc, PASSWORD)
+        .encrypt_with_cipher(&mut OsRng.unwrap_err(), Cipher::Aes128Cbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder

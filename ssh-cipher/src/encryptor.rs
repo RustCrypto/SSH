@@ -1,12 +1,12 @@
 //! Stateful encryptor object.
 
 use crate::{Cipher, Error, Result};
-use cipher::{Block, BlockCipher, BlockCipherEncrypt, KeyIvInit};
+use cipher::{Block, BlockCipherEncrypt, KeyIvInit};
 
 #[cfg(feature = "aes-ctr")]
 use {
     crate::Ctr128BE,
-    cipher::{StreamCipherCore, array::sizes::U16},
+    cipher::{BlockSizeUser, StreamCipherCore, array::sizes::U16},
 };
 
 #[cfg(feature = "tdes")]
@@ -16,7 +16,7 @@ use des::TdesEde3;
 use aes::{Aes128, Aes192, Aes256};
 
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-use cipher::BlockModeEncrypt;
+use cipher::block::BlockModeEncrypt;
 
 /// Stateful encryptor object for unauthenticated SSH symmetric ciphers.
 ///
@@ -122,7 +122,7 @@ impl Encryptor {
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 fn cbc_encrypt<C>(encryptor: &mut cbc::Encryptor<C>, buffer: &mut [u8]) -> Result<()>
 where
-    C: BlockCipher + BlockCipherEncrypt,
+    C: BlockCipherEncrypt,
 {
     let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
 
@@ -139,7 +139,7 @@ where
 #[cfg(feature = "aes-ctr")]
 pub(crate) fn ctr_encrypt<C>(encryptor: &mut Ctr128BE<C>, buffer: &mut [u8]) -> Result<()>
 where
-    C: BlockCipher<BlockSize = U16> + BlockCipherEncrypt,
+    C: BlockCipherEncrypt + BlockSizeUser<BlockSize = U16>,
 {
     let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
 

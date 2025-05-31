@@ -242,6 +242,9 @@ pub use crate::mpint::Mpint;
 #[cfg(feature = "base64")]
 pub use crate::{base64::Base64Reader, base64::Base64Writer};
 
+#[cfg(feature = "bigint")]
+pub use bigint;
+
 #[cfg(feature = "bytes")]
 pub use bytes;
 
@@ -258,3 +261,14 @@ pub use ssh_derive::{Decode, Encode};
 
 #[cfg(all(doc, feature = "alloc"))]
 use alloc::vec::Vec;
+
+#[cfg(feature = "bigint")]
+pub use bigint::BoxedUint as Uint;
+
+/// Non-zero [`Uint`].
+#[cfg(feature = "bigint")]
+pub type NonZeroUint = bigint::NonZero<Uint>;
+
+/// Odd [`Uint`].
+#[cfg(feature = "bigint")]
+pub type OddUint = bigint::Odd<Uint>;

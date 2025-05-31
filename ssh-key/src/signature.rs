@@ -12,7 +12,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
-    bigint::BigUint,
+    encoding::{NonZeroUint, Uint},
     signature::{DigestSigner, DigestVerifier},
 };
 
@@ -331,13 +331,13 @@ impl Signer<Signature> for DsaKeypair {
             .map_err(|_| signature::Error::new())?;
 
         // Encode the format specified in RFC4253 section 6.6: two raw 80-bit integers concatenated
-        let mut data = Vec::new();
+        let mut data = Vec::with_capacity(DSA_SIGNATURE_SIZE);
 
         for component in [signature.r(), signature.s()] {
-            let mut bytes = component.to_bytes_be();
+            let bytes = component.to_be_bytes_trimmed_vartime();
             let pad_len = (DSA_SIGNATURE_SIZE / 2).saturating_sub(bytes.len());
             data.extend(iter::repeat(0).take(pad_len));
-            data.append(&mut bytes);
+            data.extend_from_slice(&bytes);
         }
 
         debug_assert_eq!(data.len(), DSA_SIGNATURE_SIZE);
@@ -354,21 +354,51 @@ impl Verifier<Signature> for DsaPublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         match signature.algorithm {
             Algorithm::Dsa => {
-                let data = signature.data.as_slice();
-                if data.len() != DSA_SIGNATURE_SIZE {
-                    return Err(signature::Error::new());
-                }
-                let (r, s) = data.split_at(DSA_SIGNATURE_SIZE / 2);
-                let signature = dsa::Signature::from_components(
-                    BigUint::from_bytes_be(r),
-                    BigUint::from_bytes_be(s),
-                )?;
+                let signature = dsa::Signature::try_from(signature)?;
                 dsa::VerifyingKey::try_from(self)?
                     .verify_digest(Sha1::new_with_prefix(message), &signature)
                     .map_err(|_| signature::Error::new())
             }
             _ => Err(signature.algorithm().unsupported_error().into()),
         }
+    }
+}
+
+#[cfg(feature = "dsa")]
+impl TryFrom<Signature> for dsa::Signature {
+    type Error = Error;
+
+    fn try_from(signature: Signature) -> Result<Self> {
+        dsa::Signature::try_from(&signature)
+    }
+}
+
+#[cfg(feature = "dsa")]
+impl TryFrom<&Signature> for dsa::Signature {
+    type Error = Error;
+
+    fn try_from(signature: &Signature) -> Result<Self> {
+        let data = signature.data.as_slice();
+        if data.len() != DSA_SIGNATURE_SIZE {
+            return Err(encoding::Error::Length.into());
+        }
+
+        let component_size = DSA_SIGNATURE_SIZE / 2;
+        let component_bits = component_size.saturating_mul(8) as u32;
+        let components = data.split_at(component_size);
+
+        let r = Uint::from_be_slice(components.0, component_bits)?;
+        let s = Uint::from_be_slice(components.1, component_bits)?;
+        let signature = Self::from_components(
+            NonZeroUint::new(r)
+                .into_option()
+                .ok_or(encoding::Error::MpintEncoding)?,
+            NonZeroUint::new(s)
+                .into_option()
+                .ok_or(encoding::Error::MpintEncoding)?,
+        );
+
+        Ok(signature)
     }
 }
 
@@ -867,7 +897,7 @@ mod tests {
         use encoding::Decode as _;
         use signature::{Signer as _, Verifier as _};
 
-        fn check_signature_component_lens(
+        fn check_signature_component_lengths(
             keypair: &DsaKeypair,
             data: &[u8],
             r_len: usize,
@@ -881,7 +911,7 @@ mod tests {
                 .try_sign_digest(Sha1::new_with_prefix(data))
                 .expect("valid DSA signature");
 
-            let r = signature.r().to_bytes_be();
+            let r = signature.r().to_be_bytes_trimmed_vartime();
             assert_eq!(
                 r.len(),
                 r_len,
@@ -889,7 +919,7 @@ mod tests {
                 r.len(),
                 r_len
             );
-            let s = signature.s().to_bytes_be();
+            let s = signature.s().to_be_bytes_trimmed_vartime();
             assert_eq!(
                 s.len(),
                 s_len,
@@ -907,7 +937,7 @@ mod tests {
         let data = hex!(
             "F0000040713d5f6fffe0000e6421ab0b3a69774d3da02fd72b107d6b32b6dad7c1660bbf507bf3eac3304cc5058f7e6f81b04239b8471459b1f3b387e2626f7eb8f6bcdd3200000006626c616465320000000e7373682d636f6e6e656374696f6e00000009686f73746261736564000000077373682d647373000001b2000000077373682d6473730000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf2771619800000015746f6d61746f7373682e6c6f63616c646f6d61696e00000009746f6d61746f737368"
         );
-        check_signature_component_lens(
+        check_signature_component_lengths(
             &keypair,
             &data,
             DSA_SIGNATURE_SIZE / 2,
@@ -923,7 +953,7 @@ mod tests {
             "00000040713d5f6fffe0000e6421ab0b3a69774d3da02fd72b107d6b32b6dad7c1660bbf507bf3eac3304cc5058f7e6f81b04239b8471459b1f3b387e2626f7eb8f6bcdd3200000006626c616465320000000e7373682d636f6e6e656374696f6e00000009686f73746261736564000000077373682d647373000001b2000000077373682d6473730000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf2771619800000015746f6d61746f7373682e6c6f63616c646f6d61696e00000009746f6d61746f737368"
         );
         // verify that this data produces signature with `r` integer component that is less than 160 bits/20 bytes.
-        check_signature_component_lens(
+        check_signature_component_lengths(
             &keypair,
             &data,
             DSA_SIGNATURE_SIZE / 2 - 1,

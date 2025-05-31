@@ -4,6 +4,9 @@ use crate::{Error, Mpint, Result};
 use core::hash::{Hash, Hasher};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
+#[cfg(feature = "dsa")]
+use encoding::{NonZeroUint, OddUint};
+
 /// Digital Signature Algorithm (DSA) public key.
 ///
 /// Described in [FIPS 186-4 § 4.1](https://csrc.nist.gov/publications/detail/fips/186/4/final).
@@ -116,14 +119,13 @@ impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
     type Error = Error;
 
     fn try_from(key: &DsaPublicKey) -> Result<dsa::VerifyingKey> {
-        let components = dsa::Components::from_components(
-            dsa::BigUint::try_from(&key.p)?,
-            dsa::BigUint::try_from(&key.q)?,
-            dsa::BigUint::try_from(&key.g)?,
-        )?;
+        let p = OddUint::try_from(&key.p)?;
+        let q = NonZeroUint::try_from(&key.q)?;
+        let g = NonZeroUint::try_from(&key.g)?;
+        let y = NonZeroUint::try_from(&key.y)?;
 
-        dsa::VerifyingKey::from_components(components, dsa::BigUint::try_from(&key.y)?)
-            .map_err(|_| Error::Crypto)
+        let components = dsa::Components::from_components(p, q, g)?;
+        dsa::VerifyingKey::from_components(components, y).map_err(|_| Error::Crypto)
     }
 }
 
