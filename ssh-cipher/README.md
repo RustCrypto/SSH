@@ -21,7 +21,7 @@ Built on the pure Rust cryptography implementations maintained by the
 
 ## Minimum Supported Rust Version
 
-This crate requires **Rust 1.81** at a minimum.
+This crate requires **Rust 1.85** at a minimum.
 
 We may change the MSRV in the future, but it will be accompanied by a minor
 version bump.
@@ -43,12 +43,12 @@ dual licensed as above, without any additional terms or conditions.
 
 [//]: # (badges)
 
-[crate-image]: https://img.shields.io/crates/v/ssh-cipher
+[crate-image]: https://img.shields.io/crates/v/ssh-cipher?logo=rust
 [crate-link]: https://crates.io/crates/ssh-cipher
 [docs-image]: https://docs.rs/ssh-cipher/badge.svg
 [docs-link]: https://docs.rs/ssh-cipher/
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.81+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.85+-blue.svg
 [chat-image]: https://img.shields.io/badge/zulip-join_chat-blue.svg
 [chat-link]: https://rustcrypto.zulipchat.com/#narrow/stream/346919-SSH
 [build-image]: https://github.com/RustCrypto/SSH/actions/workflows/ssh-cipher.yml/badge.svg
