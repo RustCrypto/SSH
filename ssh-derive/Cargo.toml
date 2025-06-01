@@ -1,6 +1,6 @@
 [package]
 name = "ssh-derive"
-version = "0.0.1-alpha"
+version = "0.3.0-rc.0"
 description = "Custom derive support for the `ssh-encoding` crate"
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"

@@ -810,7 +810,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-derive"
-version = "0.0.1-alpha"
+version = "0.3.0-rc.0"
 dependencies = [
  "proc-macro2",
  "quote",
