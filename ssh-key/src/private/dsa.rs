@@ -6,8 +6,11 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
+#[cfg(feature = "dsa")]
+use encoding::Uint;
+
 #[cfg(all(feature = "dsa", feature = "rand_core"))]
-use rand_core::CryptoRngCore;
+use rand_core::CryptoRng;
 
 /// Digital Signature Algorithm (DSA) private key.
 ///
@@ -93,20 +96,20 @@ impl Drop for DsaPrivateKey {
 }
 
 #[cfg(feature = "dsa")]
-impl TryFrom<DsaPrivateKey> for dsa::BigUint {
+impl TryFrom<DsaPrivateKey> for Uint {
     type Error = Error;
 
-    fn try_from(key: DsaPrivateKey) -> Result<dsa::BigUint> {
-        Ok(dsa::BigUint::try_from(&key.inner)?)
+    fn try_from(key: DsaPrivateKey) -> Result<Uint> {
+        Ok(Uint::try_from(&key.inner)?)
     }
 }
 
 #[cfg(feature = "dsa")]
-impl TryFrom<&DsaPrivateKey> for dsa::BigUint {
+impl TryFrom<&DsaPrivateKey> for Uint {
     type Error = Error;
 
-    fn try_from(key: &DsaPrivateKey) -> Result<dsa::BigUint> {
-        Ok(dsa::BigUint::try_from(&key.inner)?)
+    fn try_from(key: &DsaPrivateKey) -> Result<Uint> {
+        Ok(Uint::try_from(&key.inner)?)
     }
 }
 
@@ -148,7 +151,7 @@ impl DsaKeypair {
 
     /// Generate a random DSA private key.
     #[cfg(all(feature = "dsa", feature = "rand_core"))]
-    pub fn random(rng: &mut impl CryptoRngCore) -> Result<Self> {
+    pub fn random<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
         let components = dsa::Components::generate(rng, Self::KEY_SIZE);
         dsa::SigningKey::generate(rng, components).try_into()
     }
@@ -241,7 +244,7 @@ impl TryFrom<&DsaKeypair> for dsa::SigningKey {
     fn try_from(key: &DsaKeypair) -> Result<dsa::SigningKey> {
         Ok(dsa::SigningKey::from_components(
             dsa::VerifyingKey::try_from(&key.public)?,
-            dsa::BigUint::try_from(&key.private)?,
+            key.private.as_mpint().try_into()?,
         )?)
     }
 }

@@ -24,6 +24,8 @@
 pub use cipher::{self, Cipher};
 pub use encoding::{self, Decode, Encode, Reader, Writer};
 pub use key::{
-    self, Algorithm, Fingerprint, HashAlg, Kdf, KdfAlg, Signature, certificate::Certificate,
-    private::PrivateKey, public::PublicKey,
+    self, Algorithm, Fingerprint, HashAlg, Kdf, KdfAlg, private::PrivateKey, public::PublicKey,
 };
+
+#[cfg(feature = "alloc")]
+pub use key::{Signature, certificate::Certificate};

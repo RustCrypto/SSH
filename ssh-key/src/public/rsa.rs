@@ -7,6 +7,7 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 #[cfg(feature = "rsa")]
 use {
     crate::private::RsaKeypair,
+    encoding::Uint,
     rsa::{pkcs1v15, traits::PublicKeyParts},
     sha2::{Digest, digest::const_oid::AssociatedOid},
 };
@@ -111,11 +112,9 @@ impl TryFrom<&RsaPublicKey> for rsa::RsaPublicKey {
     type Error = Error;
 
     fn try_from(key: &RsaPublicKey) -> Result<rsa::RsaPublicKey> {
-        let ret = rsa::RsaPublicKey::new(
-            rsa::BigUint::try_from(&key.n)?,
-            rsa::BigUint::try_from(&key.e)?,
-        )
-        .map_err(|_| Error::Crypto)?;
+        let n = Uint::try_from(&key.n)?;
+        let e = Uint::try_from(&key.e)?;
+        let ret = rsa::RsaPublicKey::new(n, e).map_err(|_| Error::Crypto)?;
 
         if ret.size().saturating_mul(8) >= RsaPublicKey::MIN_KEY_SIZE {
             Ok(ret)

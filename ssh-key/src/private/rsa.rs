@@ -8,7 +8,8 @@ use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
 use {
-    rand_core::CryptoRngCore,
+    encoding::{OddUint, Uint},
+    rand_core::CryptoRng,
     rsa::{
         pkcs1v15,
         traits::{PrivateKeyParts, PublicKeyParts},
@@ -143,7 +144,7 @@ impl RsaKeypair {
 
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
-    pub fn random(rng: &mut impl CryptoRngCore, bit_size: usize) -> Result<Self> {
+    pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, bit_size: usize) -> Result<Self> {
         if bit_size >= Self::MIN_KEY_SIZE {
             rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
         } else {
@@ -251,12 +252,12 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
 
     fn try_from(key: &RsaKeypair) -> Result<rsa::RsaPrivateKey> {
         let ret = rsa::RsaPrivateKey::from_components(
-            rsa::BigUint::try_from(key.public.n())?,
-            rsa::BigUint::try_from(key.public.e())?,
-            rsa::BigUint::try_from(&key.private.d)?,
+            OddUint::try_from(key.public.n())?,
+            Uint::try_from(key.public.e())?,
+            Uint::try_from(&key.private.d)?,
             vec![
-                rsa::BigUint::try_from(&key.private.p)?,
-                rsa::BigUint::try_from(&key.private.q)?,
+                Uint::try_from(&key.private.p)?,
+                Uint::try_from(&key.private.q)?,
             ],
         )?;
 

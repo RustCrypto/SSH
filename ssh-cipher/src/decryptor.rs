@@ -13,7 +13,10 @@ use des::TdesEde3;
 use aes::{Aes128, Aes192, Aes256};
 
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-use cipher::{Block, BlockCipher, BlockCipherDecrypt, BlockModeDecrypt};
+use cipher::{
+    Block,
+    block::{BlockCipherDecrypt, BlockModeDecrypt},
+};
 
 /// Stateful decryptor object for unauthenticated SSH symmetric ciphers.
 ///
@@ -137,7 +140,7 @@ impl Decryptor {
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 fn cbc_decrypt<C>(decryptor: &mut cbc::Decryptor<C>, buffer: &mut [u8]) -> Result<()>
 where
-    C: BlockCipher + BlockCipherDecrypt,
+    C: BlockCipherDecrypt,
 {
     let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
 

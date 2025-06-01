@@ -5,7 +5,7 @@ use crate::{Result, Signature, SigningKey, public};
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "rand_core")]
-use rand_core::CryptoRngCore;
+use rand_core::CryptoRng;
 
 #[cfg(feature = "std")]
 use {super::UnixTime, std::time::SystemTime};
@@ -43,16 +43,16 @@ use crate::PrivateKey;
     doc = " ```ignore"
 )]
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-/// use ssh_key::{Algorithm, PrivateKey, certificate, rand_core::OsRng};
+/// use ssh_key::{Algorithm, PrivateKey, certificate, rand_core::{TryRngCore, OsRng}};
 /// use std::time::{SystemTime, UNIX_EPOCH};
 ///
 /// // Generate the certificate authority's private key
-/// let ca_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519)?;
+/// let ca_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
 ///
 /// // Generate a "subject" key to be signed by the certificate authority.
 /// // Normally a user or host would do this locally and give the certificate
 /// // authority the public key.
-/// let subject_private_key = PrivateKey::random(&mut OsRng, Algorithm::Ed25519)?;
+/// let subject_private_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
 /// let subject_public_key = subject_private_key.public_key();
 ///
 /// // Create certificate validity window
@@ -61,7 +61,7 @@ use crate::PrivateKey;
 ///
 /// // Initialize certificate builder
 /// let mut cert_builder = certificate::Builder::new_with_random_nonce(
-///     &mut OsRng,
+///     &mut OsRng.unwrap_err(),
 ///     subject_public_key,
 ///     valid_after,
 ///     valid_before,
@@ -146,7 +146,7 @@ impl Builder {
     /// provided random number generator.
     #[cfg(feature = "rand_core")]
     pub fn new_with_random_nonce(
-        rng: &mut impl CryptoRngCore,
+        rng: &mut impl CryptoRng,
         public_key: impl Into<public::KeyData>,
         valid_after: u64,
         valid_before: u64,
