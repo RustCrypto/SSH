@@ -1,6 +1,5 @@
 //! Certificate builder tests.
 
-#![allow(unexpected_cfgs)] // `ed25519` is temporarily disabled
 #![cfg(all(
     feature = "alloc",
     feature = "rand_core",
