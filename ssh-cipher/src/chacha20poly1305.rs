@@ -137,7 +137,7 @@ impl Cipher {
 fn compute_mac(mut mac: Poly1305, aad: &[u8], buffer: &[u8]) -> Result<Tag> {
     match aad.len() {
         0 => Ok(mac.compute_unpadded(buffer)),
-        1..poly1305::BLOCK_SIZE => {
+        1..=poly1305::BLOCK_SIZE => {
             let mut block = poly1305::Block::default();
             block[..aad.len()].copy_from_slice(aad);
 
@@ -159,7 +159,7 @@ fn compute_mac(mut mac: Poly1305, aad: &[u8], buffer: &[u8]) -> Result<Tag> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AeadInOut, ChaCha20Poly1305, KeyInit};
+    use super::{AeadInOut, ChaCha20Poly1305, KeyInit, Poly1305, compute_mac};
     use hex_literal::hex;
 
     #[test]
@@ -190,5 +190,30 @@ mod tests {
             .unwrap();
 
         assert_eq!(buffer, plaintext);
+    }
+
+    #[test]
+    fn mac_computation_with_aad() {
+        const KEY: &[u8; poly1305::KEY_SIZE] = b"11112222333344445555666677778888";
+        const AAD: &[u8; poly1305::BLOCK_SIZE] = b"0123456789ABCDEF";
+        const PT: &[u8; poly1305::BLOCK_SIZE] = b"abcdefghijklmnop";
+
+        for aad_len in 0..=poly1305::BLOCK_SIZE {
+            for pt_len in 0..=poly1305::BLOCK_SIZE {
+                let mut buffer = [0; poly1305::BLOCK_SIZE * 2];
+                let aad = &AAD[..aad_len];
+                let pt = &PT[..pt_len];
+
+                let eob = aad_len + pt_len;
+                buffer[..aad_len].copy_from_slice(aad);
+                buffer[aad_len..eob].copy_from_slice(pt);
+
+                let poly = Poly1305::new(KEY.as_ref());
+                let expected_mac = poly.clone().compute_unpadded(&buffer[..eob]);
+                let actual_mac = compute_mac(poly, aad, pt).unwrap();
+
+                assert_eq!(expected_mac, actual_mac);
+            }
+        }
     }
 }
