@@ -45,12 +45,12 @@ use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes-gcm")]
 use {
-    aead::{AeadInOut, array::typenum::U12},
+    aead::array::typenum::U12,
     aes_gcm::{Aes128Gcm, Aes256Gcm},
 };
 
 #[cfg(any(feature = "aes-gcm", feature = "chacha20poly1305"))]
-use aead::KeyInit;
+use aead::{AeadInOut, KeyInit};
 
 /// AES-128 in block chaining (CBC) mode
 const AES128_CBC: &str = "aes128-cbc";
@@ -258,7 +258,7 @@ impl Cipher {
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = tag.ok_or(Error::TagSize)?;
                 ChaCha20Poly1305::new(key)
-                    .decrypt(nonce, buffer, tag, 0)
+                    .decrypt_inout_detached(nonce, &[], buffer.into(), &tag)
                     .map_err(|_| Error::Crypto)
             }
             // Use `Decryptor` for non-AEAD modes
@@ -320,7 +320,7 @@ impl Cipher {
                 let key = key.try_into().map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
                 let tag = ChaCha20Poly1305::new(key)
-                    .encrypt(nonce, buffer, 0)
+                    .encrypt_inout_detached(nonce, &[], buffer.into())
                     .map_err(|_| Error::Crypto)?;
                 Ok(Some(tag))
             }
