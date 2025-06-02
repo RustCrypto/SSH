@@ -160,8 +160,11 @@ use rand_core::CryptoRngCore;
 #[cfg(feature = "std")]
 use std::{fs, path::Path};
 
+#[cfg(feature = "std")]
+use std::io::{self, Read, Write};
+
 #[cfg(all(unix, feature = "std"))]
-use std::{io::Write, os::unix::fs::OpenOptionsExt};
+use std::os::unix::fs::OpenOptionsExt;
 
 /// Error message for infallible conversions (used by `expect`)
 const CONVERSION_ERROR_MSG: &str = "SSH private key conversion error";
@@ -340,7 +343,14 @@ impl PrivateKey {
 
     /// Read private key from an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    pub fn read_openssh_file(path: &Path) -> Result<Self> {
+    pub fn read_openssh<R: Read>(reader: &mut R) -> Result<Self> {
+        let pem = Zeroizing::new(io::read_to_string(reader)?);
+        Self::from_openssh(&*pem)
+    }
+
+    /// Read private key from an OpenSSH-formatted PEM file.
+    #[cfg(feature = "std")]
+    pub fn read_openssh_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         // TODO(tarcieri): verify file permissions match `UNIX_FILE_PERMISSIONS`
         let pem = Zeroizing::new(fs::read_to_string(path)?);
         Self::from_openssh(&*pem)
@@ -348,7 +358,15 @@ impl PrivateKey {
 
     /// Write private key as an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    pub fn write_openssh_file(&self, path: &Path, line_ending: LineEnding) -> Result<()> {
+    pub fn write_openssh<W: Write>(&self, mut writer: W, line_ending: LineEnding) -> Result<()> {
+        let pem = self.to_openssh(line_ending)?;
+        writer.write_all(pem.as_bytes())?;
+        Ok(())
+    }
+
+    /// Write private key as an OpenSSH-formatted PEM file.
+    #[cfg(feature = "std")]
+    pub fn write_openssh_file<P: AsRef<Path>>(&self, path: P, line_ending: LineEnding) -> Result<()> {
         let pem = self.to_openssh(line_ending)?;
 
         #[cfg(not(unix))]
