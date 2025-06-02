@@ -4,11 +4,12 @@ pub use chacha20::ChaCha20Legacy as ChaCha20;
 
 use crate::Tag;
 use aead::{
-    AeadCore, Error, KeyInit, KeySizeUser, Result, TagPosition,
+    AeadCore, AeadInOut, Error, KeyInit, KeySizeUser, Result, TagPosition,
     array::typenum::{U8, U16, U32},
+    inout::InOutBuf,
 };
 use cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
-use poly1305::Poly1305;
+use poly1305::{Poly1305, universal_hash::UniversalHash};
 use subtle::ConstantTimeEq;
 
 #[cfg(feature = "zeroize")]
@@ -27,6 +28,11 @@ pub type ChaChaNonce = chacha20::LegacyNonce;
 /// - Nonce is 64-bit instead of 96-bit (i.e. uses legacy "djb" ChaCha20 variant).
 /// - The AAD and ciphertext inputs of Poly1305 are not padded.
 /// - The lengths of ciphertext and AAD are not authenticated using Poly1305.
+/// - Maximum supported AAD size is 16.
+///
+/// ## Usage notes
+/// - In the context of SSH packet encryption, AAD will be 4 bytes and contain the encrypted length.
+/// - In the context of SSH key encryption, AAD will be empty.
 ///
 /// [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
 /// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
@@ -52,46 +58,25 @@ impl AeadCore for ChaCha20Poly1305 {
     const TAG_POSITION: TagPosition = TagPosition::Postfix;
 }
 
-impl ChaCha20Poly1305 {
-    /// Encrypt the provided `buffer` in-place, returning the Poly1305 authentication tag.
-    ///
-    /// The input `buffer` should contain the concatenation of any additional associated data (AAD)
-    /// and the plaintext to be encrypted, where in the context of the SSH packet encryption
-    /// protocol the AAD represents an encrypted packet length, which is itself 4-bytes / 64-bits.
-    ///
-    /// `aad_len` is the length of the AAD in bytes:
-    /// - In the context of SSH packet encryption, this should be `4`.
-    /// - In the context of SSH key encryption, `aad_len` should be `0`.
-    ///
-    /// The first `aad_len` bytes of `buffer` will be unmodified after encryption is completed.
-    /// Only the data after `aad_len` will be encrypted.
-    ///
-    /// The resulting `Tag` authenticates both the AAD and the ciphertext in the buffer.
-    pub fn encrypt(&self, nonce: &ChaChaNonce, buffer: &mut [u8], aad_len: usize) -> Result<Tag> {
-        Cipher::new(&self.key, nonce).encrypt(buffer, aad_len)
-    }
-
-    /// Decrypt the provided `buffer` in-place, verifying it against the provided Poly1305
-    /// authentication `tag`.
-    ///
-    /// The input `buffer` should contain the concatenation of any additional associated data (AAD)
-    /// and the ciphertext to be authenticated, where in the context of the SSH packet encryption
-    /// protocol the AAD represents an encrypted packet length, which is itself 4-bytes / 64-bits.
-    ///
-    /// `aad_len` is the length of the AAD in bytes:
-    /// - In the context of SSH packet encryption, this should be `4`.
-    /// - In the context of SSH key encryption, `aad_len` should be `0`.
-    ///
-    /// The first `aad_len` bytes of `buffer` will be unmodified after decryption completes
-    /// successfully. Only data after `aad_len` will be decrypted.
-    pub fn decrypt(
+impl AeadInOut for ChaCha20Poly1305 {
+    // Required methods
+    fn encrypt_inout_detached(
         &self,
         nonce: &ChaChaNonce,
-        buffer: &mut [u8],
-        tag: Tag,
-        aad_len: usize,
+        associated_data: &[u8],
+        buffer: InOutBuf<'_, '_, u8>,
+    ) -> Result<Tag> {
+        Cipher::new(&self.key, nonce).encrypt(associated_data, buffer)
+    }
+
+    fn decrypt_inout_detached(
+        &self,
+        nonce: &ChaChaNonce,
+        associated_data: &[u8],
+        buffer: InOutBuf<'_, '_, u8>,
+        tag: &Tag,
     ) -> Result<()> {
-        Cipher::new(&self.key, nonce).decrypt(buffer, tag, aad_len)
+        Cipher::new(&self.key, nonce).decrypt(associated_data, buffer, tag)
     }
 }
 
@@ -128,27 +113,19 @@ impl Cipher {
 
     /// Encrypt the provided `buffer` in-place, returning the Poly1305 authentication tag.
     #[inline]
-    pub fn encrypt(mut self, buffer: &mut [u8], aad_len: usize) -> Result<Tag> {
-        if buffer.len() < aad_len {
-            return Err(Error);
-        }
-
-        self.cipher.apply_keystream(&mut buffer[aad_len..]);
-        Ok(self.mac.compute_unpadded(buffer))
+    pub fn encrypt(mut self, aad: &[u8], mut buffer: InOutBuf<'_, '_, u8>) -> Result<Tag> {
+        self.cipher.apply_keystream_inout(buffer.reborrow());
+        compute_mac(self.mac, aad, buffer.get_out())
     }
 
     /// Decrypt the provided `buffer` in-place, verifying it against the provided Poly1305
     /// authentication `tag`.
     #[inline]
-    pub fn decrypt(mut self, buffer: &mut [u8], tag: Tag, aad_len: usize) -> Result<()> {
-        if buffer.len() < aad_len {
-            return Err(Error);
-        }
+    pub fn decrypt(mut self, aad: &[u8], buffer: InOutBuf<'_, '_, u8>, tag: &Tag) -> Result<()> {
+        let expected_tag = compute_mac(self.mac, aad, buffer.get_in())?;
 
-        let expected_tag = self.mac.compute_unpadded(buffer);
-
-        if expected_tag.ct_eq(&tag).into() {
-            self.cipher.apply_keystream(&mut buffer[aad_len..]);
+        if expected_tag.ct_eq(tag).into() {
+            self.cipher.apply_keystream_inout(buffer);
             Ok(())
         } else {
             Err(Error)
@@ -156,9 +133,33 @@ impl Cipher {
     }
 }
 
+/// Compute the MAC for a given input buffer (containing ciphertext).
+fn compute_mac(mut mac: Poly1305, aad: &[u8], buffer: &[u8]) -> Result<Tag> {
+    match aad.len() {
+        0 => Ok(mac.compute_unpadded(buffer)),
+        1..poly1305::BLOCK_SIZE => {
+            let mut block = poly1305::Block::default();
+            block[..aad.len()].copy_from_slice(aad);
+
+            let block_remaining = poly1305::BLOCK_SIZE.checked_sub(aad.len()).ok_or(Error)?;
+            if buffer.len() > block_remaining {
+                let (head, tail) = buffer.split_at(block_remaining);
+                block[aad.len()..].copy_from_slice(head);
+                mac.update(&[block]);
+                Ok(mac.compute_unpadded(tail))
+            } else {
+                let msg_len = aad.len().checked_add(buffer.len()).ok_or(Error)?;
+                block[aad.len()..msg_len].copy_from_slice(buffer);
+                Ok(mac.compute_unpadded(&block[..msg_len]))
+            }
+        }
+        _ => Err(Error),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ChaCha20Poly1305, KeyInit};
+    use super::{AeadInOut, ChaCha20Poly1305, KeyInit};
     use hex_literal::hex;
 
     #[test]
@@ -170,30 +171,24 @@ mod tests {
         let ciphertext = hex!("6dcfb03be8a55e7f0220465672edd921489ea0171198e8a7");
         let tag = hex!("3e82fe0a2db7128d58ef8d9047963ca3");
 
-        const AAD_LEN: usize = 4;
-        const PT_LEN: usize = 24;
-        assert_eq!(aad.len(), AAD_LEN);
-        assert_eq!(plaintext.len(), PT_LEN);
-
         let cipher = ChaCha20Poly1305::new(key.as_ref());
-        let mut buffer = [0u8; AAD_LEN + PT_LEN];
-        let (a, p) = buffer.split_at_mut(AAD_LEN);
-        a.copy_from_slice(&aad);
-        p.copy_from_slice(&plaintext);
-
+        let mut buffer = plaintext.clone();
         let actual_tag = cipher
-            .encrypt(nonce.as_ref(), &mut buffer, AAD_LEN)
+            .encrypt_inout_detached(nonce.as_ref(), &aad, buffer.as_mut_slice().into())
             .unwrap();
 
-        assert_eq!(&buffer[..AAD_LEN], aad);
-        assert_eq!(&buffer[AAD_LEN..], ciphertext);
+        assert_eq!(buffer, ciphertext);
         assert_eq!(actual_tag, tag);
 
         cipher
-            .decrypt(nonce.as_ref(), &mut buffer, actual_tag, AAD_LEN)
+            .decrypt_inout_detached(
+                nonce.as_ref(),
+                &aad,
+                buffer.as_mut_slice().into(),
+                &actual_tag,
+            )
             .unwrap();
 
-        assert_eq!(&buffer[..AAD_LEN], aad);
-        assert_eq!(&buffer[AAD_LEN..], plaintext);
+        assert_eq!(buffer, plaintext);
     }
 }
