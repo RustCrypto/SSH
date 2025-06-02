@@ -135,26 +135,32 @@ impl Cipher {
 
 /// Compute the MAC for a given input buffer (containing ciphertext).
 fn compute_mac(mut mac: Poly1305, aad: &[u8], buffer: &[u8]) -> Result<Tag> {
-    match aad.len() {
-        0 => Ok(mac.compute_unpadded(buffer)),
-        1..=poly1305::BLOCK_SIZE => {
-            let mut block = poly1305::Block::default();
-            block[..aad.len()].copy_from_slice(aad);
-
-            let block_remaining = poly1305::BLOCK_SIZE.checked_sub(aad.len()).ok_or(Error)?;
-            if buffer.len() > block_remaining {
-                let (head, tail) = buffer.split_at(block_remaining);
-                block[aad.len()..].copy_from_slice(head);
-                mac.update(&[block]);
-                Ok(mac.compute_unpadded(tail))
-            } else {
-                let msg_len = aad.len().checked_add(buffer.len()).ok_or(Error)?;
-                block[aad.len()..msg_len].copy_from_slice(buffer);
-                Ok(mac.compute_unpadded(&block[..msg_len]))
-            }
-        }
-        _ => Err(Error),
+    // We only support up to one block (16-bytes) of AAD.
+    // In practice the sizes that matter are `0` and `4` (i.e. length prefix size).
+    if aad.len() > poly1305::BLOCK_SIZE {
+        return Err(Error);
     }
+
+    // Compute the first Poly1305 block which incorporates any AAD.
+    let mut block = poly1305::Block::default();
+    block[..aad.len()].copy_from_slice(aad);
+
+    let block_remaining = poly1305::BLOCK_SIZE.checked_sub(aad.len()).ok_or(Error)?;
+    let remaining = if buffer.len() <= block_remaining {
+        // If total AAD + buffer length is less than or equal to a block, compute a partial block
+        let msg_len = aad.len().checked_add(buffer.len()).ok_or(Error)?;
+        block[aad.len()..msg_len].copy_from_slice(buffer);
+        &block[..msg_len]
+    } else {
+        // Compute the first block and return any remaining data
+        let (head, tail) = buffer.split_at(block_remaining);
+        block[aad.len()..].copy_from_slice(head);
+        mac.update(&[block]);
+        tail
+    };
+
+    // Compute Poly1305 over the remaining message data.
+    Ok(mac.compute_unpadded(remaining))
 }
 
 #[cfg(test)]
