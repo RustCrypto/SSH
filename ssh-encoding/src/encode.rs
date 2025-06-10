@@ -192,7 +192,7 @@ impl<const N: usize> Encode for [u8; N] {
 /// > UTF-8 mapping does not alter the encoding of US-ASCII characters.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
-impl Encode for &str {
+impl Encode for str {
     fn encoded_len(&self) -> Result<usize, Error> {
         self.as_bytes().encoded_len()
     }
@@ -224,8 +224,49 @@ impl Encode for String {
     }
 }
 
+#[cfg(feature = "bytes")]
+impl Encode for Bytes {
+    fn encoded_len(&self) -> Result<usize, Error> {
+        self.as_ref().encoded_len()
+    }
+
+    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
+        self.as_ref().encode(writer)
+    }
+}
+
+/// A trait indicating that the type is encoded like an SSH-string.
+///
+/// A `string` is described in [RFC4251 § 5]:
+///
+/// > Arbitrary length binary string.  Strings are allowed to contain
+/// > arbitrary binary data, including null characters and 8-bit
+/// > characters.  They are stored as a uint32 containing its length
+/// > (number of bytes that follow) and zero (= empty string) or more
+/// > bytes that are the value of the string.  Terminating null
+/// > characters are not used.
+/// >
+/// > Strings are also used to store text.  In that case, US-ASCII is
+/// > used for internal names, and ISO-10646 UTF-8 for text that might
+/// > be displayed to the user.  The terminating null character SHOULD
+/// > NOT normally be stored in the string.  For example: the US-ASCII
+/// > string "testing" is represented as 00 00 00 07 t e s t i n g.  The
+/// > UTF-8 mapping does not alter the encoding of US-ASCII characters.
+///
+/// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+pub trait EncodesLikeString: Encode {}
+
+impl EncodesLikeString for [u8] {}
+impl EncodesLikeString for str {}
 #[cfg(feature = "alloc")]
-impl Encode for Vec<String> {
+impl EncodesLikeString for String {}
+#[cfg(feature = "alloc")]
+impl EncodesLikeString for Vec<u8> {}
+#[cfg(feature = "bytes")]
+impl EncodesLikeString for Bytes {}
+
+/// Encode a slice of string-like types as a string wrapping all the entires.
+impl<T: EncodesLikeString> Encode for [T] {
     fn encoded_len(&self) -> Result<usize, Error> {
         self.iter().try_fold(4usize, |acc, string| {
             acc.checked_add(string.encoded_len()?).ok_or(Error::Length)
@@ -237,22 +278,6 @@ impl Encode for Vec<String> {
             .checked_sub(4)
             .ok_or(Error::Length)?
             .encode(writer)?;
-
-        for entry in self {
-            entry.encode(writer)?;
-        }
-
-        Ok(())
-    }
-}
-
-#[cfg(feature = "bytes")]
-impl Encode for Bytes {
-    fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_ref().encoded_len()
-    }
-
-    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_ref().encode(writer)
+        self.iter().try_fold((), |(), entry| entry.encode(writer))
     }
 }
