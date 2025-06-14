@@ -72,12 +72,12 @@ impl DotSsh {
 
     /// Write a private key into `~/.ssh`.
     pub fn write_private_key(&self, filename: impl AsRef<Path>, key: &PrivateKey) -> Result<()> {
-        key.write_openssh_file(&self.path.join(filename), Default::default())
+        key.write_openssh_file(self.path.join(filename), Default::default())
     }
 
     /// Write a public key into `~/.ssh`.
     pub fn write_public_key(&self, filename: impl AsRef<Path>, key: &PublicKey) -> Result<()> {
-        key.write_openssh_file(&self.path.join(filename))
+        key.write_openssh_file(self.path.join(filename))
     }
 }
 
@@ -100,7 +100,7 @@ impl Iterator for PrivateKeysIter {
         loop {
             let entry = self.read_dir.next()?.ok()?;
 
-            if let Ok(key) = PrivateKey::read_openssh_file(&entry.path()) {
+            if let Ok(key) = PrivateKey::read_openssh_file(entry.path()) {
                 return Some(key);
             }
         }
@@ -119,7 +119,7 @@ impl Iterator for PublicKeysIter {
         loop {
             let entry = self.read_dir.next()?.ok()?;
 
-            if let Ok(key) = PublicKey::read_openssh_file(&entry.path()) {
+            if let Ok(key) = PublicKey::read_openssh_file(entry.path()) {
                 return Some(key);
             }
         }

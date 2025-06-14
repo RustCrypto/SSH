@@ -65,6 +65,14 @@ impl PartialEq for DsaPrivateKey {
     }
 }
 
+impl TryFrom<Mpint> for DsaPrivateKey {
+    type Error = Error;
+
+    fn try_from(x: Mpint) -> Result<Self> {
+        Self::new(x)
+    }
+}
+
 impl Decode for DsaPrivateKey {
     type Error = Error;
 

@@ -77,6 +77,12 @@ impl OpaqueKeypair {
     }
 }
 
+impl From<Vec<u8>> for OpaquePrivateKeyBytes {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self(bytes)
+    }
+}
+
 impl Decode for OpaquePrivateKeyBytes {
     type Error = Error;
 
