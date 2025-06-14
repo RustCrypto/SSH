@@ -358,7 +358,7 @@ impl PrivateKey {
 
     /// Write private key as an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    pub fn write_openssh<W: Write>(&self, mut writer: W, line_ending: LineEnding) -> Result<()> {
+    pub fn write_openssh<W: Write>(&self, writer: &mut W, line_ending: LineEnding) -> Result<()> {
         let pem = self.to_openssh(line_ending)?;
         writer.write_all(pem.as_bytes())?;
         Ok(())
