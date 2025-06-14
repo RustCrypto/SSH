@@ -176,8 +176,8 @@ pub use crate::{
     private::PrivateKey,
     public::PublicKey,
 };
-pub use cipher::Cipher;
-pub use encoding::pem::LineEnding;
+pub use cipher::{self, Cipher};
+pub use encoding::{self, pem::LineEnding};
 pub use sha2;
 
 #[cfg(feature = "alloc")]
