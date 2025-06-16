@@ -50,6 +50,9 @@ use serde::{Deserialize, Serialize, de, ser};
 #[cfg(feature = "std")]
 use std::{fs, path::Path};
 
+#[cfg(feature = "std")]
+use std::io::{self, Read, Write};
+
 #[cfg(doc)]
 use crate::PrivateKey;
 
@@ -237,14 +240,31 @@ impl PublicKey {
 
     /// Read public key from an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    pub fn read_openssh_file(path: &Path) -> Result<Self> {
+    pub fn read_openssh<R: Read>(reader: &mut R) -> Result<Self> {
+        let input = io::read_to_string(reader)?;
+        Self::from_openssh(&input)
+    }
+
+    /// Read public key from an OpenSSH-formatted file.
+    #[cfg(feature = "std")]
+    pub fn read_openssh_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let input = fs::read_to_string(path)?;
         Self::from_openssh(&input)
     }
 
     /// Write public key as an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    pub fn write_openssh_file(&self, path: &Path) -> Result<()> {
+    pub fn write_openssh<W: Write>(&self, writer: &mut W) -> Result<()> {
+        let mut encoded = self.to_openssh()?;
+        encoded.push('\n'); // TODO(tarcieri): OS-specific line endings?
+
+        writer.write_all(encoded.as_bytes())?;
+        Ok(())
+    }
+
+    /// Write public key as an OpenSSH-formatted file.
+    #[cfg(feature = "std")]
+    pub fn write_openssh_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
         let mut encoded = self.to_openssh()?;
         encoded.push('\n'); // TODO(tarcieri): OS-specific line endings?
 

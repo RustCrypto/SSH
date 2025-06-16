@@ -88,6 +88,12 @@ impl<const SIZE: usize> Encode for EcdsaPrivateKey<SIZE> {
     }
 }
 
+impl<const SIZE: usize> From<[u8; SIZE]> for EcdsaPrivateKey<SIZE> {
+    fn from(bytes: [u8; SIZE]) -> Self {
+        Self { bytes }
+    }
+}
+
 impl<const SIZE: usize> AsRef<[u8; SIZE]> for EcdsaPrivateKey<SIZE> {
     fn as_ref(&self) -> &[u8; SIZE] {
         &self.bytes
