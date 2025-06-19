@@ -224,7 +224,12 @@ impl PublicKey {
     /// # }
     /// ```
     ///
+    /// The entire message has to be loaded into memory for verification. If loading the
+    /// entire message into memory is a problem consider computing a [Digest] via a
+    /// streaming API instead, and then signing/verifying a fixed length digest instead.
+    ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
+    /// [Digest]: https://docs.rs/digest/latest/digest/trait.Digest.html
     #[cfg(feature = "alloc")]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
         if self.key_data() != signature.public_key() {
