@@ -264,11 +264,3 @@ use alloc::vec::Vec;
 
 #[cfg(feature = "bigint")]
 pub use bigint::BoxedUint as Uint;
-
-/// Non-zero [`Uint`].
-#[cfg(feature = "bigint")]
-pub type NonZeroUint = bigint::NonZero<Uint>;
-
-/// Odd [`Uint`].
-#[cfg(feature = "bigint")]
-pub type OddUint = bigint::Odd<Uint>;

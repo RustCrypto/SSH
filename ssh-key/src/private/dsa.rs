@@ -136,7 +136,7 @@ impl TryFrom<&dsa::SigningKey> for DsaPrivateKey {
 
     fn try_from(key: &dsa::SigningKey) -> Result<DsaPrivateKey> {
         Ok(DsaPrivateKey {
-            inner: key.x().try_into()?,
+            inner: key.x().as_ref().try_into()?,
         })
     }
 }

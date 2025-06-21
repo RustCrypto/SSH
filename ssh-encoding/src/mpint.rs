@@ -5,7 +5,7 @@ use alloc::{boxed::Box, vec::Vec};
 use core::fmt;
 
 #[cfg(feature = "bigint")]
-use crate::{NonZeroUint, OddUint, Uint};
+use crate::Uint;
 
 #[cfg(feature = "subtle")]
 use subtle::{Choice, ConstantTimeEq};
@@ -208,42 +208,6 @@ impl fmt::UpperHex for Mpint {
 }
 
 #[cfg(feature = "bigint")]
-impl TryFrom<NonZeroUint> for Mpint {
-    type Error = Error;
-
-    fn try_from(uint: NonZeroUint) -> Result<Mpint> {
-        Mpint::try_from(&uint)
-    }
-}
-
-#[cfg(feature = "bigint")]
-impl TryFrom<&NonZeroUint> for Mpint {
-    type Error = Error;
-
-    fn try_from(uint: &NonZeroUint) -> Result<Mpint> {
-        Self::try_from(uint.as_ref())
-    }
-}
-
-#[cfg(feature = "bigint")]
-impl TryFrom<OddUint> for Mpint {
-    type Error = Error;
-
-    fn try_from(uint: OddUint) -> Result<Mpint> {
-        Mpint::try_from(&uint)
-    }
-}
-
-#[cfg(feature = "bigint")]
-impl TryFrom<&OddUint> for Mpint {
-    type Error = Error;
-
-    fn try_from(uint: &OddUint) -> Result<Mpint> {
-        Self::try_from(uint.as_ref())
-    }
-}
-
-#[cfg(feature = "bigint")]
 impl TryFrom<Uint> for Mpint {
     type Error = Error;
 
@@ -263,46 +227,6 @@ impl TryFrom<&Uint> for Mpint {
 }
 
 #[cfg(feature = "bigint")]
-impl TryFrom<Mpint> for NonZeroUint {
-    type Error = Error;
-
-    fn try_from(mpint: Mpint) -> Result<NonZeroUint> {
-        NonZeroUint::try_from(&mpint)
-    }
-}
-
-#[cfg(feature = "bigint")]
-impl TryFrom<&Mpint> for NonZeroUint {
-    type Error = Error;
-
-    fn try_from(mpint: &Mpint) -> Result<NonZeroUint> {
-        let uint = Uint::try_from(mpint)?;
-        NonZeroUint::new(uint)
-            .into_option()
-            .ok_or(Error::MpintEncoding)
-    }
-}
-
-#[cfg(feature = "bigint")]
-impl TryFrom<Mpint> for OddUint {
-    type Error = Error;
-
-    fn try_from(mpint: Mpint) -> Result<OddUint> {
-        OddUint::try_from(&mpint)
-    }
-}
-
-#[cfg(feature = "bigint")]
-impl TryFrom<&Mpint> for OddUint {
-    type Error = Error;
-
-    fn try_from(mpint: &Mpint) -> Result<OddUint> {
-        let uint = Uint::try_from(mpint)?;
-        OddUint::new(uint).into_option().ok_or(Error::MpintEncoding)
-    }
-}
-
-#[cfg(feature = "bigint")]
 impl TryFrom<Mpint> for Uint {
     type Error = Error;
 
@@ -316,14 +240,9 @@ impl TryFrom<&Mpint> for Uint {
     type Error = Error;
 
     fn try_from(mpint: &Mpint) -> Result<Uint> {
+        // TODO(tarcieri): enforce a maximum size?
         let bytes = mpint.as_positive_bytes().ok_or(Error::MpintEncoding)?;
-        let bits_precision = bytes
-            .len()
-            .checked_mul(8)
-            .and_then(|n| u32::try_from(n).ok())
-            .ok_or(Error::MpintEncoding)?;
-
-        Ok(Uint::from_be_slice(bytes, bits_precision)?)
+        Ok(Uint::from_be_slice_vartime(bytes))
     }
 }
 

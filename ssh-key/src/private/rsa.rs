@@ -8,7 +8,7 @@ use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
 use {
-    encoding::{OddUint, Uint},
+    encoding::Uint,
     rand_core::CryptoRng,
     rsa::{
         pkcs1v15,
@@ -252,7 +252,7 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
 
     fn try_from(key: &RsaKeypair) -> Result<rsa::RsaPrivateKey> {
         let ret = rsa::RsaPrivateKey::from_components(
-            OddUint::try_from(key.public.n())?,
+            Uint::try_from(key.public.n())?,
             Uint::try_from(key.public.e())?,
             Uint::try_from(&key.private.d)?,
             vec![

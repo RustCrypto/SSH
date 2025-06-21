@@ -12,7 +12,7 @@ use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
-    encoding::{NonZeroUint, Uint},
+    encoding::Uint,
     signature::{DigestSigner, DigestVerifier},
 };
 
@@ -389,16 +389,7 @@ impl TryFrom<&Signature> for dsa::Signature {
 
         let r = Uint::from_be_slice(components.0, component_bits)?;
         let s = Uint::from_be_slice(components.1, component_bits)?;
-        let signature = Self::from_components(
-            NonZeroUint::new(r)
-                .into_option()
-                .ok_or(encoding::Error::MpintEncoding)?,
-            NonZeroUint::new(s)
-                .into_option()
-                .ok_or(encoding::Error::MpintEncoding)?,
-        );
-
-        Ok(signature)
+        Ok(Self::from_components(r, s).ok_or(encoding::Error::MpintEncoding)?)
     }
 }
 

@@ -5,7 +5,7 @@ use core::hash::{Hash, Hasher};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "dsa")]
-use encoding::{NonZeroUint, OddUint};
+use encoding::Uint;
 
 /// Digital Signature Algorithm (DSA) public key.
 ///
@@ -119,10 +119,10 @@ impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
     type Error = Error;
 
     fn try_from(key: &DsaPublicKey) -> Result<dsa::VerifyingKey> {
-        let p = OddUint::try_from(&key.p)?;
-        let q = NonZeroUint::try_from(&key.q)?;
-        let g = NonZeroUint::try_from(&key.g)?;
-        let y = NonZeroUint::try_from(&key.y)?;
+        let p = Uint::try_from(&key.p)?;
+        let q = Uint::try_from(&key.q)?;
+        let g = Uint::try_from(&key.g)?;
+        let y = Uint::try_from(&key.y)?;
 
         let components = dsa::Components::from_components(p, q, g)?;
         dsa::VerifyingKey::from_components(components, y).map_err(|_| Error::Crypto)
@@ -144,10 +144,10 @@ impl TryFrom<&dsa::VerifyingKey> for DsaPublicKey {
 
     fn try_from(key: &dsa::VerifyingKey) -> Result<DsaPublicKey> {
         Ok(DsaPublicKey {
-            p: key.components().p().try_into()?,
-            q: key.components().q().try_into()?,
-            g: key.components().g().try_into()?,
-            y: key.y().try_into()?,
+            p: key.components().p().as_ref().try_into()?,
+            q: key.components().q().as_ref().try_into()?,
+            g: key.components().g().as_ref().try_into()?,
+            y: key.y().as_ref().try_into()?,
         })
     }
 }
