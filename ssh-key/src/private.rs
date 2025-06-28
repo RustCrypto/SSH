@@ -161,7 +161,7 @@ use rand_core::TryCryptoRng;
 use rand_core::CryptoRng;
 
 #[cfg(feature = "std")]
-use std::{fs, path::Path};
+use std::{fs::File, path::Path};
 
 #[cfg(feature = "std")]
 use std::io::{self, Read, Write};
@@ -344,24 +344,24 @@ impl PrivateKey {
         SshSig::sign(self, namespace, hash_alg, msg)
     }
 
-    /// Read private key from an OpenSSH-formatted PEM file.
+    /// Read private key from an OpenSSH-formatted PEM source.
     #[cfg(feature = "std")]
-    pub fn read_openssh<R: Read>(reader: &mut R) -> Result<Self> {
+    pub fn read_openssh(reader: &mut impl Read) -> Result<Self> {
         let pem = Zeroizing::new(io::read_to_string(reader)?);
         Self::from_openssh(&*pem)
     }
 
     /// Read private key from an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    pub fn read_openssh_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn read_openssh_file(path: impl AsRef<Path>) -> Result<Self> {
         // TODO(tarcieri): verify file permissions match `UNIX_FILE_PERMISSIONS`
-        let pem = Zeroizing::new(fs::read_to_string(path)?);
-        Self::from_openssh(&*pem)
+        let mut file = File::open(path)?;
+        Self::read_openssh(&mut file)
     }
 
     /// Write private key as an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    pub fn write_openssh<W: Write>(&self, writer: &mut W, line_ending: LineEnding) -> Result<()> {
+    pub fn write_openssh(&self, writer: &mut impl Write, line_ending: LineEnding) -> Result<()> {
         let pem = self.to_openssh(line_ending)?;
         writer.write_all(pem.as_bytes())?;
         Ok(())
@@ -369,25 +369,19 @@ impl PrivateKey {
 
     /// Write private key as an OpenSSH-formatted PEM file.
     #[cfg(feature = "std")]
-    pub fn write_openssh_file<P: AsRef<Path>>(
+    pub fn write_openssh_file(
         &self,
-        path: P,
+        path: impl AsRef<Path>,
         line_ending: LineEnding,
     ) -> Result<()> {
-        let pem = self.to_openssh(line_ending)?;
+        let mut options = File::options();
 
-        #[cfg(not(unix))]
-        fs::write(path, pem.as_bytes())?;
         #[cfg(unix)]
-        fs::OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .mode(UNIX_FILE_PERMISSIONS)
-            .open(path)
-            .and_then(|mut file| file.write_all(pem.as_bytes()))?;
+        let mut options = options.mode(UNIX_FILE_PERMISSIONS);
 
-        Ok(())
+        let mut file = options.write(true).create(true).truncate(true).open(path)?;
+
+        self.write_openssh(&mut file, line_ending)
     }
 
     /// Attempt to decrypt an encrypted private key using the provided
