@@ -48,7 +48,7 @@ use {
 use serde::{Deserialize, Serialize, de, ser};
 
 #[cfg(feature = "std")]
-use std::{fs, path::Path};
+use std::{fs::File, path::Path};
 
 #[cfg(feature = "std")]
 use std::io::{self, Read, Write};
@@ -243,23 +243,23 @@ impl PublicKey {
         signature.verify(msg)
     }
 
-    /// Read public key from an OpenSSH-formatted file.
+    /// Read public key from an OpenSSH-formatted source.
     #[cfg(feature = "std")]
-    pub fn read_openssh<R: Read>(reader: &mut R) -> Result<Self> {
+    pub fn read_openssh(reader: &mut impl Read) -> Result<Self> {
         let input = io::read_to_string(reader)?;
         Self::from_openssh(&input)
     }
 
     /// Read public key from an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    pub fn read_openssh_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let input = fs::read_to_string(path)?;
-        Self::from_openssh(&input)
+    pub fn read_openssh_file(path: impl AsRef<Path>) -> Result<Self> {
+        let mut file = File::open(path)?;
+        Self::read_openssh(&mut file)
     }
 
     /// Write public key as an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    pub fn write_openssh<W: Write>(&self, writer: &mut W) -> Result<()> {
+    pub fn write_openssh(&self, writer: &mut impl Write) -> Result<()> {
         let mut encoded = self.to_openssh()?;
         encoded.push('\n'); // TODO(tarcieri): OS-specific line endings?
 
@@ -269,12 +269,9 @@ impl PublicKey {
 
     /// Write public key as an OpenSSH-formatted file.
     #[cfg(feature = "std")]
-    pub fn write_openssh_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let mut encoded = self.to_openssh()?;
-        encoded.push('\n'); // TODO(tarcieri): OS-specific line endings?
-
-        fs::write(path, encoded.as_bytes())?;
-        Ok(())
+    pub fn write_openssh_file(&self, path: impl AsRef<Path>) -> Result<()> {
+        let mut file = File::create(path)?;
+        self.write_openssh(&mut file)
     }
 
     /// Get the digital signature [`Algorithm`] used by this key.
