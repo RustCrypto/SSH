@@ -377,7 +377,7 @@ impl PrivateKey {
         let mut options = File::options();
 
         #[cfg(unix)]
-        let mut options = options.mode(UNIX_FILE_PERMISSIONS);
+        options.mode(UNIX_FILE_PERMISSIONS);
 
         let mut file = options.write(true).create(true).truncate(true).open(path)?;
 
