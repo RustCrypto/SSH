@@ -6,12 +6,10 @@ mod name;
 use crate::{Error, Result};
 use core::{fmt, str};
 use encoding::{Label, LabelError};
+use sha2::{Digest, Sha256, Sha512};
 
 #[cfg(feature = "alloc")]
-use {
-    alloc::{borrow::ToOwned, string::String, vec::Vec},
-    sha2::{Digest, Sha256, Sha512},
-};
+use alloc::{borrow::ToOwned, string::String, vec::Vec};
 
 #[cfg(feature = "alloc")]
 pub use name::AlgorithmName;
@@ -88,10 +86,7 @@ const SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256@openssh.com";
 /// U2F/FIDO security key with Ed25519
 const SK_SSH_ED25519: &str = "sk-ssh-ed25519@openssh.com";
 
-/// SSH key algorithms.
-///
-/// This type provides a registry of supported digital signature algorithms
-/// used for SSH keys.
+/// SSH key algorithms, i.e. digital signature algorithms used with SSH private/public keys.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Algorithm {
@@ -469,6 +464,20 @@ impl str::FromStr for HashAlg {
             _ => Err(LabelError::new(id)),
         }
     }
+}
+
+/// Associate an SSH [`HashAlg`] with the given type.
+pub trait AssociatedHashAlg: Digest {
+    /// Algorithm identifier for this hash.
+    const HASH_ALG: HashAlg;
+}
+
+impl AssociatedHashAlg for Sha256 {
+    const HASH_ALG: HashAlg = HashAlg::Sha256;
+}
+
+impl AssociatedHashAlg for Sha512 {
+    const HASH_ALG: HashAlg = HashAlg::Sha512;
 }
 
 /// Key Derivation Function (KDF) algorithms.

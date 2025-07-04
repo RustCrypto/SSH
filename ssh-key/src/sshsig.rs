@@ -1,12 +1,13 @@
 //! `sshsig` implementation.
 
-use crate::{Algorithm, Error, HashAlg, Result, Signature, SigningKey, public};
+use crate::{Algorithm, AssociatedHashAlg, Error, HashAlg, Result, Signature, SigningKey, public};
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
     CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
     pem::{LineEnding, PemLabel},
 };
+use sha2::Digest;
 use signature::Verifier;
 
 #[cfg(doc)]
@@ -112,6 +113,20 @@ impl SshSig {
             namespace,
             hash_alg,
             hash_alg.digest(msg).as_slice(),
+        )
+    }
+
+    /// Sign the given message digest with the provided signing key.
+    pub fn sign_digest<S: SigningKey, D: AssociatedHashAlg + Digest>(
+        signing_key: &S,
+        namespace: &str,
+        digest: D,
+    ) -> Result<Self> {
+        Self::sign_prehash(
+            signing_key,
+            namespace,
+            D::HASH_ALG,
+            digest.finalize().as_slice(),
         )
     }
 
