@@ -189,6 +189,12 @@ impl PublicKey {
     ///
     /// See [PROTOCOL.sshsig] for more information.
     ///
+    /// # Notes
+    ///
+    /// This method loads the  entire message has to be loaded into memory for verification.
+    /// If loading the entire message into memory is a problem consider computing a [Digest]
+    /// of the data first, and using [`PublicKey::verify_prehash`].
+    ///
     /// # Usage
     ///
     /// See also: [`PrivateKey::sign`].
@@ -224,14 +230,28 @@ impl PublicKey {
     /// # }
     /// ```
     ///
-    /// The entire message has to be loaded into memory for verification. If loading the
-    /// entire message into memory is a problem consider computing a [Digest] via a
-    /// streaming API instead, and then signing/verifying a fixed length digest instead.
-    ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
     /// [Digest]: https://docs.rs/digest/latest/digest/trait.Digest.html
     #[cfg(feature = "alloc")]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
+        self.verify_prehash(
+            namespace,
+            signature.hash_alg().digest(msg).as_slice(),
+            signature,
+        )
+    }
+
+    /// Verify the [`SshSig`] signature over the given prehashed message digest using this
+    /// public key.
+    ///
+    /// See [`PublicKey::verify`] for more information.
+    #[cfg(feature = "alloc")]
+    pub fn verify_prehash(
+        &self,
+        namespace: &str,
+        prehash: &[u8],
+        signature: &SshSig,
+    ) -> Result<()> {
         if self.key_data() != signature.public_key() {
             return Err(Error::PublicKey);
         }
@@ -240,7 +260,7 @@ impl PublicKey {
             return Err(Error::Namespace);
         }
 
-        signature.verify(msg)
+        signature.verify_prehash(prehash)
     }
 
     /// Read public key from an OpenSSH-formatted source.

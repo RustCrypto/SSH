@@ -344,6 +344,21 @@ impl PrivateKey {
         SshSig::sign(self, namespace, hash_alg, msg)
     }
 
+    /// Sign the given message prehash using this private key, returning an [`SshSig`].
+    ///
+    /// These signatures can be produced using `ssh-keygen -Y sign`.
+    ///
+    /// For more information, see [`PrivateKey::sign`].
+    #[cfg(feature = "alloc")]
+    pub fn sign_prehash(
+        &self,
+        namespace: &str,
+        hash_alg: HashAlg,
+        prehash: &[u8],
+    ) -> Result<SshSig> {
+        SshSig::sign_prehash(self, namespace, hash_alg, prehash)
+    }
+
     /// Read private key from an OpenSSH-formatted PEM source.
     #[cfg(feature = "std")]
     pub fn read_openssh(reader: &mut impl Read) -> Result<Self> {
