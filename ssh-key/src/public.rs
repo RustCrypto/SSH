@@ -35,13 +35,14 @@ use encoding::{Base64Reader, Decode, Reader};
 
 #[cfg(feature = "alloc")]
 use {
-    crate::{Comment, SshSig},
+    crate::{AssociatedHashAlg, Comment, SshSig},
     alloc::{
         borrow::ToOwned,
         string::{String, ToString},
         vec::Vec,
     },
     encoding::Encode,
+    sha2::Digest,
 };
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
@@ -177,8 +178,7 @@ impl PublicKey {
         Ok(self.key_data.encode_vec()?)
     }
 
-    /// Verify the [`SshSig`] signature over the given message using this
-    /// public key.
+    /// Verify the [`SshSig`] signature is valid the given message using this public key.
     ///
     /// These signatures can be produced using `ssh-keygen -Y sign`. They're
     /// encoded as PEM and begin with the following:
@@ -241,7 +241,24 @@ impl PublicKey {
         )
     }
 
-    /// Verify the [`SshSig`] signature over the given prehashed message digest using this
+    /// Verify the [`SshSig`] signature is valid the given message [`Digest`] using this public key.
+    ///
+    /// See [`PublicKey::verify`] for more information.
+    #[cfg(feature = "alloc")]
+    pub fn verify_digest<D: AssociatedHashAlg + Digest>(
+        &self,
+        namespace: &str,
+        digest: D,
+        signature: &SshSig,
+    ) -> Result<()> {
+        if D::HASH_ALG != signature.hash_alg() {
+            return Err(Error::Crypto);
+        }
+
+        self.verify_prehash(namespace, digest.finalize().as_slice(), signature)
+    }
+
+    /// Verify the [`SshSig`] signature matches the given prehashed message digest using this
     /// public key.
     ///
     /// See [`PublicKey::verify`] for more information.
