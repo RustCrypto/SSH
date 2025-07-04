@@ -9,6 +9,9 @@ use crate::certificate;
 #[cfg(feature = "ppk")]
 use crate::ppk::PpkParseError;
 
+#[cfg(doc)]
+use crate::HashAlg;
+
 /// Result type with `ssh-key`'s [`Error`] as the error type.
 pub type Result<T> = core::result::Result<T, Error>;
 
@@ -58,6 +61,9 @@ pub enum Error {
 
     /// Other format encoding errors.
     FormatEncoding,
+
+    /// Provided hash is the wrong size for a given [`HashAlg`].
+    HashSize,
 
     /// Input/output errors.
     #[cfg(feature = "std")]
@@ -112,6 +118,7 @@ impl fmt::Display for Error {
             Error::Encoding(err) => write!(f, "{err}"),
             Error::Encrypted => write!(f, "private key is encrypted"),
             Error::FormatEncoding => write!(f, "format encoding error"),
+            Error::HashSize => write!(f, "hash is the wrong size for the given algorithm"),
             #[cfg(feature = "std")]
             Error::Io(err) => write!(f, "I/O error: {}", std::io::Error::from(*err)),
             Error::Namespace => write!(f, "namespace invalid"),

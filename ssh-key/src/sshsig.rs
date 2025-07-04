@@ -107,6 +107,21 @@ impl SshSig {
         hash_alg: HashAlg,
         msg: &[u8],
     ) -> Result<Self> {
+        Self::sign_prehash(
+            signing_key,
+            namespace,
+            hash_alg,
+            hash_alg.digest(msg).as_slice(),
+        )
+    }
+
+    /// Sign the given prehashed message digest with the provided signing key.
+    pub fn sign_prehash<S: SigningKey>(
+        signing_key: &S,
+        namespace: &str,
+        hash_alg: HashAlg,
+        prehash: &[u8],
+    ) -> Result<Self> {
         if namespace.is_empty() {
             return Err(Error::Namespace);
         }
@@ -120,13 +135,13 @@ impl SshSig {
             return Err(Algorithm::SkEcdsaSha2NistP256.unsupported_error());
         }
 
-        let signed_data = Self::signed_data(namespace, hash_alg, msg)?;
+        let signed_data = Self::signed_data_for_prehash(namespace, hash_alg, prehash)?;
         let signature = signing_key.try_sign(&signed_data)?;
         Self::new(signing_key.public_key(), namespace, hash_alg, signature)
     }
 
-    /// Get the raw message over which the signature for a given message
-    /// needs to be computed.
+    /// Get the raw "enveloped" message over which the signature for a given input message is
+    /// computed.
     ///
     /// This is a low-level function intended for uses cases which can't be
     /// expressed using [`SshSig::sign`], such as if the [`SigningKey`] trait
@@ -135,6 +150,20 @@ impl SshSig {
     /// Once a [`Signature`] has been computed over the returned byte vector,
     /// [`SshSig::new`] can be used to construct the final signature.
     pub fn signed_data(namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<Vec<u8>> {
+        Self::signed_data_for_prehash(namespace, hash_alg, hash_alg.digest(msg).as_slice())
+    }
+
+    /// Get the raw message over which the signature for a given message digest (passed as the
+    /// `prehash` parameter) is computed.
+    pub fn signed_data_for_prehash(
+        namespace: &str,
+        hash_alg: HashAlg,
+        prehash: &[u8],
+    ) -> Result<Vec<u8>> {
+        if prehash.len() != hash_alg.digest_size() {
+            return Err(Error::HashSize);
+        }
+
         if namespace.is_empty() {
             return Err(Error::Namespace);
         }
@@ -143,22 +172,26 @@ impl SshSig {
             namespace,
             reserved: &[],
             hash_alg,
-            hash: hash_alg.digest(msg).as_slice(),
+            hash: prehash,
         }
         .to_bytes()
     }
 
-    /// Verify the given message against this signature.
+    /// Verify the given prehashed message digest against this signature.
     ///
     /// Note that this method does not verify the public key or namespace
     /// are correct and thus is crate-private so as to ensure these parameters
     /// are always authenticated by users of the public API.
-    pub(crate) fn verify(&self, msg: &[u8]) -> Result<()> {
+    pub(crate) fn verify_prehash(&self, prehash: &[u8]) -> Result<()> {
+        if prehash.len() != self.hash_alg.digest_size() {
+            return Err(Error::HashSize);
+        }
+
         let signed_data = SignedData {
             namespace: self.namespace.as_str(),
             reserved: self.reserved.as_slice(),
             hash_alg: self.hash_alg,
-            hash: self.hash_alg.digest(msg).as_slice(),
+            hash: prehash,
         }
         .to_bytes()?;
 
