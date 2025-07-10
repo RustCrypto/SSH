@@ -49,7 +49,7 @@ rand_chacha = "0.9"
 [features]
 default = ["ecdsa", "rand_core", "std"]
 alloc = ["encoding/alloc", "signature/alloc", "zeroize/alloc", ]
-std = ["alloc", "p256?/std", "p384?/std", "p521?/std", "rsa?/std", "sec1?/std", "dep:home"]
+std = ["alloc", "dep:home"]
 
 crypto = ["ed25519", "p256", "p384", "p521", "rsa"] # NOTE: `dsa` is obsolete/weak
 dsa = ["dep:dsa", "dep:sha1", "alloc", "encoding/bigint", "signature/rand_core"]
