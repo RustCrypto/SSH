@@ -290,14 +290,14 @@ dependencies = [
 
 [[package]]
 name = "dsa"
-version = "0.7.0-rc.2"
+version = "0.7.0-rc.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8284c810bd748c704428a0709251e524aa4483050aaf83f0084b4e388ca3041"
+checksum = "cf953085f7e58b6b26fcaf4bce207638c5ced0334cdc5050e309408e40505747"
 dependencies = [
  "crypto-bigint",
  "crypto-primes",
+ "der",
  "digest",
- "pkcs8",
  "rfc6979",
  "sha2",
  "signature",
@@ -546,16 +546,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pkcs8"
-version = "0.11.0-rc.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c53e5d0804fa4070b1b2a5b320102f2c1c094920a7533d5d87c2630609bcbd34"
-dependencies = [
- "der",
- "spki",
-]
-
-[[package]]
 name = "poly1305"
 version = "0.9.0-rc.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -769,16 +759,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "spki"
-version = "0.8.0-rc.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8baeff88f34ed0691978ec34440140e1572b68c7dd4a495fd14a3dc1944daa80"
-dependencies = [
- "base64ct",
- "der",
-]
-
-[[package]]
 name = "ssh-cipher"
 version = "0.3.0-rc.2"
 dependencies = [
@@ -823,7 +803,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-key"
-version = "0.7.0-rc.0"
+version = "0.7.0-rc.1"
 dependencies = [
  "argon2",
  "bcrypt-pbkdf",
@@ -852,7 +832,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-protocol"
-version = "0.3.0-rc.0"
+version = "0.3.0-rc.1"
 dependencies = [
  "ssh-cipher",
  "ssh-encoding",

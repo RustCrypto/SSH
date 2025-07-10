@@ -1,6 +1,6 @@
 [package]
 name = "ssh-protocol"
-version = "0.3.0-rc.0"
+version = "0.3.0-rc.1"
 description = """
 Pure Rust implementation of the SSH protocol as described in RFC4251/RFC4253 as well as
 OpenSSH-specific extensions (WIP)
