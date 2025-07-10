@@ -264,7 +264,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2fe0a4fafae25053c19a03fefe040607bda956b4941d692ed9fb9d3c18a3193"
 dependencies = [
  "const-oid",
- "pem-rfc7468",
  "zeroize",
 ]
 
@@ -316,7 +315,6 @@ dependencies = [
  "elliptic-curve",
  "rfc6979",
  "signature",
- "spki",
  "zeroize",
 ]
 
@@ -353,7 +351,6 @@ dependencies = [
  "ff",
  "group",
  "hybrid-array",
- "pkcs8",
  "rand_core",
  "sec1",
  "subtle",
@@ -549,16 +546,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pkcs1"
-version = "0.8.0-rc.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2345503b65d9be13aac96ddbec3eed60def8bc83869f9a519789afbcf3c2bea"
-dependencies = [
- "der",
- "spki",
-]
-
-[[package]]
 name = "pkcs8"
 version = "0.11.0-rc.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -684,8 +671,6 @@ dependencies = [
  "crypto-bigint",
  "crypto-primes",
  "digest",
- "pkcs1",
- "pkcs8",
  "rand_core",
  "sha2",
  "signature",
