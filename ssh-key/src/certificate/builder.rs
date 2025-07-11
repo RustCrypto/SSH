@@ -268,18 +268,24 @@ impl Builder {
     ///
     /// The [`PrivateKey`] type can be used as a signer.
     pub fn sign<S: SigningKey>(self, signing_key: &S) -> Result<Certificate> {
+        let cert_type = self.cert_type.unwrap_or_default();
         // Empty valid principals result in a "golden ticket", so this check
         // ensures that was explicitly configured via `all_principals_valid`.
         let valid_principals = match self.valid_principals {
             Some(principals) => principals,
-            None => return Err(Field::ValidPrincipals.invalid_error()),
+            None => {
+                if cert_type != CertType::Host {
+                    return Err(Field::ValidPrincipals.invalid_error());
+                };
+                Vec::new()
+            }
         };
 
         let mut cert = Certificate {
             nonce: self.nonce,
             public_key: self.public_key,
             serial: self.serial.unwrap_or_default(),
-            cert_type: self.cert_type.unwrap_or_default(),
+            cert_type,
             key_id: self.key_id.unwrap_or_default(),
             valid_principals,
             valid_after: self.valid_after,
