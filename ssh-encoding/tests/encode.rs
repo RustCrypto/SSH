@@ -89,4 +89,37 @@ fn encode_string_vec() {
         out,
         hex!("0000001500000003666f6f000000036261720000000362617a")
     );
+
+    // Should also work with a Vec of references to Strings.
+    let vec: Vec<&String> = vec.iter().collect();
+    let mut out = Vec::new();
+    vec.encode(&mut out).unwrap();
+
+    assert_eq!(
+        out,
+        hex!("0000001500000003666f6f000000036261720000000362617a")
+    );
+}
+
+#[test]
+fn encode_str_vec() {
+    let vec = vec!["foo", "bar", "baz"];
+
+    let mut out = Vec::new();
+    vec.encode(&mut out).unwrap();
+
+    assert_eq!(
+        out,
+        hex!("0000001500000003666f6f000000036261720000000362617a")
+    );
+}
+
+#[test]
+fn encode_slice_vec() {
+    let vec = vec![[1u8].as_slice(), [2u8, 3u8].as_slice(), [4u8].as_slice()];
+
+    let mut out = Vec::new();
+    vec.encode(&mut out).unwrap();
+
+    assert_eq!(out, hex!("0000001000000001010000000202030000000104"));
 }
