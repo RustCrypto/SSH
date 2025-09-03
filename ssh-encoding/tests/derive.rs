@@ -4,7 +4,7 @@
 use ssh_encoding::{Decode, Encode, Error};
 
 #[derive(Debug, PartialEq, Decode, Encode)]
-struct MostTypes<T>
+pub struct MostTypes<T>
 where
     T: Encode + Decode<Error = Error>,
 {
@@ -21,11 +21,11 @@ where
 
 // Only `Encode` is derived for references, as `Decode` isn't implemented for them.
 #[derive(Debug, PartialEq, Encode)]
-struct Reference<'a>(&'a [u8]);
+pub struct Reference<'a>(&'a [u8]);
 
 #[derive(Debug, PartialEq, Decode, Encode)]
 #[ssh(length_prefixed)]
-struct LengthPrefixed {
+pub struct LengthPrefixed {
     #[ssh(length_prefixed)]
     a: u32,
     b: String,
@@ -34,7 +34,7 @@ struct LengthPrefixed {
 #[derive(Debug, PartialEq, Encode, Decode)]
 #[repr(u8)]
 #[ssh(length_prefixed)]
-enum ComplexEnum {
+pub enum ComplexEnum {
     Bar = 1,
     Baz {
         a: u32,
@@ -46,20 +46,20 @@ enum ComplexEnum {
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 #[repr(u32)]
-enum SimpleEnum {
+pub enum SimpleEnum {
     A = 1,
     B = 2,
 }
 
 #[derive(Debug, PartialEq, Encode, Decode)]
 #[repr(u8)]
-enum ModerateEnum {
+pub enum ModerateEnum {
     A = 1,
     B { a: String } = 2,
 }
 
 #[derive(Debug, PartialEq, Encode, Decode)]
-struct Empty;
+pub struct Empty;
 
 #[test]
 fn derive_encode_decode_roundtrip_most_types() {
