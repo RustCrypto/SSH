@@ -22,9 +22,6 @@ use crate::{
     public::EcdsaPublicKey,
 };
 
-#[cfg(any(feature = "dsa", feature = "p256", feature = "p384", feature = "p521"))]
-use core::iter;
-
 #[cfg(feature = "rsa")]
 use {
     crate::{HashAlg, private::RsaKeypair, public::RsaPublicKey},
@@ -336,7 +333,7 @@ impl Signer<Signature> for DsaKeypair {
         for component in [signature.r(), signature.s()] {
             let bytes = component.to_be_bytes_trimmed_vartime();
             let pad_len = (DSA_SIGNATURE_SIZE / 2).saturating_sub(bytes.len());
-            data.extend(iter::repeat(0).take(pad_len));
+            data.extend(core::iter::repeat_n(0, pad_len));
             data.extend_from_slice(&bytes);
         }
 
@@ -550,7 +547,7 @@ fn zero_pad_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
     let bytes = m.as_positive_bytes()?;
     size_of::<B>()
         .checked_sub(bytes.len())
-        .map(|i| B::from_iter(iter::repeat(0u8).take(i).chain(bytes.iter().cloned())))
+        .map(|i| B::from_iter(core::iter::repeat_n(0u8, i).chain(bytes.iter().cloned())))
 }
 
 #[cfg(feature = "p256")]

@@ -461,7 +461,7 @@ fn decode_private_key_as(
     algorithm: Algorithm,
 ) -> Result<KeypairData, Error> {
     match (&algorithm, public.key_data()) {
-        (Algorithm::Dsa { .. }, KeyData::Dsa(pk)) => {
+        (Algorithm::Dsa, KeyData::Dsa(pk)) => {
             use crate::private::{DsaKeypair, DsaPrivateKey};
 
             Ok(KeypairData::Dsa(DsaKeypair::new(
@@ -484,7 +484,7 @@ fn decode_private_key_as(
         }
 
         #[cfg(feature = "ed25519")]
-        (Algorithm::Ed25519 { .. }, KeyData::Ed25519(pk)) => {
+        (Algorithm::Ed25519, KeyData::Ed25519(pk)) => {
             // PPK encodes Ed25519 private exponent as an mpint
             use crate::Mpint;
             use crate::private::{Ed25519Keypair, Ed25519PrivateKey};
