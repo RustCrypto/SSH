@@ -166,36 +166,38 @@ fn compute_mac(mut mac: Poly1305, aad: &[u8], buffer: &[u8]) -> Result<Tag> {
 #[cfg(test)]
 mod tests {
     use super::{AeadInOut, ChaCha20Poly1305, KeyInit, Poly1305, compute_mac};
+    use aead::array::AsArrayRef;
     use hex_literal::hex;
 
     #[test]
     fn test_vector() {
-        let key = hex!("379a8ca9e7e705763633213511e8d92eb148a46f1dd0045ec8164e5d23e456eb");
-        let nonce = hex!("0000000000000003");
-        let aad = hex!("5709db2d");
-        let plaintext = hex!("06050000000c7373682d7573657261757468de5949ab061f");
-        let ciphertext = hex!("6dcfb03be8a55e7f0220465672edd921489ea0171198e8a7");
-        let tag = hex!("3e82fe0a2db7128d58ef8d9047963ca3");
+        const KEY: [u8; 32] =
+            hex!("379a8ca9e7e705763633213511e8d92eb148a46f1dd0045ec8164e5d23e456eb");
+        const NONCE: [u8; 8] = hex!("0000000000000003");
+        const AAD: [u8; 4] = hex!("5709db2d");
+        const PT: [u8; 24] = hex!("06050000000c7373682d7573657261757468de5949ab061f");
+        const CT: [u8; 24] = hex!("6dcfb03be8a55e7f0220465672edd921489ea0171198e8a7");
+        const TAG: [u8; 16] = hex!("3e82fe0a2db7128d58ef8d9047963ca3");
 
-        let cipher = ChaCha20Poly1305::new(key.as_ref());
-        let mut buffer = plaintext.clone();
+        let cipher = ChaCha20Poly1305::new(KEY.as_array_ref());
+        let mut buffer = PT.clone();
         let actual_tag = cipher
-            .encrypt_inout_detached(nonce.as_ref(), &aad, buffer.as_mut_slice().into())
+            .encrypt_inout_detached(NONCE.as_array_ref(), &AAD, buffer.as_mut_slice().into())
             .unwrap();
 
-        assert_eq!(buffer, ciphertext);
-        assert_eq!(actual_tag, tag);
+        assert_eq!(buffer, CT);
+        assert_eq!(actual_tag, TAG);
 
         cipher
             .decrypt_inout_detached(
-                nonce.as_ref(),
-                &aad,
+                NONCE.as_array_ref(),
+                &AAD,
                 buffer.as_mut_slice().into(),
                 &actual_tag,
             )
             .unwrap();
 
-        assert_eq!(buffer, plaintext);
+        assert_eq!(buffer, PT);
     }
 
     #[test]
@@ -214,7 +216,7 @@ mod tests {
                 buffer[..aad_len].copy_from_slice(aad);
                 buffer[aad_len..eob].copy_from_slice(pt);
 
-                let poly = Poly1305::new(KEY.as_ref());
+                let poly = Poly1305::new(KEY.as_array_ref());
                 let expected_mac = poly.clone().compute_unpadded(&buffer[..eob]);
                 let actual_mac = compute_mac(poly, aad, pt).unwrap();
 
