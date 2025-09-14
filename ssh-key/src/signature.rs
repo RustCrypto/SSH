@@ -324,7 +324,10 @@ impl Verifier<Signature> for public::KeyData {
 impl Signer<Signature> for DsaKeypair {
     fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
         let signature = dsa::SigningKey::try_from(self)?
-            .try_sign_digest(Sha1::new_with_prefix(message))
+            .try_sign_digest(|digest: &mut Sha1| {
+                digest.update(message);
+                Ok(())
+            })
             .map_err(|_| signature::Error::new())?;
 
         // Encode the format specified in RFC4253 section 6.6: two raw 80-bit integers concatenated
@@ -353,7 +356,13 @@ impl Verifier<Signature> for DsaPublicKey {
             Algorithm::Dsa => {
                 let signature = dsa::Signature::try_from(signature)?;
                 dsa::VerifyingKey::try_from(self)?
-                    .verify_digest(Sha1::new_with_prefix(message), &signature)
+                    .verify_digest(
+                        |digest: &mut Sha1| {
+                            digest.update(message);
+                            Ok(())
+                        },
+                        &signature,
+                    )
                     .map_err(|_| signature::Error::new())
             }
             _ => Err(signature.algorithm().unsupported_error().into()),
@@ -896,7 +905,10 @@ mod tests {
 
             let signature = dsa::SigningKey::try_from(keypair)
                 .expect("valid DSA signing key")
-                .try_sign_digest(Sha1::new_with_prefix(data))
+                .try_sign_digest(|digest: &mut Sha1| {
+                    digest.update(data);
+                    Ok(())
+                })
                 .expect("valid DSA signature");
 
             let r = signature.r().to_be_bytes_trimmed_vartime();
