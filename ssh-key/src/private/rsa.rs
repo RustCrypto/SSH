@@ -140,7 +140,7 @@ pub struct RsaKeypair {
 impl RsaKeypair {
     /// Minimum allowed RSA key size.
     #[cfg(feature = "rsa")]
-    pub(crate) const MIN_KEY_SIZE: usize = 2048;
+    pub(crate) const MIN_KEY_SIZE: usize = 1024;
 
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
