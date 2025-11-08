@@ -2,6 +2,7 @@
 
 use crate::{Fingerprint, PrivateKey, PublicKey, Result};
 use std::{
+    env,
     fs::{self, ReadDir},
     path::{Path, PathBuf},
 };
@@ -17,7 +18,8 @@ impl DotSsh {
     ///
     /// Returns `None` if the home directory couldn't be located.
     pub fn new() -> Option<Self> {
-        home::home_dir().map(|path| Self::open(path.join(".ssh")))
+        #[allow(deprecated)] // NOTE: no longer deprecated as of Rust 1.86
+        env::home_dir().map(|path| Self::open(path.join(".ssh")))
     }
 
     /// Open a `~/.ssh`-structured directory.
