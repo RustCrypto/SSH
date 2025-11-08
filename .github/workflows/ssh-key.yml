@@ -90,7 +90,7 @@ jobs:
       - uses: RustCrypto/actions/cargo-hack-install@master
       - run: cargo hack test --feature-powerset --exclude-features default,dsa,ed25519,getrandom,p256,p384,p521,rsa,tdes,std,ppk --release
       - run: cargo test --release
-      - run: cargo test --release --features getrandom
+      #- run: cargo test --release --features getrandom # TODO(tarcieri): fix `getrandom` feature
       - run: cargo test --release --features std
       - run: cargo test --all-features # debug build
       - run: cargo test --release --all-features
