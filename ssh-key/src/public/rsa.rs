@@ -6,7 +6,6 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
 use {
-    crate::private::RsaKeypair,
     encoding::Uint,
     rsa::{pkcs1v15, traits::PublicKeyParts},
     sha2::{Digest, digest::const_oid::AssociatedOid},
@@ -28,10 +27,6 @@ pub struct RsaPublicKey {
 }
 
 impl RsaPublicKey {
-    /// Minimum allowed RSA key size.
-    #[cfg(feature = "rsa")]
-    pub(crate) const MIN_KEY_SIZE: usize = RsaKeypair::MIN_KEY_SIZE;
-
     /// Create a new [`RsaPublicKey`] with the given components:
     ///
     /// - `e`: RSA public exponent.
@@ -116,11 +111,7 @@ impl TryFrom<&RsaPublicKey> for rsa::RsaPublicKey {
         let e = Uint::try_from(&key.e)?;
         let ret = rsa::RsaPublicKey::new(n, e).map_err(|_| Error::Crypto)?;
 
-        if ret.size().saturating_mul(8) >= RsaPublicKey::MIN_KEY_SIZE {
-            Ok(ret)
-        } else {
-            Err(Error::Crypto)
-        }
+        Ok(ret)
     }
 }
 

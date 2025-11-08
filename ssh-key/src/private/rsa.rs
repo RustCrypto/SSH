@@ -10,10 +10,7 @@ use zeroize::Zeroize;
 use {
     encoding::Uint,
     rand_core::CryptoRng,
-    rsa::{
-        pkcs1v15,
-        traits::{PrivateKeyParts, PublicKeyParts},
-    },
+    rsa::{pkcs1v15, traits::PrivateKeyParts},
     sha2::{Digest, digest::const_oid::AssociatedOid},
 };
 
@@ -138,18 +135,10 @@ pub struct RsaKeypair {
 }
 
 impl RsaKeypair {
-    /// Minimum allowed RSA key size.
-    #[cfg(feature = "rsa")]
-    pub(crate) const MIN_KEY_SIZE: usize = 2048;
-
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, bit_size: usize) -> Result<Self> {
-        if bit_size >= Self::MIN_KEY_SIZE {
-            rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
-        } else {
-            Err(Error::Crypto)
-        }
+        rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
     }
 
     /// Create a new keypair from the given `public` and `private` key components.
@@ -261,11 +250,7 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
             ],
         )?;
 
-        if ret.size().saturating_mul(8) >= RsaKeypair::MIN_KEY_SIZE {
-            Ok(ret)
-        } else {
-            Err(Error::Crypto)
-        }
+        Ok(ret)
     }
 }
 
