@@ -6,8 +6,8 @@
     any(feature = "ed25519", feature = "p256")
 ))]
 
+use chacha20::{ChaCha8Rng, rand_core::SeedableRng};
 use hex_literal::hex;
-use rand_chacha::{ChaCha8Rng, rand_core::SeedableRng};
 use ssh_key::{Algorithm, PrivateKey, certificate};
 
 #[cfg(feature = "p256")]

@@ -20,6 +20,8 @@
     unused_lifetimes,
     unused_qualifications
 )]
+// TODO(tarcieri): fix `getrandom` feature
+#![allow(unexpected_cfgs)]
 
 //! ## Usage
 //!

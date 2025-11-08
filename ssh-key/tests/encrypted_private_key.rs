@@ -1,6 +1,8 @@
 //! Encrypted SSH private key tests.
 
 #![cfg(feature = "alloc")]
+// TODO(tarcieri): fix `getrandom` feature
+#![allow(unexpected_cfgs)]
 
 use hex_literal::hex;
 use ssh_key::{Algorithm, Cipher, Kdf, KdfAlg, PrivateKey};
