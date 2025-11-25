@@ -747,7 +747,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.3.0-rc.2"
+version = "0.3.0-rc.3"
 dependencies = [
  "base64ct",
  "bytes",
