@@ -211,7 +211,7 @@ impl EcdsaKeypair {
         match curve {
             #[cfg(feature = "p256")]
             EcdsaCurve::NistP256 => {
-                let private = p256::SecretKey::random(rng);
+                let Ok(private) = p256::SecretKey::try_from_rng(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP256 {
                     private: private.into(),
@@ -220,7 +220,7 @@ impl EcdsaKeypair {
             }
             #[cfg(feature = "p384")]
             EcdsaCurve::NistP384 => {
-                let private = p384::SecretKey::random(rng);
+                let Ok(private) = p384::SecretKey::try_from_rng(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP384 {
                     private: private.into(),
@@ -229,7 +229,7 @@ impl EcdsaKeypair {
             }
             #[cfg(feature = "p521")]
             EcdsaCurve::NistP521 => {
-                let private = p521::SecretKey::random(rng);
+                let Ok(private) = p521::SecretKey::try_from_rng(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP521 {
                     private: private.into(),
