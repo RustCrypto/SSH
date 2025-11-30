@@ -615,7 +615,7 @@ fn round_trip_non_utf8_comment_openssh() {
 #[cfg(feature = "alloc")]
 #[test]
 fn encode_dsa_openssh() {
-    encoding_test(OPENSSH_DSA_EXAMPLE)
+    round_trip_test(OPENSSH_DSA_EXAMPLE);
 }
 
 #[cfg(all(feature = "alloc", feature = "p256"))]
@@ -663,6 +663,17 @@ fn encode_custom_algorithm_openssh() {
 /// Common behavior of all encoding tests
 #[cfg(feature = "alloc")]
 fn encoding_test(private_key: &str) {
+    #[cfg_attr(not(feature = "std"), allow(unused_variables))]
+    let key = round_trip_test(private_key);
+
+    #[cfg(feature = "std")]
+    if !matches!(key.algorithm(), Algorithm::Other(_)) {
+        encoding_integration_test(key)
+    }
+}
+
+#[cfg(feature = "alloc")]
+fn round_trip_test(private_key: &str) -> PrivateKey {
     let key = PrivateKey::from_openssh(private_key).unwrap();
 
     // Ensure key round-trips
@@ -670,10 +681,7 @@ fn encoding_test(private_key: &str) {
     let key2 = PrivateKey::from_openssh(&*pem).unwrap();
     assert_eq!(key, key2);
 
-    #[cfg(feature = "std")]
-    if !matches!(key.algorithm(), Algorithm::Other(_)) {
-        encoding_integration_test(key)
-    }
+    key
 }
 
 /// Parse PEM encoded using `PrivateKey::to_openssh` using the `ssh-keygen` utility.
