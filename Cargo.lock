@@ -217,8 +217,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-primes"
-version = "0.7.0-dev"
-source = "git+https://github.com/tarcieri/crypto-primes?branch=crypto-bigint%2Fv0.7.0-rc.13#f98697886371aa15446ca53ef5b9e9e44efbabf8"
+version = "0.7.0-pre.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da0b07a7a616370e8b6efca0c6a25e5f4c6d02fde11f3d570e4af64d8ed7e2e9"
 dependencies = [
  "crypto-bigint",
  "libm",
@@ -247,7 +248,8 @@ dependencies = [
 [[package]]
 name = "curve25519-dalek"
 version = "5.0.0-pre.4"
-source = "git+https://github.com/dalek-cryptography/curve25519-dalek#e5a798697007891eb0ba3b8f452ca3ac8765aafc"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ae8b2fe5e4995d7fd08a7604e794dc569a65ed19659f5939d529813ed816d38"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -271,9 +273,9 @@ dependencies = [
 
 [[package]]
 name = "der"
-version = "0.8.0-rc.9"
+version = "0.8.0-rc.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9d8dd2f26c86b27a2a8ea2767ec7f9df7a89516e4794e54ac01ee618dda3aa4"
+checksum = "02c1d73e9668ea6b6a28172aa55f3ebec38507131ce179051c8033b5c6037653"
 dependencies = [
  "const-oid",
  "zeroize",
@@ -302,8 +304,9 @@ dependencies = [
 
 [[package]]
 name = "dsa"
-version = "0.7.0-rc.7"
-source = "git+https://github.com/RustCrypto/signatures#48b7f61e5221f38d4671e9701a28713e086c84ba"
+version = "0.7.0-rc.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7802eb96ba326179a4e82002a99a59b4219ff5b3e87069d623746f86301ccdb"
 dependencies = [
  "crypto-bigint",
  "crypto-primes",
@@ -341,7 +344,8 @@ dependencies = [
 [[package]]
 name = "ed25519-dalek"
 version = "3.0.0-pre.4"
-source = "git+https://github.com/dalek-cryptography/curve25519-dalek#e5a798697007891eb0ba3b8f452ca3ac8765aafc"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4b9f613e0c236c699bf70d39f825594d9b03aadfd8dd856ea40685f782a4ef2"
 dependencies = [
  "curve25519-dalek",
  "ed25519",
@@ -603,8 +607,9 @@ dependencies = [
 
 [[package]]
 name = "rsa"
-version = "0.10.0-rc.10"
-source = "git+https://github.com/RustCrypto/RSA#aa54cd9b021af284ec10b1307607260f9f516369"
+version = "0.10.0-rc.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d27d813937fdf8e9ad15e3e422a55da4021d29639000139ca19d99f3949060da"
 dependencies = [
  "const-oid",
  "crypto-bigint",

@@ -16,9 +16,3 @@ ssh-cipher = { path = "./ssh-cipher" }
 ssh-derive = { path = "./ssh-derive" }
 ssh-encoding = { path = "./ssh-encoding" }
 ssh-key = { path = "./ssh-key" }
-
-crypto-primes = { git = "https://github.com/tarcieri/crypto-primes", branch = "crypto-bigint/v0.7.0-rc.13" }
-curve25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek" }
-dsa = { git = "https://github.com/RustCrypto/signatures" }
-ed25519-dalek = { git = "https://github.com/dalek-cryptography/curve25519-dalek" }
-rsa = { git = "https://github.com/RustCrypto/RSA" }
