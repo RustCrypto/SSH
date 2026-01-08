@@ -10,6 +10,12 @@ use zeroize::Zeroize;
 #[cfg(feature = "rand_core")]
 use rand_core::CryptoRng;
 
+#[cfg(all(
+    feature = "rand_core",
+    any(feature = "p256", feature = "p384", feature = "p521")
+))]
+use cipher::cipher::crypto_common::Generate;
+
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private key.
 #[derive(Clone)]
 pub struct EcdsaPrivateKey<const SIZE: usize> {
@@ -211,7 +217,7 @@ impl EcdsaKeypair {
         match curve {
             #[cfg(feature = "p256")]
             EcdsaCurve::NistP256 => {
-                let Ok(private) = p256::SecretKey::try_from_rng(rng);
+                let private = p256::SecretKey::generate_from_rng(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP256 {
                     private: private.into(),
@@ -220,7 +226,7 @@ impl EcdsaKeypair {
             }
             #[cfg(feature = "p384")]
             EcdsaCurve::NistP384 => {
-                let Ok(private) = p384::SecretKey::try_from_rng(rng);
+                let private = p384::SecretKey::generate_from_rng(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP384 {
                     private: private.into(),
@@ -229,7 +235,7 @@ impl EcdsaKeypair {
             }
             #[cfg(feature = "p521")]
             EcdsaCurve::NistP521 => {
-                let Ok(private) = p521::SecretKey::try_from_rng(rng);
+                let private = p521::SecretKey::generate_from_rng(rng);
                 let public = private.public_key();
                 Ok(EcdsaKeypair::NistP521 {
                     private: private.into(),
