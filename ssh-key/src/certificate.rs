@@ -17,7 +17,10 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::str::FromStr;
+use core::{
+    hash::{Hash, Hasher},
+    str::FromStr,
+};
 use encoding::{Base64Reader, CheckedSum, Decode, Encode, Reader, Writer};
 use signature::Verifier;
 
@@ -160,7 +163,7 @@ pub struct Certificate {
     signature: Signature,
 
     /// Comment on the certificate.
-    comment: String,
+    pub comment: String,
 }
 
 impl Certificate {
@@ -508,6 +511,23 @@ impl Encode for Certificate {
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.encode_tbs(writer)?;
         self.signature.encode_prefixed(writer)
+    }
+}
+
+impl Hash for Certificate {
+    #[inline]
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.public_key.hash(state);
+        self.serial.hash(state);
+        self.cert_type.hash(state);
+        self.key_id.hash(state);
+        self.valid_principals.hash(state);
+        self.valid_after.hash(state);
+        self.valid_before.hash(state);
+        self.critical_options.hash(state);
+        self.extensions.hash(state);
+        self.signature_key.hash(state);
+        self.signature.hash(state);
     }
 }
 

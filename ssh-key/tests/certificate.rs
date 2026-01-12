@@ -2,8 +2,9 @@
 
 #![cfg(feature = "alloc")]
 
+use encoding::Decode;
 use hex_literal::hex;
-use ssh_key::{Algorithm, Certificate};
+use ssh_key::{Algorithm, Certificate, public::KeyData};
 use std::str::FromStr;
 
 #[cfg(feature = "ecdsa")]
@@ -260,6 +261,44 @@ fn encode_rsa_4096_openssh() {
         RSA_4096_CERT_EXAMPLE.trim_end(),
         &cert.to_openssh().unwrap()
     );
+}
+
+fn decode_keydata(certificate_str: &str) {
+    // Decode certificate from OpenSSH format to bytes-on-wire
+    let cert = Certificate::from_str(certificate_str).unwrap();
+    let cert_encoded = cert.to_bytes().unwrap();
+
+    // Decode bytes-on-wire to KeyData
+    let mut reader = &cert_encoded[..];
+    let key_data = KeyData::decode(&mut reader).unwrap();
+
+    // Convert KeyData to Certificate and override comment from
+    // OpenSSH encapsulation format so input and output match
+    let mut cert_decoded = key_data.into_certificate().unwrap();
+    cert_decoded.comment = cert.comment().into();
+
+    // Write Certificate to OpenSSH format and compare to input
+    assert_eq!(
+        certificate_str.trim_end(),
+        &cert_decoded.to_openssh().unwrap()
+    );
+}
+
+#[cfg(feature = "ecdsa")]
+#[test]
+fn decode_ecdsa_keydata() {
+    decode_keydata(ECDSA_P256_CERT_EXAMPLE)
+}
+
+#[cfg(feature = "ed25519")]
+#[test]
+fn decode_ed25519_keydata() {
+    decode_keydata(ED25519_CERT_EXAMPLE)
+}
+
+#[test]
+fn decode_rsa_4096_keydata() {
+    decode_keydata(RSA_4096_CERT_EXAMPLE)
 }
 
 #[cfg(feature = "ed25519")]
