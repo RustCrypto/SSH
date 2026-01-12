@@ -747,7 +747,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-cipher"
-version = "0.3.0-rc.4"
+version = "0.3.0-rc.5"
 dependencies = [
  "aead",
  "aes",
@@ -775,7 +775,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.3.0-rc.3"
+version = "0.3.0-rc.4"
 dependencies = [
  "base64ct",
  "bytes",
@@ -790,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-key"
-version = "0.7.0-rc.4"
+version = "0.7.0-rc.5"
 dependencies = [
  "argon2",
  "bcrypt-pbkdf",

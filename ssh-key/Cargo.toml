@@ -1,6 +1,6 @@
 [package]
 name = "ssh-key"
-version = "0.7.0-rc.4"
+version = "0.7.0-rc.5"
 description = """
 Pure Rust implementation of SSH key file format decoders/encoders as described
 in RFC4251/RFC4253 and OpenSSH key formats, as well as "sshsig" signatures and
@@ -18,10 +18,10 @@ edition = "2024"
 rust-version = "1.85"
 
 [dependencies]
-cipher = { package = "ssh-cipher", version = "0.3.0-rc.3", features = ["zeroize"] }
-encoding = { package = "ssh-encoding", version = "0.3.0-rc.3", features = ["base64", "digest", "pem", "subtle", "zeroize"] }
+cipher = { package = "ssh-cipher", version = "0.3.0-rc.5", features = ["zeroize"] }
+encoding = { package = "ssh-encoding", version = "0.3.0-rc.4", features = ["base64", "digest", "pem", "subtle", "zeroize"] }
 sha2 = { version = "0.11.0-rc.3", default-features = false }
-signature = { version = "3.0.0-rc.5", default-features = false }
+signature = { version = "3.0.0-rc.6", default-features = false }
 subtle = { version = "2", default-features = false }
 zeroize = { version = "1", default-features = false }
 
@@ -37,7 +37,7 @@ p384 = { version = "0.14.0-rc.2", optional = true, default-features = false, fea
 p521 = { version = "0.14.0-rc.2", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.10.0-rc-3", optional = true, default-features = false }
 rsa = { version = "0.10.0-rc.11", optional = true, default-features = false, features = ["sha2"] }
-sec1 = { version = "0.8.0-rc.10", optional = true, default-features = false, features = ["point"] }
+sec1 = { version = "0.8.0-rc.11", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1.0.16", optional = true }
 sha1 = { version = "0.11.0-rc.3", optional = true, default-features = false, features = ["oid"] }
 
