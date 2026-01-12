@@ -22,8 +22,10 @@ const DEFAULT_SALT_SIZE: usize = 16;
 /// Key Derivation Functions (KDF).
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
+#[derive(Default)]
 pub enum Kdf {
     /// No KDF.
+    #[default]
     None,
 
     /// bcrypt-pbkdf options.
@@ -121,12 +123,6 @@ impl Kdf {
     #[cfg(feature = "alloc")]
     pub fn is_bcrypt(&self) -> bool {
         matches!(self, Self::Bcrypt { .. })
-    }
-}
-
-impl Default for Kdf {
-    fn default() -> Self {
-        Self::None
     }
 }
 

@@ -6,8 +6,10 @@ use encoding::{Decode, Encode, Reader, Writer};
 /// Types of OpenSSH certificates: user or host.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
+#[derive(Default)]
 pub enum CertType {
     /// User certificate
+    #[default]
     User = 1,
 
     /// Host certificate
@@ -23,12 +25,6 @@ impl CertType {
     /// Is this a user certificate?
     pub fn is_user(self) -> bool {
         self == CertType::User
-    }
-}
-
-impl Default for CertType {
-    fn default() -> Self {
-        Self::User
     }
 }
 

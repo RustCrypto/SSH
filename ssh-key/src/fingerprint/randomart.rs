@@ -25,8 +25,6 @@ pub(super) struct Randomart<'a> {
 
 impl<'a> Randomart<'a> {
     /// Create new "randomart" from the given fingerprint.
-    // TODO: Remove this when the pipeline toolchain is updated beyond 1.69
-    #[allow(clippy::arithmetic_side_effects)]
     pub(super) fn new(header: &'a str, fingerprint: Fingerprint) -> Self {
         let mut field = Field::default();
         let mut x = WIDTH / 2;
