@@ -83,7 +83,7 @@ where
 /// [RFC5656]: https://datatracker.ietf.org/doc/html/rfc5656
 /// [RFC8032]: https://datatracker.ietf.org/doc/html/rfc8032
 /// [RFC8332]: https://datatracker.ietf.org/doc/html/rfc8332
-#[derive(Clone, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Signature {
     /// Signature algorithm.
     algorithm: Algorithm,

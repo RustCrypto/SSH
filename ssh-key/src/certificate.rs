@@ -9,11 +9,10 @@ mod unix_time;
 pub use self::{builder::Builder, cert_type::CertType, field::Field, options_map::OptionsMap};
 
 use crate::{
-    Algorithm, Error, Fingerprint, HashAlg, Result, Signature,
+    Algorithm, Comment, Error, Fingerprint, HashAlg, Result, Signature,
     public::{KeyData, SshFormat},
 };
 use alloc::{
-    borrow::ToOwned,
     string::{String, ToString},
     vec::Vec,
 };
@@ -117,7 +116,7 @@ use {
 /// human-readable formats like JSON and TOML.
 ///
 /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
-#[derive(Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Certificate {
     /// CA-provided random bitstring of arbitrary length
     /// (but typically 16 or 32 bytes).
@@ -160,7 +159,7 @@ pub struct Certificate {
     signature: Signature,
 
     /// Comment on the certificate.
-    comment: String,
+    comment: Comment,
 }
 
 impl Certificate {
@@ -182,7 +181,7 @@ impl Certificate {
             return Err(Error::AlgorithmUnknown);
         }
 
-        cert.comment = encapsulation.comment.to_owned();
+        cert.comment = Comment::from(encapsulation.comment);
         Ok(reader.finish(cert)?)
     }
 
@@ -229,7 +228,12 @@ impl Certificate {
 
     /// Get the comment on this certificate.
     pub fn comment(&self) -> &str {
-        self.comment.as_str()
+        self.comment.as_str_lossy()
+    }
+
+    /// Set the comment on this certificate.
+    pub fn set_comment(&mut self, comment: impl Into<Comment>) {
+        self.comment = comment.into();
     }
 
     /// Nonces are a CA-provided random bitstring of arbitrary length
@@ -470,7 +474,7 @@ impl Certificate {
             reserved: Vec::decode(reader)?,
             signature_key: reader.read_prefixed(KeyData::decode)?,
             signature: reader.read_prefixed(Signature::decode)?,
-            comment: String::new(),
+            comment: Comment::default(),
         })
     }
 }

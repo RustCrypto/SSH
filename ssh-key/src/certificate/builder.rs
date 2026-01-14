@@ -1,7 +1,7 @@
 //! OpenSSH certificate builder.
 
 use super::{CertType, Certificate, Field, OptionsMap};
-use crate::{Result, Signature, SigningKey, public};
+use crate::{Comment, Result, Signature, SigningKey, public};
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "rand_core")]
@@ -88,7 +88,7 @@ pub struct Builder {
     valid_before: u64,
     critical_options: OptionsMap,
     extensions: OptionsMap,
-    comment: Option<String>,
+    comment: Option<Comment>,
 }
 
 impl Builder {
@@ -255,7 +255,7 @@ impl Builder {
     /// Add a comment to this certificate.
     ///
     /// Default `""`
-    pub fn comment(&mut self, comment: impl Into<String>) -> Result<&mut Self> {
+    pub fn comment(&mut self, comment: impl Into<Comment>) -> Result<&mut Self> {
         if self.comment.is_some() {
             return Err(Field::Comment.invalid_error());
         }

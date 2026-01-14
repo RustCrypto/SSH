@@ -4,7 +4,7 @@ use crate::{Error, Result};
 use encoding::{Decode, Encode, Reader, Writer};
 
 /// Types of OpenSSH certificates: user or host.
-#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 #[derive(Default)]
 pub enum CertType {

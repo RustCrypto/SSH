@@ -9,7 +9,7 @@ use core::{
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 
 /// Key/value map type used for certificate's critical options and extensions.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct OptionsMap(pub BTreeMap<String, String>);
 
 impl OptionsMap {
