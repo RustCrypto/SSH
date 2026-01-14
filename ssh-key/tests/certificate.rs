@@ -275,7 +275,7 @@ fn decode_keydata(certificate_str: &str) {
     // Convert KeyData to Certificate and override comment from
     // OpenSSH encapsulation format so input and output match
     let mut cert_decoded = key_data.into_certificate().unwrap();
-    cert_decoded.comment = cert.comment().into();
+    cert_decoded.set_comment(cert.comment());
 
     // Write Certificate to OpenSSH format and compare to input
     assert_eq!(
