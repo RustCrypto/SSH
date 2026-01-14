@@ -1,7 +1,5 @@
 //! OpenSSH certificate types.
 
-use core::hash::Hash;
-
 use crate::{Error, Result};
 use encoding::{Decode, Encode, Reader, Writer};
 

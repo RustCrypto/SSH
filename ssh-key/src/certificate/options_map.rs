@@ -4,7 +4,6 @@ use crate::{Error, Result};
 use alloc::{collections::BTreeMap, string::String, vec::Vec};
 use core::{
     cmp::Ordering,
-    hash::Hash,
     ops::{Deref, DerefMut},
 };
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
