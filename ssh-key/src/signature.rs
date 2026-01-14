@@ -2,7 +2,7 @@
 
 use crate::{Algorithm, EcdsaCurve, Error, Mpint, PrivateKey, PublicKey, Result, private, public};
 use alloc::vec::Vec;
-use core::{fmt, hash::Hash};
+use core::fmt;
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use signature::{SignatureEncoding, Signer, Verifier};
 
