@@ -16,7 +16,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::{hash::Hash, str::FromStr};
+use core::str::FromStr;
 use encoding::{Base64Reader, CheckedSum, Decode, Encode, Reader, Writer};
 use signature::Verifier;
 
