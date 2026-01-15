@@ -2,7 +2,7 @@
 
 #![cfg(feature = "alloc")]
 
-use encoding::Decode;
+use encoding::{Base64Reader, Decode, Encode, Reader};
 use hex_literal::hex;
 use ssh_key::{Algorithm, Certificate, public::KeyData};
 use std::str::FromStr;
@@ -299,6 +299,40 @@ fn decode_ed25519_keydata() {
 #[test]
 fn decode_rsa_4096_keydata() {
     decode_keydata(RSA_4096_CERT_EXAMPLE)
+}
+
+fn encode_keydata(certificate_str: &str) {
+    // Decode the certificate's binary representation directly from the base64
+    let cert_base64 = certificate_str.split_whitespace().nth(1).unwrap();
+    let mut base64_reader = Base64Reader::new(cert_base64.as_bytes()).unwrap();
+    let mut cert_bytes = vec![0; base64_reader.remaining_len()];
+    base64_reader.read(&mut cert_bytes).unwrap();
+
+    // Parse the certificate from the same OpenSSH public key string, then re-encode it as binary
+    // using KeyData's Encode implementation
+    let cert = Certificate::from_str(certificate_str).unwrap();
+    let key_data = KeyData::from(cert);
+    let key_encoded = key_data.encode_vec().unwrap();
+
+    // Compare the decoded base64 to the parsed and re-encoded KeyData
+    assert_eq!(cert_bytes, key_encoded);
+}
+
+#[cfg(feature = "ecdsa")]
+#[test]
+fn encode_ecdsa_keydata() {
+    encode_keydata(ECDSA_P256_CERT_EXAMPLE);
+}
+
+#[cfg(feature = "ed25519")]
+#[test]
+fn encode_ed25519_keydata() {
+    encode_keydata(ED25519_CERT_EXAMPLE);
+}
+
+#[test]
+fn encode_rsa_4096_keydata() {
+    encode_keydata(RSA_4096_CERT_EXAMPLE);
 }
 
 #[cfg(feature = "ed25519")]
