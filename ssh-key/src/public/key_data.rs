@@ -301,16 +301,26 @@ impl Decode for KeyData {
 
 impl Encode for KeyData {
     fn encoded_len(&self) -> encoding::Result<usize> {
-        [
-            self.algorithm().encoded_len()?,
-            self.encoded_key_data_len()?,
-        ]
-        .checked_sum()
+        if let Self::Certificate(_) = self {
+            // Certificate encodes its own Algorithm
+            self.encoded_key_data_len()
+        } else {
+            [
+                self.algorithm().encoded_len()?,
+                self.encoded_key_data_len()?,
+            ]
+            .checked_sum()
+        }
     }
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
-        self.algorithm().encode(writer)?;
-        self.encode_key_data(writer)
+        if let Self::Certificate(_) = self {
+            // Certificate encodes its own Algorithm
+            self.encode_key_data(writer)
+        } else {
+            self.algorithm().encode(writer)?;
+            self.encode_key_data(writer)
+        }
     }
 }
 
