@@ -301,6 +301,12 @@ impl Decode for KeyData {
 
 impl Encode for KeyData {
     fn encoded_len(&self) -> encoding::Result<usize> {
+        #[cfg(feature = "alloc")]
+        if self.is_certificate() {
+            // Certificate encodes its own Algorithm
+            return self.encoded_key_data_len();
+        }
+
         [
             self.algorithm().encoded_len()?,
             self.encoded_key_data_len()?,
@@ -309,6 +315,12 @@ impl Encode for KeyData {
     }
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
+        #[cfg(feature = "alloc")]
+        if self.is_certificate() {
+            // Certificate encodes its own Algorithm
+            return self.encode_key_data(writer);
+        }
+
         self.algorithm().encode(writer)?;
         self.encode_key_data(writer)
     }
