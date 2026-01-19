@@ -35,7 +35,7 @@ hmac = { version = "0.13.0-rc.3", optional = true }
 p256 = { version = "0.14.0-rc.2", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.14.0-rc.2", optional = true, default-features = false, features = ["ecdsa"] }
 p521 = { version = "0.14.0-rc.2", optional = true, default-features = false, features = ["ecdsa"] }
-rand_core = { version = "0.10.0-rc-3", optional = true, default-features = false }
+rand_core = { version = "0.10.0-rc-4", optional = true, default-features = false }
 rsa = { version = "0.10.0-rc.12", optional = true, default-features = false, features = ["sha2"] }
 sec1 = { version = "0.8.0-rc.11", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1.0.16", optional = true }
