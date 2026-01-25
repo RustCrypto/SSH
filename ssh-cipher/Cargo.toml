@@ -1,6 +1,6 @@
 [package]
 name = "ssh-cipher"
-version = "0.3.0-rc.5"
+version = "0.3.0-rc.6"
 description = """
 Pure Rust implementation of SSH symmetric encryption including support for the
 modern aes128-gcm@openssh.com/aes256-gcm@openssh.com and
@@ -20,7 +20,7 @@ rust-version = "1.85"
 
 [dependencies]
 cipher = "0.5.0-rc.6"
-encoding = { package = "ssh-encoding", version = "0.3.0-rc.4" }
+encoding = { package = "ssh-encoding", version = "0.3.0-rc.6" }
 
 # optional dependencies
 aead = { version = "0.6.0-rc.8", optional = true, default-features = false }
