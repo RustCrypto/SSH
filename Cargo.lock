@@ -293,9 +293,9 @@ dependencies = [
 
 [[package]]
 name = "digest"
-version = "0.11.0-rc.8"
+version = "0.11.0-rc.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fc1408b7a9f59a7b933faff3e9e7fc15a05a524effd3b3d1601156944c8077f"
+checksum = "bff8de092798697546237a3a701e4174fe021579faec9b854379af9bf1e31962"
 dependencies = [
  "block-buffer",
  "const-oid",
@@ -402,9 +402,9 @@ checksum = "e712f64ec3850b98572bffac52e2c6f282b29fe6c5fa6d42334b30be438d95c1"
 
 [[package]]
 name = "hmac"
-version = "0.13.0-rc.3"
+version = "0.13.0-rc.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f1c597ac7d6cc8143e30e83ef70915e7f883b18d8bec2e2b2bce47f5bbb06d57"
+checksum = "d9956e202a691c5c86c60303a421f66f93f44b29433407b7c43cf2bebadc750e"
 dependencies = [
  "digest",
 ]
@@ -747,7 +747,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-cipher"
-version = "0.3.0-rc.5"
+version = "0.3.0-rc.6"
 dependencies = [
  "aead",
  "aes",
@@ -775,7 +775,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-encoding"
-version = "0.3.0-rc.4"
+version = "0.3.0-rc.6"
 dependencies = [
  "base64ct",
  "bytes",
@@ -790,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-key"
-version = "0.7.0-rc.6"
+version = "0.7.0-rc.7"
 dependencies = [
  "argon2",
  "bcrypt-pbkdf",
