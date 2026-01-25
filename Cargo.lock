@@ -218,8 +218,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-primes"
-version = "0.7.0-pre.7"
-source = "git+https://github.com/entropyxyz/crypto-primes#ba1024f4985d351d83dc588ee2607604ad19dba6"
+version = "0.7.0-pre.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "334a79c97c0b7fa536716dc132fd417d0afbf471440a41fc25a5d9f66d8771cd"
 dependencies = [
  "crypto-bigint",
  "libm",
@@ -304,9 +305,9 @@ dependencies = [
 
 [[package]]
 name = "dsa"
-version = "0.7.0-rc.10"
+version = "0.7.0-rc.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36a030a6dd3dda21116e2c7b41f13bf07e5c6e147c966ac82ec78d0f0aa0d7ae"
+checksum = "2c3eba9e80ed870bde8fbd018338932a3b59cf67d3b0d6a1e3c538e0047e879f"
 dependencies = [
  "crypto-bigint",
  "crypto-primes",
@@ -609,8 +610,9 @@ dependencies = [
 
 [[package]]
 name = "rsa"
-version = "0.10.0-rc.13"
-source = "git+https://github.com/RustCrypto/RSA#433ac18eeb6a88730503ddce23f213da400d9c4c"
+version = "0.10.0-rc.14"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ef381dd6f207f81aff2ee3a8264eddd68ba475bbfcdb44ca445e5906bce381b"
 dependencies = [
  "const-oid",
  "crypto-bigint",
