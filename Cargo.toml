@@ -16,6 +16,3 @@ ssh-cipher = { path = "./ssh-cipher" }
 ssh-derive = { path = "./ssh-derive" }
 ssh-encoding = { path = "./ssh-encoding" }
 ssh-key = { path = "./ssh-key" }
-
-crypto-primes = { git = "https://github.com/entropyxyz/crypto-primes" }
-rsa = { git = "https://github.com/RustCrypto/RSA" }
