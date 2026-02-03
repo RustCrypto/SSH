@@ -132,9 +132,9 @@ checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
 
 [[package]]
 name = "cbc"
-version = "0.2.0-rc.2"
+version = "0.2.0-rc.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c34a745c272d1f6124df3006881364190a8f033ff3857ce196a17aa4a753096"
+checksum = "85742c5f1d0dda799d2e582c76b82b817d3e4d6434dd285e48e90ed0c963b667"
 dependencies = [
  "cipher",
 ]
@@ -160,9 +160,9 @@ dependencies = [
 
 [[package]]
 name = "cipher"
-version = "0.5.0-rc.6"
+version = "0.5.0-rc.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eba4d87abf4032a6d927f84b71af5086128a3349b929b4501c51a0fe0981a937"
+checksum = "9002c8edb9b1e21938663da3489c9c4403bba2393997fb2ecbd401386c0e71dc"
 dependencies = [
  "block-buffer",
  "crypto-common",
@@ -208,9 +208,9 @@ dependencies = [
 
 [[package]]
 name = "crypto-common"
-version = "0.2.0-rc.13"
+version = "0.2.0-rc.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7722afd27468475c9b6063dc03a57ef2ca833816981619f8ebe64d38d207eef"
+checksum = "6f8441110cea75afde0b89a8d796e2bc67b23432f5a9566cb15d9d365d91a2b0"
 dependencies = [
  "hybrid-array",
  "rand_core",
@@ -594,9 +594,9 @@ dependencies = [
 
 [[package]]
 name = "rand_core"
-version = "0.10.0-rc-6"
+version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70765ff7112b0fb2d272d24d9a2f907fc206211304328fe58b2db15a5649ef28"
+checksum = "0c8d0fd677905edcbeedbf2edb6494d676f0e98d54d5cf9bda0b061cb8fb8aba"
 
 [[package]]
 name = "rfc6979"
