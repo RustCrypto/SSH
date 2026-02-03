@@ -173,8 +173,7 @@ macro_rules! impl_ecdsa_for_curve {
             fn try_from(public_key: &EcdsaPublicKey) -> Result<$krate::ecdsa::VerifyingKey> {
                 match public_key {
                     EcdsaPublicKey::$curve(key) => {
-                        $krate::ecdsa::VerifyingKey::from_encoded_point(key)
-                            .map_err(|_| Error::Crypto)
+                        $krate::ecdsa::VerifyingKey::from_sec1_point(key).map_err(|_| Error::Crypto)
                     }
                     _ => Err(Error::AlgorithmUnknown),
                 }
@@ -191,7 +190,7 @@ macro_rules! impl_ecdsa_for_curve {
         #[cfg(feature = $feature)]
         impl From<&$krate::ecdsa::VerifyingKey> for EcdsaPublicKey {
             fn from(key: &$krate::ecdsa::VerifyingKey) -> EcdsaPublicKey {
-                EcdsaPublicKey::$curve(key.to_encoded_point(false))
+                EcdsaPublicKey::$curve(key.to_sec1_point(false))
             }
         }
     };
