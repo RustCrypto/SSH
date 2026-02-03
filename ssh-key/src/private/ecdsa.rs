@@ -14,7 +14,7 @@ use rand_core::CryptoRng;
     feature = "rand_core",
     any(feature = "p256", feature = "p384", feature = "p521")
 ))]
-use cipher::cipher::crypto_common::Generate;
+use cipher::cipher::common::Generate;
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) private key.
 #[derive(Clone)]

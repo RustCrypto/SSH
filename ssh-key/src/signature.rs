@@ -459,7 +459,7 @@ impl Verifier<Signature> for public::SkEcdsaSha2NistP256 {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         let (signature_bytes, flags_and_counter) = split_sk_signature(signature)?;
         let signature = p256_signature_from_openssh_bytes(signature_bytes)?;
-        p256::ecdsa::VerifyingKey::from_encoded_point(self.ec_point())?.verify(
+        p256::ecdsa::VerifyingKey::from_sec1_point(self.ec_point())?.verify(
             &make_sk_signed_data(self.application(), flags_and_counter, message),
             &signature,
         )
