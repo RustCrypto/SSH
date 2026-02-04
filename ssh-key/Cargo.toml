@@ -1,6 +1,6 @@
 [package]
 name = "ssh-key"
-version = "0.7.0-rc.7"
+version = "0.7.0-rc.8"
 description = """
 Pure Rust implementation of SSH key file format decoders/encoders as described
 in RFC4251/RFC4253 and OpenSSH key formats, as well as "sshsig" signatures and
@@ -19,13 +19,13 @@ rust-version = "1.85"
 
 # ssh-cipher
 [dependencies.cipher]
-version = "0.3.0-rc.6"
+version = "0.3.0-rc.7"
 package = "ssh-cipher"
 features = ["zeroize"]
 
 # ssh-encoding
 [dependencies.encoding]
-version = "0.3.0-rc.6"
+version = "0.3.0-rc.7"
 package = "ssh-encoding"
 features = ["base64", "digest", "pem", "subtle", "zeroize"]
 
