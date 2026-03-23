@@ -41,13 +41,13 @@ dependencies = [
 
 [[package]]
 name = "argon2"
-version = "0.6.0-rc.7"
+version = "0.6.0-rc.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5cc32af0fde8095068147d01a5dfbc0e0b06307924138d992df7c8f18d34c585"
+checksum = "7af50940b73bf4e16c15c448a2b121c63f2d68e3e54b6a8731673cb4aa0cdff5"
 dependencies = [
  "base64ct",
  "blake2",
- "cpufeatures 0.2.17",
+ "cpufeatures 0.3.0",
  "password-hash",
 ]
 
