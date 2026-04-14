@@ -175,7 +175,76 @@ impl<const N: usize> Encode for [u8; N] {
     }
 }
 
-/// Encode a `string` as described in [RFC4251 § 5]:
+/// A macro to implement `Encode` for a type by delegating to some transformed version of `self`.
+macro_rules! impl_by_delegation {
+    (
+        $(
+            $(#[$attr:meta])*
+            impl $( ($($generics:tt)+) )? Encode for $type:ty where $self:ident -> $delegate:expr;
+        )+
+    ) => {
+        $(
+            $(#[$attr])*
+            impl $(< $($generics)* >)? Encode for $type  {
+                fn encoded_len(&$self) -> Result<usize, Error> {
+                    $delegate.encoded_len()
+                }
+
+                fn encode(&$self, writer: &mut impl Writer) -> Result<(), Error> {
+                    $delegate.encode(writer)
+                }
+            }
+        )+
+    };
+}
+
+impl_by_delegation!(
+    /// Encode a `string` as described in [RFC4251 § 5]:
+    ///
+    /// > Arbitrary length binary string.  Strings are allowed to contain
+    /// > arbitrary binary data, including null characters and 8-bit
+    /// > characters.  They are stored as a uint32 containing its length
+    /// > (number of bytes that follow) and zero (= empty string) or more
+    /// > bytes that are the value of the string.  Terminating null
+    /// > characters are not used.
+    /// >
+    /// > Strings are also used to store text.  In that case, US-ASCII is
+    /// > used for internal names, and ISO-10646 UTF-8 for text that might
+    /// > be displayed to the user.  The terminating null character SHOULD
+    /// > NOT normally be stored in the string.  For example: the US-ASCII
+    /// > string "testing" is represented as 00 00 00 07 t e s t i n g.  The
+    /// > UTF-8 mapping does not alter the encoding of US-ASCII characters.
+    ///
+    /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+    impl Encode for str where self -> self.as_bytes();
+
+    #[cfg(feature = "alloc")]
+    impl Encode for Vec<u8> where self -> self.as_slice();
+    #[cfg(feature = "alloc")]
+    impl Encode for String where self -> self.as_bytes();
+    #[cfg(feature = "bytes")]
+    impl Encode for Bytes where self -> self.as_ref();
+
+    // While deref coercion ensures that `&E` can use the `Encode` trait methods, it will not be
+    // allowd in trait bounds, as `&E` does not implement `Encode` itself just because `E: Encode`.
+    // A blanket impl for `&E` would be the most generic, but that collides with the `Label` trait's
+    // blanket impl. Instead, we can do it explicitly for the immediatley relevant base types.
+    impl Encode for &str where self -> **self;
+    impl Encode for &[u8] where self -> **self;
+    #[cfg(feature = "alloc")]
+    impl Encode for &Vec<u8> where self -> **self;
+    #[cfg(feature = "alloc")]
+    impl Encode for &String where self -> **self;
+    #[cfg(feature = "bytes")]
+    impl Encode for &Bytes where self -> **self;
+
+);
+
+/// A trait indicating that the type is encoded like an RFC4251 string.
+///
+/// Implementing this trait allows encoding sequences of the type as a  string of strings.
+///
+/// A `string` is described in [RFC4251 § 5]:
 ///
 /// > Arbitrary length binary string.  Strings are allowed to contain
 /// > arbitrary binary data, including null characters and 8-bit
@@ -192,40 +261,27 @@ impl<const N: usize> Encode for [u8; N] {
 /// > UTF-8 mapping does not alter the encoding of US-ASCII characters.
 ///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
-impl Encode for &str {
-    fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_bytes().encoded_len()
-    }
+pub trait Rfc4251String: Encode {}
 
-    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_bytes().encode(writer)
-    }
+impl Rfc4251String for str {}
+impl Rfc4251String for [u8] {}
+#[cfg(feature = "alloc")]
+impl Rfc4251String for String {}
+#[cfg(feature = "alloc")]
+impl Rfc4251String for Vec<u8> {}
+#[cfg(feature = "bytes")]
+impl Rfc4251String for Bytes {}
+
+/// Any reference to [`Rfc4251String`] is itself [`Rfc4251String`] if `&T: Encode`.
+impl<'a, T> Rfc4251String for &'a T
+where
+    T: Rfc4251String + ?Sized,
+    &'a T: Encode,
+{
 }
 
-#[cfg(feature = "alloc")]
-impl Encode for Vec<u8> {
-    fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_slice().encoded_len()
-    }
-
-    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_slice().encode(writer)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl Encode for String {
-    fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_str().encoded_len()
-    }
-
-    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_str().encode(writer)
-    }
-}
-
-#[cfg(feature = "alloc")]
-impl Encode for Vec<String> {
+/// Encode a slice of string-like types as a string wrapping all the entries.
+impl<T: Rfc4251String> Encode for [T] {
     fn encoded_len(&self) -> Result<usize, Error> {
         self.iter().try_fold(4usize, |acc, string| {
             acc.checked_add(string.encoded_len()?).ok_or(Error::Length)
@@ -237,22 +293,11 @@ impl Encode for Vec<String> {
             .checked_sub(4)
             .ok_or(Error::Length)?
             .encode(writer)?;
-
-        for entry in self {
-            entry.encode(writer)?;
-        }
-
-        Ok(())
+        self.iter().try_fold((), |(), entry| entry.encode(writer))
     }
 }
 
-#[cfg(feature = "bytes")]
-impl Encode for Bytes {
-    fn encoded_len(&self) -> Result<usize, Error> {
-        self.as_ref().encoded_len()
-    }
-
-    fn encode(&self, writer: &mut impl Writer) -> Result<(), Error> {
-        self.as_ref().encode(writer)
-    }
-}
+impl_by_delegation!(
+    #[cfg(feature = "alloc")]
+    impl (T: Rfc4251String) Encode for Vec<T> where self -> self.as_slice();
+);
