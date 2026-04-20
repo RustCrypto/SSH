@@ -44,7 +44,7 @@ hex = { version = "0.4", optional = true, default-features = false, features = [
 hmac = { version = "0.13.0-rc.5", optional = true }
 p256 = { version = "0.14.0-rc.8", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.14.0-rc.8", optional = true, default-features = false, features = ["ecdsa"] }
-p521 = { version = "0.14.0-rc.8", optional = true, default-features = false, features = ["ecdsa"] }
+p521 = { version = "0.14.0-rc.9", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.10", optional = true, default-features = false }
 rsa = { version = "0.10.0-rc.17", optional = true, default-features = false, features = ["sha2"] }
 sec1 = { version = "0.8", optional = true, default-features = false, features = ["point"] }
