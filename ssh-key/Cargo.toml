@@ -31,7 +31,7 @@ features = ["base64", "digest", "pem", "subtle", "zeroize"]
 
 [dependencies]
 sha2 = { version = "0.11", default-features = false }
-signature = { version = "3.0.0-rc.10", default-features = false }
+signature = { version = "3.0.0", default-features = false }
 subtle = { version = "2", default-features = false }
 zeroize = { version = "1", default-features = false }
 
