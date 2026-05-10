@@ -280,10 +280,10 @@ impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
         let iqmp = key.crt_coefficient().ok_or(Error::Crypto)?;
 
         let private = RsaPrivateKey {
-            d: key.d().try_into()?,
-            iqmp: iqmp.try_into()?,
-            p: p.try_into()?,
-            q: q.try_into()?,
+            d: key.d().into(),
+            iqmp: iqmp.into(),
+            p: p.into(),
+            q: q.into(),
         };
 
         Ok(RsaKeypair { public, private })

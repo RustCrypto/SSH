@@ -129,9 +129,7 @@ impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
     type Error = Error;
 
     fn try_from(key: &rsa::RsaPublicKey) -> Result<RsaPublicKey> {
-        let e = Mpint::try_from(key.e())?;
-        let n = Mpint::try_from(key.n().as_ref())?;
-        RsaPublicKey::new(e, n)
+        RsaPublicKey::new(key.e().into(), key.n().as_ref().into())
     }
 }
 

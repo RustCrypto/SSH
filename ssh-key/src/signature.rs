@@ -512,8 +512,8 @@ macro_rules! impl_signature_for_curve {
                 #[allow(clippy::arithmetic_side_effects)]
                 let mut data = Vec::with_capacity($size * 2 + 4 * 2 + 2);
 
-                Mpint::from_positive_bytes(&r)?.encode(&mut data)?;
-                Mpint::from_positive_bytes(&s)?.encode(&mut data)?;
+                Mpint::from_positive_bytes(&r).encode(&mut data)?;
+                Mpint::from_positive_bytes(&s).encode(&mut data)?;
 
                 Ok(Signature {
                     algorithm: Algorithm::Ecdsa {

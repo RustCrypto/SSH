@@ -130,24 +130,20 @@ impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
 }
 
 #[cfg(feature = "dsa")]
-impl TryFrom<dsa::VerifyingKey> for DsaPublicKey {
-    type Error = Error;
-
-    fn try_from(key: dsa::VerifyingKey) -> Result<DsaPublicKey> {
-        DsaPublicKey::try_from(&key)
+impl From<dsa::VerifyingKey> for DsaPublicKey {
+    fn from(key: dsa::VerifyingKey) -> DsaPublicKey {
+        DsaPublicKey::from(&key)
     }
 }
 
 #[cfg(feature = "dsa")]
-impl TryFrom<&dsa::VerifyingKey> for DsaPublicKey {
-    type Error = Error;
-
-    fn try_from(key: &dsa::VerifyingKey) -> Result<DsaPublicKey> {
-        Ok(DsaPublicKey {
-            p: key.components().p().as_ref().try_into()?,
-            q: key.components().q().as_ref().try_into()?,
-            g: key.components().g().as_ref().try_into()?,
-            y: key.y().as_ref().try_into()?,
-        })
+impl From<&dsa::VerifyingKey> for DsaPublicKey {
+    fn from(key: &dsa::VerifyingKey) -> DsaPublicKey {
+        DsaPublicKey {
+            p: key.components().p().as_ref().into(),
+            q: key.components().q().as_ref().into(),
+            g: key.components().g().as_ref().into(),
+            y: key.y().as_ref().into(),
+        }
     }
 }
