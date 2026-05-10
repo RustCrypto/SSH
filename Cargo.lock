@@ -772,11 +772,11 @@ dependencies = [
  "chacha20",
  "cipher",
  "ctr",
+ "ctutils",
  "des",
  "hex-literal",
  "poly1305",
  "ssh-encoding",
- "subtle",
  "zeroize",
 ]
 
@@ -796,11 +796,11 @@ dependencies = [
  "base64ct",
  "bytes",
  "crypto-bigint",
+ "ctutils",
  "digest",
  "hex-literal",
  "pem-rfc7468",
  "ssh-derive",
- "subtle",
  "zeroize",
 ]
 
@@ -811,6 +811,7 @@ dependencies = [
  "argon2",
  "bcrypt-pbkdf",
  "chacha20",
+ "ctutils",
  "dsa",
  "ed25519-dalek",
  "hex",
@@ -828,7 +829,6 @@ dependencies = [
  "signature",
  "ssh-cipher",
  "ssh-encoding",
- "subtle",
  "zeroize",
 ]
 

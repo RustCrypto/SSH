@@ -143,11 +143,11 @@ pub use self::sk::SkEcdsaSha2NistP256;
 use crate::{Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result, public};
 use cipher::Tag;
 use core::str;
+use ctutils::{Choice, CtEq};
 use encoding::{
     CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
     pem::{LineEnding, PemLabel},
 };
-use subtle::{Choice, ConstantTimeEq};
 
 #[cfg(feature = "alloc")]
 use {
@@ -737,7 +737,7 @@ impl PrivateKey {
     }
 }
 
-impl ConstantTimeEq for PrivateKey {
+impl CtEq for PrivateKey {
     fn ct_eq(&self, other: &Self) -> Choice {
         // Constant-time with respect to private key data
         self.key_data.ct_eq(&other.key_data)

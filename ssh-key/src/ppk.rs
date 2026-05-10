@@ -17,9 +17,9 @@ use sha2::Sha256;
 use crate::private::KeypairData;
 use crate::public::KeyData;
 use crate::{Algorithm, Error, PublicKey};
+use ctutils::CtEq;
 use encoding::base64::{self, Base64, Encoding};
 use encoding::{Decode, Encode, LabelError, Reader};
-use subtle::ConstantTimeEq;
 
 #[derive(Debug)]
 pub enum Kdf {

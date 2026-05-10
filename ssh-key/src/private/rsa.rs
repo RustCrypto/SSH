@@ -2,8 +2,8 @@
 
 use crate::{Error, Mpint, Result, public::RsaPublicKey};
 use core::fmt;
+use ctutils::{Choice, CtEq};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
@@ -66,7 +66,7 @@ impl RsaPrivateKey {
     }
 }
 
-impl ConstantTimeEq for RsaPrivateKey {
+impl CtEq for RsaPrivateKey {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.d.ct_eq(&other.d)
             & self.iqmp.ct_eq(&self.iqmp)
@@ -163,7 +163,7 @@ impl RsaKeypair {
     }
 }
 
-impl ConstantTimeEq for RsaKeypair {
+impl CtEq for RsaKeypair {
     fn ct_eq(&self, other: &Self) -> Choice {
         Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
     }
