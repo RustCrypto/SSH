@@ -104,6 +104,22 @@ impl Drop for DsaPrivateKey {
 }
 
 #[cfg(feature = "dsa")]
+impl From<&dsa::SigningKey> for DsaPrivateKey {
+    fn from(key: &dsa::SigningKey) -> DsaPrivateKey {
+        DsaPrivateKey {
+            inner: key.x().as_ref().into(),
+        }
+    }
+}
+
+#[cfg(feature = "dsa")]
+impl From<dsa::SigningKey> for DsaPrivateKey {
+    fn from(key: dsa::SigningKey) -> DsaPrivateKey {
+        DsaPrivateKey::from(&key)
+    }
+}
+
+#[cfg(feature = "dsa")]
 impl TryFrom<DsaPrivateKey> for Uint {
     type Error = Error;
 
@@ -118,26 +134,6 @@ impl TryFrom<&DsaPrivateKey> for Uint {
 
     fn try_from(key: &DsaPrivateKey) -> Result<Uint> {
         Ok(Uint::try_from(&key.inner)?)
-    }
-}
-
-#[cfg(feature = "dsa")]
-impl TryFrom<dsa::SigningKey> for DsaPrivateKey {
-    type Error = Error;
-
-    fn try_from(key: dsa::SigningKey) -> Result<DsaPrivateKey> {
-        DsaPrivateKey::try_from(&key)
-    }
-}
-
-#[cfg(feature = "dsa")]
-impl TryFrom<&dsa::SigningKey> for DsaPrivateKey {
-    type Error = Error;
-
-    fn try_from(key: &dsa::SigningKey) -> Result<DsaPrivateKey> {
-        Ok(DsaPrivateKey {
-            inner: key.x().as_ref().try_into()?,
-        })
     }
 }
 
@@ -161,7 +157,7 @@ impl DsaKeypair {
     #[cfg(all(feature = "dsa", feature = "rand_core"))]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
         let components = dsa::Components::generate(rng, Self::KEY_SIZE);
-        dsa::SigningKey::generate(rng, components).try_into()
+        Ok(dsa::SigningKey::generate(rng, components).into())
     }
 
     /// Create a new [`DsaKeypair`] with the given `public` and `private` components.
@@ -258,22 +254,18 @@ impl TryFrom<&DsaKeypair> for dsa::SigningKey {
 }
 
 #[cfg(feature = "dsa")]
-impl TryFrom<dsa::SigningKey> for DsaKeypair {
-    type Error = Error;
-
-    fn try_from(key: dsa::SigningKey) -> Result<DsaKeypair> {
-        DsaKeypair::try_from(&key)
+impl From<dsa::SigningKey> for DsaKeypair {
+    fn from(key: dsa::SigningKey) -> DsaKeypair {
+        DsaKeypair::from(&key)
     }
 }
 
 #[cfg(feature = "dsa")]
-impl TryFrom<&dsa::SigningKey> for DsaKeypair {
-    type Error = Error;
-
-    fn try_from(key: &dsa::SigningKey) -> Result<DsaKeypair> {
-        Ok(DsaKeypair {
-            private: key.try_into()?,
-            public: key.verifying_key().try_into()?,
-        })
+impl From<&dsa::SigningKey> for DsaKeypair {
+    fn from(key: &dsa::SigningKey) -> DsaKeypair {
+        DsaKeypair {
+            private: key.into(),
+            public: key.verifying_key().into(),
+        }
     }
 }

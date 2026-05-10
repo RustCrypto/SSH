@@ -1,4 +1,4 @@
-//! Multiple precision integer
+//! Multiple precision integer.
 
 use crate::{CheckedSum, Decode, Encode, Error, Reader, Result, Writer};
 use alloc::{boxed::Box, vec::Vec};
@@ -48,34 +48,42 @@ pub struct Mpint {
 }
 
 impl Mpint {
-    /// Create a new multiple precision integer from the given
-    /// big endian-encoded byte slice.
+    /// Create a new multiple precision integer from the given big endian-encoded byte slice.
     ///
-    /// Note that this method expects a leading zero on positive integers whose
-    /// MSB is set, but does *NOT* expect a 4-byte length prefix.
+    /// Note that this method expects a leading zero on positive integers whose MSB is set, but does
+    /// *NOT* expect a 4-byte length prefix.
+    ///
+    /// # Errors
+    /// Returns [`Error::MpintEncoding`] in the event of an unnecessary leading `0`.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         bytes.try_into()
     }
 
-    /// Create a new multiple precision integer from the given big endian
-    /// encoded byte slice representing a positive integer.
+    /// Create a new multiple precision integer from the given big endian encoded byte slice
+    /// representing a positive integer.
     ///
-    /// The input may begin with leading zeros, which will be stripped when
-    /// converted to [`Mpint`] encoding.
-    pub fn from_positive_bytes(mut bytes: &[u8]) -> Result<Self> {
-        let mut inner = Vec::with_capacity(bytes.len());
-
+    /// The input may begin with leading zeros, which will be stripped when converted to [`Mpint`]
+    /// encoding.
+    pub fn from_positive_bytes(mut bytes: &[u8]) -> Self {
+        // Strip leading zeros
         while bytes.first().copied() == Some(0) {
             bytes = &bytes[1..];
         }
 
-        match bytes.first().copied() {
-            Some(n) if n >= 0x80 => inner.push(0),
-            _ => (),
-        }
+        // Add a leading zero to the output if necessary
+        let inner = match bytes.first().copied() {
+            Some(n) if n >= 0x80 => {
+                let mut inner = Vec::with_capacity(bytes.len().saturating_add(1));
+                inner.push(0);
+                inner.extend_from_slice(bytes);
+                inner
+            }
+            _ => Vec::from(bytes),
+        };
 
-        inner.extend_from_slice(bytes);
-        inner.into_boxed_slice().try_into()
+        Self {
+            inner: inner.into_boxed_slice(),
+        }
     }
 
     /// Get the big integer data encoded as big endian bytes.
@@ -208,21 +216,17 @@ impl fmt::UpperHex for Mpint {
 }
 
 #[cfg(feature = "bigint")]
-impl TryFrom<Uint> for Mpint {
-    type Error = Error;
-
-    fn try_from(uint: Uint) -> Result<Mpint> {
-        Mpint::try_from(&uint)
+impl From<&Uint> for Mpint {
+    fn from(uint: &Uint) -> Mpint {
+        let bytes = Zeroizing::new(uint.to_be_bytes());
+        Mpint::from_positive_bytes(&bytes)
     }
 }
 
 #[cfg(feature = "bigint")]
-impl TryFrom<&Uint> for Mpint {
-    type Error = Error;
-
-    fn try_from(uint: &Uint) -> Result<Mpint> {
-        let bytes = Zeroizing::new(uint.to_be_bytes());
-        Mpint::from_positive_bytes(&bytes)
+impl From<Uint> for Mpint {
+    fn from(uint: Uint) -> Mpint {
+        Mpint::from(&uint)
     }
 }
 
@@ -278,18 +282,9 @@ mod tests {
     }
     #[test]
     fn from_positive_bytes_strips_leading_zeroes() {
-        assert_eq!(
-            Mpint::from_positive_bytes(&hex!("00")).unwrap().as_ref(),
-            b""
-        );
-        assert_eq!(
-            Mpint::from_positive_bytes(&hex!("00 00")).unwrap().as_ref(),
-            b""
-        );
-        assert_eq!(
-            Mpint::from_positive_bytes(&hex!("00 01")).unwrap().as_ref(),
-            b"\x01"
-        );
+        assert_eq!(Mpint::from_positive_bytes(&hex!("00")).as_ref(), b"");
+        assert_eq!(Mpint::from_positive_bytes(&hex!("00 00")).as_ref(), b"");
+        assert_eq!(Mpint::from_positive_bytes(&hex!("00 01")).as_ref(), b"\x01");
     }
 
     // TODO(tarcieri): drop support for negative numbers?
