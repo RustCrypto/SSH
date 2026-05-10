@@ -25,7 +25,7 @@ features = ["zeroize"]
 
 # ssh-encoding
 [dependencies.encoding]
-version = "0.3.0-rc.8"
+version = "0.3.0-rc.9"
 package = "ssh-encoding"
 features = ["base64", "digest", "pem", "ctutils", "zeroize"]
 
