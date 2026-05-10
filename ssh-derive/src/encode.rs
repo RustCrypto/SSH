@@ -222,8 +222,8 @@ fn fields_variables(fields: &syn::Fields, use_self: bool) -> Vec<TokenStream> {
 
 #[cfg(test)]
 mod tests {
-    #![allow(clippy::unwrap_used)]
     use super::*;
+    use core::iter;
     use proc_macro2::Span;
     use quote::quote;
 
@@ -322,7 +322,7 @@ mod tests {
             discriminant_type: None,
             length_prefixed: false,
         };
-        let err = derive_for_variants(&container_attributes, std::iter::once(&variant), &enum_name)
+        let err = derive_for_variants(&container_attributes, iter::once(&variant), &enum_name)
             .unwrap_err();
         assert_eq!(
             err.to_string(),
@@ -338,7 +338,7 @@ mod tests {
             discriminant_type: Some(quote! { u8 }),
             length_prefixed: false,
         };
-        let err = derive_for_variants(&container_attributes, std::iter::once(&variant), &enum_name)
+        let err = derive_for_variants(&container_attributes, iter::once(&variant), &enum_name)
             .unwrap_err();
         assert_eq!(
             err.to_string(),
