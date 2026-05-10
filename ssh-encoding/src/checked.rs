@@ -3,6 +3,9 @@
 use crate::{Error, Result};
 
 /// Extension trait for providing checked [`Iterator::sum`]-like functionality.
+#[diagnostic::on_unimplemented(
+    note = "Consider adding an impl of `IntoIterator<Item = usize>` to `{Self}`"
+)]
 pub trait CheckedSum<A>: Sized {
     /// Iterate over the values of this type, computing a checked sum.
     ///

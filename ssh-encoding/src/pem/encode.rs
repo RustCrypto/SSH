@@ -9,6 +9,9 @@ use {super::LINE_WIDTH, alloc::string::String};
 ///
 /// This is an extension trait which is auto-impl'd for types which impl the [`Encode`] and
 /// [`PemLabel`] traits.
+#[diagnostic::on_unimplemented(
+    note = "Consider adding impls of `Encode` and `PemLabel` to `{Self}`"
+)]
 pub trait EncodePem: Encode + PemLabel {
     /// Encode this type using the [`Encode`] trait, writing the resulting PEM document into the
     /// provided `out` buffer.
