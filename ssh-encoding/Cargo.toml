@@ -1,10 +1,7 @@
 [package]
 name = "ssh-encoding"
 version = "0.3.0-rc.8"
-description = """
-Pure Rust implementation of SSH data type decoders/encoders as described
-in RFC4251
-"""
+description = "Pure Rust implementation of SSH data type decoders/encoders as described in RFC4251"
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
 homepage = "https://github.com/RustCrypto/SSH/tree/master/ssh-encoding"
@@ -37,6 +34,8 @@ bytes = ["alloc", "dep:bytes"]
 pem = ["base64", "dep:pem-rfc7468"]
 derive = ["ssh-derive"]
 
+[lints]
+workspace = true
+
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]

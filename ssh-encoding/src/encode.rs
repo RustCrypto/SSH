@@ -17,25 +17,38 @@ use bytes::{Bytes, BytesMut};
 /// This trait describes how to encode a given type.
 pub trait Encode {
     /// Get the length of this type encoded in bytes, prior to Base64 encoding.
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     fn encoded_len(&self) -> Result<usize, Error>;
 
     /// Encode this value using the provided [`Writer`].
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     fn encode(&self, writer: &mut impl Writer) -> Result<(), Error>;
 
-    /// Return the length of this type after encoding when prepended with a
-    /// `uint32` length prefix.
+    /// Return the length of this type after encoding when prepended with a `uint32` length prefix.
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     fn encoded_len_prefixed(&self) -> Result<usize, Error> {
         [4, self.encoded_len()?].checked_sum()
     }
 
-    /// Encode this value, first prepending a `uint32` length prefix
-    /// set to [`Encode::encoded_len`].
+    /// Encode this value, first prepending a `uint32` length prefix set to [`Encode::encoded_len`].
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     fn encode_prefixed(&self, writer: &mut impl Writer) -> Result<(), Error> {
         self.encoded_len()?.encode(writer)?;
         self.encode(writer)
     }
 
     /// Encode this value, returning a `Vec<u8>` containing the encoded message.
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     #[cfg(feature = "alloc")]
     fn encode_vec(&self) -> Result<Vec<u8>, Error> {
         let mut ret = Vec::with_capacity(self.encoded_len()?);
@@ -44,6 +57,9 @@ pub trait Encode {
     }
 
     /// Encode this value, returning a [`BytesMut`] containing the encoded message.
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     #[cfg(feature = "bytes")]
     fn encode_bytes(&self) -> Result<BytesMut, Error> {
         let mut ret = BytesMut::with_capacity(self.encoded_len()?);

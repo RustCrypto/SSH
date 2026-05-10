@@ -8,12 +8,12 @@ use core::str;
 pub trait Reader: Sized {
     /// Read as much data as is needed to exactly fill `out`.
     ///
-    /// This is the base decoding method on which the rest of the trait is
-    /// implemented in terms of.
+    /// This is the base decoding method on which the rest of the trait is implemented in terms of.
     ///
-    /// # Returns
-    /// - `Ok(bytes)` if the expected amount of data was read
-    /// - `Err(Error::Length)` if the exact amount of data couldn't be read
+    /// Returns `out` reborrowed as an immutable byte slice.
+    ///
+    /// # Errors
+    /// Returns `Err(Error::Length)` if the exact amount of data couldn't be read.
     fn read<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]>;
 
     /// Get the length of the remaining data after Base64 decoding.
@@ -26,9 +26,11 @@ pub trait Reader: Sized {
 
     /// Decode length-prefixed data.
     ///
-    /// Decodes a `uint32` which identifies the length of some encapsulated
-    /// data, then calls the given reader function with the length of the
-    /// remaining data.
+    /// Decodes a `uint32` which identifies the length of some encapsulated data, then calls the
+    /// given reader function with the length of the remaining data.
+    ///
+    /// # Errors
+    /// Propagates errors returned from `F`.
     fn read_prefixed<T, E, F>(&mut self, f: F) -> core::result::Result<T, E>
     where
         E: From<Error>,
@@ -40,18 +42,21 @@ pub trait Reader: Sized {
     /// > data is sometimes represented as an array of bytes, written
     /// > `byte[n]`, where n is the number of bytes in the array.
     ///
-    /// Storage for the byte array must be provided as mutable byte slice in
-    /// order to accommodate `no_std` use cases.
+    /// Storage for the byte array must be provided as mutable byte slice in order to accommodate
+    /// `no_alloc` use cases.
     ///
-    /// The [`Decode`] impl on `Vec<u8>` can be used to allocate a buffer for
-    /// the result.
+    /// The [`Decode`] impl on `Vec<u8>` can be used to allocate a buffer for the result.
     ///
     /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+    ///
+    /// # Errors
+    /// - Returns [`Error::Length`] if `out` is too small to accommodate the full `byte[n]`.
+    /// - Propagates errors returned from [`Reader::read`].
     fn read_byten<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
         self.read_prefixed(|reader| {
             let slice = out.get_mut(..reader.remaining_len()).ok_or(Error::Length)?;
             reader.read(slice)?;
-            Ok(slice as &[u8])
+            Ok(&*slice)
         })
     }
 
@@ -71,18 +76,24 @@ pub trait Reader: Sized {
     /// > string "testing" is represented as 00 00 00 07 t e s t i n g.  The
     /// > UTF-8 mapping does not alter the encoding of US-ASCII characters.
     ///
-    /// Storage for the string data must be provided as mutable byte slice in
-    /// order to accommodate `no_std` use cases.
+    /// Storage for the string data must be provided as mutable byte slice in order to accommodate
+    /// `no_alloc` use cases.
     ///
-    /// The [`Decode`] impl on `String` can be used to allocate a buffer for
-    /// the result.
+    /// The [`Decode`] impl on `String` can be used to allocate a buffer for the result.
     ///
     /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+    ///
+    /// # Errors
+    /// - Propagates errors returned from [`Reader::read_byten`].
+    /// - Returns [`Error::CharacterEncoding`] if the data is not valid UTF-8.
     fn read_string<'o>(&mut self, buf: &'o mut [u8]) -> Result<&'o str> {
         Ok(str::from_utf8(self.read_byten(buf)?)?)
     }
 
     /// Drain the given number of bytes from the reader, discarding them.
+    ///
+    /// # Errors
+    /// Propagates errors returned from [`Reader::read`].
     fn drain(&mut self, n_bytes: usize) -> Result<()> {
         let mut byte = [0];
         for _ in 0..n_bytes {
@@ -93,8 +104,12 @@ pub trait Reader: Sized {
 
     /// Decode a `u32` length prefix, and then drain the length of the body.
     ///
-    /// Upon success, returns the number of bytes drained sans the length of
-    /// the `u32` length prefix (4-bytes).
+    /// Upon success, returns the number of bytes drained sans the length of the `u32` length prefix
+    /// (4-bytes).
+    ///
+    /// # Errors
+    /// - Propagates errors returned from [`Reader::read_prefixed`].
+    /// - Propagates errors returned from [`Reader::drain`].
     fn drain_prefixed(&mut self) -> Result<usize> {
         self.read_prefixed(|reader| {
             let len = reader.remaining_len();
@@ -106,8 +121,7 @@ pub trait Reader: Sized {
     /// Ensure that decoding is finished.
     ///
     /// # Errors
-    ///
-    /// - Returns `Error::TrailingData` if there is data remaining in the encoder.
+    /// Returns [`Error::TrailingData`] if there is data remaining in the encoder.
     fn ensure_finished(&self) -> Result<()> {
         if self.is_finished() {
             Ok(())
@@ -118,8 +132,10 @@ pub trait Reader: Sized {
         }
     }
 
-    /// Finish decoding, returning the given value if there is no remaining
-    /// data, or an error otherwise.
+    /// Finish decoding, returning the given value if there is no remaining data.
+    ///
+    /// # Errors
+    /// Returns [`Error::TrailingData`] if there is data remaining in the encoder.
     fn finish<T>(self, value: T) -> Result<T> {
         self.ensure_finished()?;
         Ok(value)

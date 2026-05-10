@@ -64,6 +64,7 @@ impl Mpint {
     ///
     /// The input may begin with leading zeros, which will be stripped when converted to [`Mpint`]
     /// encoding.
+    #[must_use]
     pub fn from_positive_bytes(mut bytes: &[u8]) -> Self {
         // Strip leading zeros
         while bytes.first().copied() == Some(0) {
@@ -91,6 +92,7 @@ impl Mpint {
     /// This slice will contain a leading zero if the value is positive but the
     /// MSB is also set. Use [`Mpint::as_positive_bytes`] to ensure the number
     /// is positive and strip the leading zero byte if it exists.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner
     }
@@ -100,6 +102,7 @@ impl Mpint {
     /// # Returns
     /// - `Some(bytes)` if the number is positive. The leading zero byte will be stripped.
     /// - `None` if the value is negative
+    #[must_use]
     pub fn as_positive_bytes(&self) -> Option<&[u8]> {
         match self.as_bytes() {
             [0x00, rest @ ..] => Some(rest),
@@ -109,6 +112,7 @@ impl Mpint {
     }
 
     /// Is this [`Mpint`] positive?
+    #[must_use]
     pub fn is_positive(&self) -> bool {
         self.as_positive_bytes().is_some()
     }
@@ -258,7 +262,7 @@ mod tests {
     #[test]
     fn decode_0() {
         let n = Mpint::from_bytes(b"").unwrap();
-        assert_eq!(b"", n.as_bytes())
+        assert_eq!(b"", n.as_bytes());
     }
 
     #[test]
@@ -278,7 +282,7 @@ mod tests {
         let n = Mpint::from_bytes(&hex!("00 80")).unwrap();
 
         // Leading zero stripped
-        assert_eq!(&hex!("80"), n.as_positive_bytes().unwrap())
+        assert_eq!(&hex!("80"), n.as_positive_bytes().unwrap());
     }
     #[test]
     fn from_positive_bytes_strips_leading_zeroes() {

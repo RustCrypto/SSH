@@ -22,6 +22,9 @@ pub trait Decode: Sized {
     type Error: From<Error>;
 
     /// Attempt to decode a value of this type using the provided [`Reader`].
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     fn decode(reader: &mut impl Reader) -> core::result::Result<Self, Self::Error>;
 }
 

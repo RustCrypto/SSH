@@ -15,6 +15,9 @@ use digest::Digest;
 /// encodings.
 pub trait Writer: Sized {
     /// Write the given bytes to the writer.
+    ///
+    /// # Errors
+    /// Returns errors specific to the concrete implementation of this trait.
     fn write(&mut self, bytes: &[u8]) -> Result<()>;
 }
 

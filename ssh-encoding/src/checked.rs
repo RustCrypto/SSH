@@ -6,6 +6,7 @@ use crate::{Error, Result};
 pub trait CheckedSum<A>: Sized {
     /// Iterate over the values of this type, computing a checked sum.
     ///
+    /// # Errors
     /// Returns [`Error::Length`] on overflow.
     fn checked_sum(self) -> Result<A>;
 }

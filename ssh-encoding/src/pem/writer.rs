@@ -5,7 +5,7 @@ use crate::{Result, Writer};
 type Inner<'o> = pem_rfc7468::Encoder<'static, 'o>;
 
 /// Constant-time PEM writer.
-pub struct PemWriter<'o> {
+pub(crate) struct PemWriter<'o> {
     inner: Inner<'o>,
 }
 
@@ -14,7 +14,7 @@ impl<'o> PemWriter<'o> {
     /// buffer.
     ///
     /// Uses 70-character line wrapping to be equivalent to OpenSSH.
-    pub fn new(
+    pub(crate) fn new(
         type_label: &'static str,
         line_ending: LineEnding,
         out: &'o mut [u8],
@@ -28,7 +28,7 @@ impl<'o> PemWriter<'o> {
     ///
     /// On success, returns the total number of bytes written to the output
     /// buffer.
-    pub fn finish(self) -> Result<usize> {
+    pub(crate) fn finish(self) -> Result<usize> {
         Ok(self.inner.finish()?)
     }
 }

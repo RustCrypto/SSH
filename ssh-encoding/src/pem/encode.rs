@@ -7,15 +7,22 @@ use {super::LINE_WIDTH, alloc::string::String};
 
 /// Encoding trait for PEM documents.
 ///
-/// This is an extension trait which is auto-impl'd for types which impl the
-/// [`Encode`] and [`PemLabel`] traits.
+/// This is an extension trait which is auto-impl'd for types which impl the [`Encode`] and
+/// [`PemLabel`] traits.
 pub trait EncodePem: Encode + PemLabel {
-    /// Encode this type using the [`Encode`] trait, writing the resulting PEM
-    /// document into the provided `out` buffer.
+    /// Encode this type using the [`Encode`] trait, writing the resulting PEM document into the
+    /// provided `out` buffer.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Pem`] in the event of PEM encoding errors.
+    /// - Propagates errors returned from the [`Encode::encode`] method.
     fn encode_pem<'o>(&self, line_ending: LineEnding, out: &'o mut [u8]) -> Result<&'o str, Error>;
 
-    /// Encode this type using the [`Encode`] trait, writing the resulting PEM
-    /// document to a returned [`String`].
+    /// Encode this type using the [`Encode`] trait, writing the resulting PEM  document to a
+    /// returned [`String`].
+    ///
+    /// # Errors
+    /// Propagates errors returned from [`EncodePem::encode_pem`].
     #[cfg(feature = "alloc")]
     fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Error>;
 }
