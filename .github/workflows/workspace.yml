@@ -21,9 +21,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.92 # pinned to prevent breakages when new rust versions are released
+          toolchain: 1.95 # pinned to prevent breakages when new rust versions are released
           components: clippy
-      - run: cargo clippy --all-features
+      - run: cargo clippy --all-features --all-targets
 
   doc:
     runs-on: ubuntu-latest
@@ -33,7 +33,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      - run: cargo doc --workspace --all-features
+      - run: cargo doc --workspace --all-features --no-deps
 
   rustfmt:
     runs-on: ubuntu-latest

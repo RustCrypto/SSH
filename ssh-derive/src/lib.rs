@@ -1,3 +1,4 @@
+#![crate_type = "proc-macro"]
 #![doc = include_str!("../README.md")]
 
 //! ## About
@@ -8,15 +9,6 @@
 //! macros from the toplevel.
 //!
 //! [`ssh-encoding`]: ../ssh-encoding
-
-#![crate_type = "proc-macro"]
-#![forbid(unsafe_code)]
-#![warn(
-    clippy::unwrap_used,
-    rust_2018_idioms,
-    trivial_casts,
-    unused_qualifications
-)]
 
 macro_rules! abort {
     ( $tokens:expr, $message:expr $(,)? ) => {

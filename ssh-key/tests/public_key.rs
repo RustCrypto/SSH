@@ -359,7 +359,7 @@ fn new_sk_ed25519_openssh() {
     assert_eq!(&sk_key, ed25519_key);
 }
 
-#[cfg(all(feature = "alloc"))]
+#[cfg(feature = "alloc")]
 #[test]
 fn decode_custom_algorithm_openssh() {
     let key = PublicKey::from_openssh(OPENSSH_OPAQUE_EXAMPLE).unwrap();

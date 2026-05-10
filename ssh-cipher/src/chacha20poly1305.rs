@@ -166,7 +166,6 @@ fn compute_mac(mut mac: Poly1305, aad: &[u8], buffer: &[u8]) -> Result<Tag> {
 #[cfg(test)]
 mod tests {
     use super::{AeadInOut, ChaCha20Poly1305, KeyInit, Poly1305, compute_mac};
-    use aead::array::AsArrayRef;
     use hex_literal::hex;
 
     #[test]
@@ -179,10 +178,10 @@ mod tests {
         const CT: [u8; 24] = hex!("6dcfb03be8a55e7f0220465672edd921489ea0171198e8a7");
         const TAG: [u8; 16] = hex!("3e82fe0a2db7128d58ef8d9047963ca3");
 
-        let cipher = ChaCha20Poly1305::new(KEY.as_array_ref());
-        let mut buffer = PT.clone();
+        let cipher = ChaCha20Poly1305::new(&KEY.into());
+        let mut buffer = PT;
         let actual_tag = cipher
-            .encrypt_inout_detached(NONCE.as_array_ref(), &AAD, buffer.as_mut_slice().into())
+            .encrypt_inout_detached(&NONCE.into(), &AAD, buffer.as_mut_slice().into())
             .unwrap();
 
         assert_eq!(buffer, CT);
@@ -190,7 +189,7 @@ mod tests {
 
         cipher
             .decrypt_inout_detached(
-                NONCE.as_array_ref(),
+                &NONCE.into(),
                 &AAD,
                 buffer.as_mut_slice().into(),
                 &actual_tag,
@@ -216,7 +215,7 @@ mod tests {
                 buffer[..aad_len].copy_from_slice(aad);
                 buffer[aad_len..eob].copy_from_slice(pt);
 
-                let poly = Poly1305::new(KEY.as_array_ref());
+                let poly = Poly1305::new(KEY.into());
                 let expected_mac = poly.clone().compute_unpadded(&buffer[..eob]);
                 let actual_mac = compute_mac(poly, aad, pt).unwrap();
 

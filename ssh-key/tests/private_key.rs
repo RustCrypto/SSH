@@ -9,7 +9,7 @@ use ssh_key::EcdsaCurve;
 #[cfg(feature = "alloc")]
 use ssh_key::LineEnding;
 
-#[cfg(all(feature = "std"))]
+#[cfg(feature = "std")]
 use {
     ssh_key::PublicKey,
     std::{io, path::PathBuf, process},
@@ -685,7 +685,7 @@ fn round_trip_test(private_key: &str) -> PrivateKey {
 }
 
 /// Parse PEM encoded using `PrivateKey::to_openssh` using the `ssh-keygen` utility.
-#[cfg(all(feature = "std"))]
+#[cfg(feature = "std")]
 fn encoding_integration_test(private_key: PrivateKey) {
     let fingerprint = private_key
         .fingerprint(Default::default())
