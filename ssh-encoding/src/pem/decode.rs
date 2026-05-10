@@ -3,8 +3,11 @@ use crate::{Decode, Error, Reader};
 
 /// Decoding trait for PEM documents.
 ///
-/// This is an extension trait which is auto-impl'd for types which impl the
-/// [`Decode`], [`PemLabel`], and [`Sized`] traits.
+/// This is an extension trait which is auto-impl'd for types which impl the [`Decode`],
+/// [`PemLabel`], and [`Sized`] traits.
+#[diagnostic::on_unimplemented(
+    note = "Consider adding impls of `Decode` and `PemLabel` to `{Self}`"
+)]
 pub trait DecodePem: Decode + PemLabel + Sized {
     /// Decode the provided PEM-encoded string, interpreting the Base64-encoded body of the document
     /// using the [`Decode`] trait.
