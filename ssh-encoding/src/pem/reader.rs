@@ -4,7 +4,7 @@ use crate::{Decode, Error, Reader, Result};
 type Inner<'i> = pem_rfc7468::Decoder<'i>;
 
 /// Constant-time PEM reader.
-pub struct PemReader<'i> {
+pub(crate) struct PemReader<'i> {
     /// Inner PEM reader.
     inner: Inner<'i>,
 
@@ -14,7 +14,7 @@ pub struct PemReader<'i> {
 
 impl<'i> PemReader<'i> {
     /// Create a new PEM reader which autodetects the line width of the input.
-    pub fn new(pem: &'i [u8]) -> Result<Self> {
+    pub(crate) fn new(pem: &'i [u8]) -> Result<Self> {
         let inner = Inner::new_detect_wrap(pem)?;
         let remaining_len = inner.remaining_len();
 
@@ -25,7 +25,7 @@ impl<'i> PemReader<'i> {
     }
 
     /// Get the PEM type label for the input document.
-    pub fn type_label(&self) -> &'i str {
+    pub(crate) fn type_label(&self) -> &'i str {
         self.inner.type_label()
     }
 }

@@ -45,6 +45,7 @@ pub struct LabelError {
 impl LabelError {
     /// Create a new [`LabelError`] for the given invalid label.
     #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
+    #[must_use]
     pub fn new(label: &str) -> Self {
         Self {
             #[cfg(feature = "alloc")]
@@ -54,6 +55,7 @@ impl LabelError {
 
     /// The invalid label string (if available).
     #[inline]
+    #[must_use]
     pub fn label(&self) -> &str {
         #[cfg(not(feature = "alloc"))]
         {

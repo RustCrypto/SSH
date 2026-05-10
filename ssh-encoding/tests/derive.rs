@@ -1,5 +1,7 @@
 //! Tests for the derive implementations for the `Decode` and `Encode` traits.
+
 #![cfg(all(feature = "derive", feature = "alloc"))]
+#![allow(missing_docs, missing_copy_implementations)]
 
 use ssh_encoding::{Decode, Encode, Error};
 
