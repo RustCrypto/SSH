@@ -7,8 +7,8 @@ use core::fmt;
 #[cfg(feature = "bigint")]
 use crate::Uint;
 
-#[cfg(feature = "subtle")]
-use subtle::{Choice, ConstantTimeEq};
+#[cfg(feature = "ctutils")]
+use ctutils::{Choice, CtEq};
 
 #[cfg(any(feature = "bigint", feature = "zeroize"))]
 use zeroize::Zeroize;
@@ -40,8 +40,8 @@ use zeroize::Zeroizing;
 /// | 80              | `00 00 00 02 00 80`
 /// |-1234            | `00 00 00 02 ed cc`
 /// | -deadbeef       | `00 00 00 05 ff 21 52 41 11`
-#[cfg_attr(not(feature = "subtle"), derive(Clone))]
-#[cfg_attr(feature = "subtle", derive(Clone, Ord, PartialOrd))] // TODO: constant time (Partial)`Ord`?
+#[cfg_attr(not(feature = "ctutils"), derive(Clone))]
+#[cfg_attr(feature = "ctutils", derive(Clone, Ord, PartialOrd))] // TODO: constant time (Partial)`Ord`?
 pub struct Mpint {
     /// Inner big endian-serialized integer value
     inner: Box<[u8]>,
@@ -112,17 +112,17 @@ impl AsRef<[u8]> for Mpint {
     }
 }
 
-#[cfg(feature = "subtle")]
-impl ConstantTimeEq for Mpint {
+#[cfg(feature = "ctutils")]
+impl CtEq for Mpint {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.as_ref().ct_eq(other.as_ref())
     }
 }
 
-#[cfg(feature = "subtle")]
+#[cfg(feature = "ctutils")]
 impl Eq for Mpint {}
 
-#[cfg(feature = "subtle")]
+#[cfg(feature = "ctutils")]
 impl PartialEq for Mpint {
     fn eq(&self, other: &Self) -> bool {
         self.ct_eq(other).into()

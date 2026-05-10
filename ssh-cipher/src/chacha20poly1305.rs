@@ -9,8 +9,8 @@ use aead::{
     inout::InOutBuf,
 };
 use cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
+use ctutils::CtEq;
 use poly1305::{Poly1305, universal_hash::UniversalHash};
-use subtle::ConstantTimeEq;
 
 #[cfg(feature = "zeroize")]
 use zeroize::{Zeroize, ZeroizeOnDrop};

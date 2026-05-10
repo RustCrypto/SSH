@@ -2,8 +2,8 @@
 
 use crate::{Error, Mpint, Result, public::DsaPublicKey};
 use core::fmt;
+use ctutils::{Choice, CtEq};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use subtle::{Choice, ConstantTimeEq};
 use zeroize::Zeroize;
 
 #[cfg(feature = "dsa")]
@@ -51,7 +51,7 @@ impl AsRef<[u8]> for DsaPrivateKey {
     }
 }
 
-impl ConstantTimeEq for DsaPrivateKey {
+impl CtEq for DsaPrivateKey {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.inner.ct_eq(&other.inner)
     }
@@ -181,7 +181,7 @@ impl DsaKeypair {
     }
 }
 
-impl ConstantTimeEq for DsaKeypair {
+impl CtEq for DsaKeypair {
     fn ct_eq(&self, other: &Self) -> Choice {
         Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
     }

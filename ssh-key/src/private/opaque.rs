@@ -14,8 +14,8 @@ use crate::{
 };
 use alloc::vec::Vec;
 use core::fmt;
+use ctutils::{Choice, CtEq};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use subtle::{Choice, ConstantTimeEq};
 
 /// An opaque private key.
 ///
@@ -118,7 +118,7 @@ impl Encode for OpaqueKeypair {
     }
 }
 
-impl ConstantTimeEq for OpaqueKeypair {
+impl CtEq for OpaqueKeypair {
     fn ct_eq(&self, other: &Self) -> Choice {
         Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
     }
@@ -148,7 +148,7 @@ impl fmt::Debug for OpaqueKeypair {
     }
 }
 
-impl ConstantTimeEq for OpaquePrivateKeyBytes {
+impl CtEq for OpaquePrivateKeyBytes {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.as_ref().ct_eq(other.as_ref())
     }

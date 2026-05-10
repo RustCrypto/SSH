@@ -4,8 +4,8 @@
 
 use crate::{Error, Result, public::Ed25519PublicKey};
 use core::fmt;
+use ctutils::{Choice, CtEq};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
-use subtle::{Choice, ConstantTimeEq};
 use zeroize::{Zeroize, Zeroizing};
 
 #[cfg(feature = "rand_core")]
@@ -45,7 +45,7 @@ impl AsRef<[u8; Self::BYTE_SIZE]> for Ed25519PrivateKey {
     }
 }
 
-impl ConstantTimeEq for Ed25519PrivateKey {
+impl CtEq for Ed25519PrivateKey {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.as_ref().ct_eq(other.as_ref())
     }
@@ -192,7 +192,7 @@ impl Ed25519Keypair {
     }
 }
 
-impl ConstantTimeEq for Ed25519Keypair {
+impl CtEq for Ed25519Keypair {
     fn ct_eq(&self, other: &Self) -> Choice {
         Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
     }

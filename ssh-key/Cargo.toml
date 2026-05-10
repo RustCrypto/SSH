@@ -27,12 +27,12 @@ features = ["zeroize"]
 [dependencies.encoding]
 version = "0.3.0-rc.8"
 package = "ssh-encoding"
-features = ["base64", "digest", "pem", "subtle", "zeroize"]
+features = ["base64", "digest", "pem", "ctutils", "zeroize"]
 
 [dependencies]
+ctutils = { version = "0.4", default-features = false }
 sha2 = { version = "0.11", default-features = false }
 signature = { version = "3", default-features = false }
-subtle = { version = "2", default-features = false }
 zeroize = { version = "1", default-features = false }
 
 # optional dependencies
