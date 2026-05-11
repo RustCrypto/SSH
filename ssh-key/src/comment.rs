@@ -109,11 +109,16 @@ impl fmt::Display for Comment {
 
 impl Comment {
     /// Interpret the comment as raw binary data.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
     /// Interpret the comment as a UTF-8 string.
+    ///
+    /// # Errors
+    /// Returns [`Error::CharacterEncoding`] in the event the underlying bytes cannot be interpreted
+    /// as valid UTF-8.
     pub fn as_str(&self) -> Result<&str, Error> {
         Ok(str::from_utf8(&self.0)?)
     }
@@ -123,6 +128,7 @@ impl Comment {
     /// This is the maximal prefix of the comment which can be interpreted as valid UTF-8.
     // TODO(tarcieri): precompute and store the offset which represents this prefix?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn as_str_lossy(&self) -> &str {
         for i in (1..=self.len()).rev() {
             if let Ok(s) = str::from_utf8(&self.0[..i]) {
@@ -134,11 +140,13 @@ impl Comment {
     }
 
     /// Is the comment empty?
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
     /// Get the length of this comment in bytes.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }

@@ -83,6 +83,9 @@ pub enum Error {
     #[cfg(feature = "rand_core")]
     RngFailure,
 
+    /// Signature errors.
+    Signature,
+
     /// Invalid timestamp (e.g. in a certificate)
     Time,
 
@@ -127,6 +130,7 @@ impl fmt::Display for Error {
             Error::PublicKey => write!(f, "public key is incorrect"),
             #[cfg(feature = "rand_core")]
             Error::RngFailure => write!(f, "random number generator failure"),
+            Error::Signature => write!(f, "signature error"),
             Error::Time => write!(f, "invalid time"),
             Error::TrailingData { remaining } => write!(
                 f,
@@ -193,7 +197,7 @@ impl From<encoding::pem::Error> for Error {
 #[cfg(not(feature = "alloc"))]
 impl From<signature::Error> for Error {
     fn from(_: signature::Error) -> Error {
-        Error::Crypto
+        Error::Signature
     }
 }
 
@@ -204,7 +208,7 @@ impl From<signature::Error> for Error {
 
         err.source()
             .and_then(|source| source.downcast_ref().cloned())
-            .unwrap_or(Error::Crypto)
+            .unwrap_or(Error::Signature)
     }
 }
 

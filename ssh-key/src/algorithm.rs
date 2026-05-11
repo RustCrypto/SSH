@@ -140,12 +140,14 @@ impl Algorithm {
     /// - `sk-ssh-ed25519@openssh.com` (FIDO/U2F key)
     ///
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event the algorithm name is not known.
     pub fn new(id: &str) -> Result<Self> {
         Ok(id.parse()?)
     }
 
-    /// Decode algorithm from the given string identifier as used by
-    /// the OpenSSH certificate format.
+    /// Decode algorithm from the given string identifier as used by the OpenSSH certificate format.
     ///
     /// OpenSSH certificate algorithms end in `*-cert-v01@openssh.com`.
     /// See [PROTOCOL.certkeys] for more information.
@@ -163,6 +165,9 @@ impl Algorithm {
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     ///
     /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
+    ///
+    /// # Errors
+    /// Returns [`Error::AlgorithmUnknown`] in the event the algorithm is not known.
     pub fn new_certificate(id: &str) -> Result<Self> {
         match id {
             CERT_DSA => Ok(Algorithm::Dsa),
@@ -193,6 +198,7 @@ impl Algorithm {
     }
 
     /// Get the string identifier which corresponds to this algorithm.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Algorithm::Dsa => SSH_DSA,
@@ -222,6 +228,7 @@ impl Algorithm {
     ///
     /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn to_certificate_type(&self) -> String {
         match self {
             Algorithm::Dsa => CERT_DSA,
@@ -246,21 +253,25 @@ impl Algorithm {
     }
 
     /// Is the algorithm DSA?
+    #[must_use]
     pub fn is_dsa(self) -> bool {
         self == Algorithm::Dsa
     }
 
     /// Is the algorithm ECDSA?
+    #[must_use]
     pub fn is_ecdsa(self) -> bool {
         matches!(self, Algorithm::Ecdsa { .. })
     }
 
     /// Is the algorithm Ed25519?
+    #[must_use]
     pub fn is_ed25519(self) -> bool {
         self == Algorithm::Ed25519
     }
 
     /// Is the algorithm RSA?
+    #[must_use]
     pub fn is_rsa(self) -> bool {
         matches!(self, Algorithm::Rsa { .. })
     }
@@ -340,11 +351,15 @@ impl EcdsaCurve {
     /// - `nistp256`
     /// - `nistp384`
     /// - `nistp521`
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event the algorithm name is not known.
     pub fn new(id: &str) -> Result<Self> {
         Ok(id.parse()?)
     }
 
     /// Get the string identifier which corresponds to this ECDSA elliptic curve.
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             EcdsaCurve::NistP256 => "nistp256",
@@ -367,6 +382,12 @@ impl EcdsaCurve {
 impl AsRef<str> for EcdsaCurve {
     fn as_ref(&self) -> &str {
         self.as_str()
+    }
+}
+
+impl From<EcdsaCurve> for Algorithm {
+    fn from(curve: EcdsaCurve) -> Algorithm {
+        Algorithm::Ecdsa { curve }
     }
 }
 
@@ -410,11 +431,15 @@ impl HashAlg {
     ///
     /// - `sha256`
     /// - `sha512`
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event the algorithm name is not known.
     pub fn new(id: &str) -> Result<Self> {
         Ok(id.parse()?)
     }
 
     /// Get the string identifier for this hash algorithm.
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             HashAlg::Sha256 => SHA256,
@@ -423,6 +448,7 @@ impl HashAlg {
     }
 
     /// Get the size of a digest produced by this hash function.
+    #[must_use]
     pub const fn digest_size(self) -> usize {
         match self {
             HashAlg::Sha256 => 32,
@@ -432,6 +458,7 @@ impl HashAlg {
 
     /// Compute a digest of the given message using this hash function.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn digest(self, msg: &[u8]) -> Vec<u8> {
         match self {
             HashAlg::Sha256 => Sha256::digest(msg).to_vec(),
@@ -497,11 +524,16 @@ impl KdfAlg {
     ///
     /// # Supported KDF names
     /// - `none`
+    /// - `bcrypt`
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event the algorithm name is not known.
     pub fn new(kdfname: &str) -> Result<Self> {
         Ok(kdfname.parse()?)
     }
 
     /// Get the string identifier which corresponds to this algorithm.
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::None => NONE,
@@ -510,6 +542,7 @@ impl KdfAlg {
     }
 
     /// Is the KDF algorithm "none"?
+    #[must_use]
     pub fn is_none(self) -> bool {
         self == Self::None
     }

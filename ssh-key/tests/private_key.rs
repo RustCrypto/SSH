@@ -1,14 +1,14 @@
 //! SSH private key tests.
 
+#![allow(clippy::unwrap_used, reason = "tests")]
+
 use hex_literal::hex;
 use ssh_key::{Algorithm, Cipher, KdfAlg, PrivateKey};
 
 #[cfg(any(feature = "p256", feature = "p384", feature = "p521"))]
 use ssh_key::EcdsaCurve;
-
 #[cfg(feature = "alloc")]
 use ssh_key::LineEnding;
-
 #[cfg(feature = "std")]
 use {
     ssh_key::PublicKey,
@@ -105,6 +105,7 @@ const OPENSSH_NON_UTF8_COMMENT_EXAMPLE: &str = include_str!("examples/non_utf8_c
 
 /// Get a path into the `tests/scratch` directory.
 #[cfg(feature = "std")]
+#[must_use]
 pub fn scratch_path(filename: &str) -> PathBuf {
     PathBuf::from(&format!("tests/scratch/{}", filename))
 }
@@ -621,43 +622,43 @@ fn encode_dsa_openssh() {
 #[cfg(all(feature = "alloc", feature = "p256"))]
 #[test]
 fn encode_ecdsa_p256_openssh() {
-    encoding_test(OPENSSH_ECDSA_P256_EXAMPLE)
+    encoding_test(OPENSSH_ECDSA_P256_EXAMPLE);
 }
 
 #[cfg(all(feature = "alloc", feature = "p384"))]
 #[test]
 fn encode_ecdsa_p384_openssh() {
-    encoding_test(OPENSSH_ECDSA_P384_EXAMPLE)
+    encoding_test(OPENSSH_ECDSA_P384_EXAMPLE);
 }
 
 #[cfg(all(feature = "alloc", feature = "p521"))]
 #[test]
 fn encode_ecdsa_p521_openssh() {
-    encoding_test(OPENSSH_ECDSA_P521_EXAMPLE)
+    encoding_test(OPENSSH_ECDSA_P521_EXAMPLE);
 }
 
 #[cfg(feature = "alloc")]
 #[test]
 fn encode_ed25519_openssh() {
-    encoding_test(OPENSSH_ED25519_EXAMPLE)
+    encoding_test(OPENSSH_ED25519_EXAMPLE);
 }
 
 #[cfg(feature = "alloc")]
 #[test]
 fn encode_rsa_3072_openssh() {
-    encoding_test(OPENSSH_RSA_3072_EXAMPLE)
+    encoding_test(OPENSSH_RSA_3072_EXAMPLE);
 }
 
 #[cfg(feature = "alloc")]
 #[test]
 fn encode_rsa_4096_openssh() {
-    encoding_test(OPENSSH_RSA_4096_EXAMPLE)
+    encoding_test(OPENSSH_RSA_4096_EXAMPLE);
 }
 
 #[cfg(feature = "alloc")]
 #[test]
 fn encode_custom_algorithm_openssh() {
-    encoding_test(OPENSSH_OPAQUE_EXAMPLE)
+    encoding_test(OPENSSH_OPAQUE_EXAMPLE);
 }
 
 /// Common behavior of all encoding tests
@@ -668,7 +669,7 @@ fn encoding_test(private_key: &str) {
 
     #[cfg(feature = "std")]
     if !matches!(key.algorithm(), Algorithm::Other(_)) {
-        encoding_integration_test(key)
+        encoding_integration_test(key);
     }
 }
 
@@ -705,7 +706,7 @@ fn encoding_integration_test(private_key: PrivateKey) {
     {
         Ok(output) => {
             assert_eq!(output.status.code().unwrap(), 0);
-            let ssh_keygen_output = std::str::from_utf8(&output.stdout).unwrap();
+            let ssh_keygen_output = core::str::from_utf8(&output.stdout).unwrap();
             PublicKey::from_openssh(ssh_keygen_output).unwrap()
         }
         Err(err) => {

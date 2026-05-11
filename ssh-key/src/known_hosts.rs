@@ -1,14 +1,15 @@
 //! Parser for `KnownHostsFile`-formatted data.
 
 use crate::{Error, PublicKey, Result};
-use core::str;
-use encoding::base64::{Base64, Encoding};
-
-use {
-    alloc::string::{String, ToString},
-    alloc::vec::Vec,
-    core::fmt,
+use alloc::{
+    string::{String, ToString},
+    vec::Vec,
 };
+use core::{
+    fmt::{self, Debug},
+    str,
+};
+use encoding::base64::{Base64, Encoding};
 
 #[cfg(feature = "std")]
 use std::{fs, path::Path};
@@ -51,14 +52,18 @@ pub struct KnownHosts<'a> {
 
 impl<'a> KnownHosts<'a> {
     /// Create a new parser for the given input buffer.
+    #[must_use]
     pub fn new(input: &'a str) -> Self {
         Self {
             lines: input.lines(),
         }
     }
 
-    /// Read a [`KnownHosts`] file from the filesystem, returning an
-    /// [`Entry`] vector on success.
+    /// Read a [`KnownHosts`] file from the filesystem, returning an [`Entry`] vector on success.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Io`] in event of I/O errors reading the file.
+    /// - Propagates [`Entry`] parsing errors as [`Error::FormatEncoding`].
     #[cfg(feature = "std")]
     pub fn read_file(path: impl AsRef<Path>) -> Result<Vec<Entry>> {
         // TODO(tarcieri): permissions checks
@@ -66,9 +71,7 @@ impl<'a> KnownHosts<'a> {
         KnownHosts::new(&input).collect()
     }
 
-    /// Get the next line, trimming any comments and trailing whitespace.
-    ///
-    /// Ignores empty lines.
+    /// Get the next line, trimming any comments and trailing whitespace. Ignores empty lines.
     fn next_line_trimmed(&mut self) -> Option<&'a str> {
         loop {
             let mut line = self.lines.next()?;
@@ -88,11 +91,17 @@ impl<'a> KnownHosts<'a> {
     }
 }
 
+impl Debug for KnownHosts<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("KnownHosts").finish_non_exhaustive()
+    }
+}
+
 impl Iterator for KnownHosts<'_> {
     type Item = Result<Entry>;
 
     fn next(&mut self) -> Option<Result<Entry>> {
-        self.next_line_trimmed().map(|line| line.parse())
+        self.next_line_trimmed().map(str::parse)
     }
 }
 
@@ -111,16 +120,19 @@ pub struct Entry {
 
 impl Entry {
     /// Get the marker for this entry, if present.
+    #[must_use]
     pub fn marker(&self) -> Option<&Marker> {
         self.marker.as_ref()
     }
 
     /// Get the host pattern enumerator for this entry
+    #[must_use]
     pub fn host_patterns(&self) -> &HostPatterns {
         &self.host_patterns
     }
 
     /// Get public key for this entry.
+    #[must_use]
     pub fn public_key(&self) -> &PublicKey {
         &self.public_key
     }
@@ -190,10 +202,11 @@ impl ToString for Entry {
 /// Markers associated with this host key entry.
 ///
 /// There can only be one of these per host key entry.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Marker {
-    /// This host entry's public key is for a certificate authority's private key
+    /// This host entry's public key is for a certificate authority's private key.
     CertAuthority,
+
     /// This host entry's public key has been revoked, and should not be allowed to connect
     /// regardless of any other entry.
     Revoked,
@@ -201,6 +214,7 @@ pub enum Marker {
 
 impl Marker {
     /// Get the string form of the marker
+    #[must_use]
     pub fn as_str(&self) -> &str {
         match self {
             Self::CertAuthority => "@cert-authority",

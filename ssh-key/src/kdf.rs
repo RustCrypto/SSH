@@ -41,6 +41,9 @@ pub enum Kdf {
 
 impl Kdf {
     /// Initialize KDF configuration for the given algorithm.
+    ///
+    /// # Errors
+    /// Returns [`Error::RngFailure`] on RNG errors.
     #[cfg(feature = "encryption")]
     pub fn new<R: TryCryptoRng + ?Sized>(algorithm: KdfAlg, rng: &mut R) -> Result<Self> {
         let mut salt = vec![0u8; DEFAULT_SALT_SIZE];
@@ -60,6 +63,7 @@ impl Kdf {
     }
 
     /// Get the KDF algorithm.
+    #[must_use]
     pub fn algorithm(&self) -> KdfAlg {
         match self {
             Self::None => KdfAlg::None,
@@ -69,6 +73,10 @@ impl Kdf {
     }
 
     /// Derive an encryption key from the given password.
+    ///
+    /// # Errors
+    /// Returns [`Error::Crypto`] in the event the underlying password hashing primitive returns an
+    /// error.
     #[cfg(feature = "encryption")]
     pub fn derive(&self, password: impl AsRef<[u8]>, output: &mut [u8]) -> Result<()> {
         match self {
@@ -83,6 +91,10 @@ impl Kdf {
     /// Derive key and IV for the given [`Cipher`].
     ///
     /// Returns two byte vectors containing the key and IV respectively.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Decrypted`] if `cipher` is [`Cipher::None`].
+    /// - Returns [`Error::Encoding`] in the event of a length error.
     #[cfg(feature = "encryption")]
     pub fn derive_key_and_iv(
         &self,
@@ -110,17 +122,20 @@ impl Kdf {
     }
 
     /// Is the KDF configured as `none`?
+    #[must_use]
     pub fn is_none(&self) -> bool {
         self == &Self::None
     }
 
     /// Is the KDF configured as anything other than `none`?
+    #[must_use]
     pub fn is_some(&self) -> bool {
         !self.is_none()
     }
 
     /// Is the KDF configured as `bcrypt` (i.e. bcrypt-pbkdf)?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_bcrypt(&self) -> bool {
         matches!(self, Self::Bcrypt { .. })
     }
@@ -174,7 +189,7 @@ impl Encode for Kdf {
             Self::Bcrypt { salt, rounds } => {
                 [8, salt.len()].checked_sum()?.encode(writer)?;
                 salt.encode(writer)?;
-                rounds.encode(writer)?
+                rounds.encode(writer)?;
             }
         }
 

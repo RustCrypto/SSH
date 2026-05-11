@@ -27,6 +27,9 @@ pub struct SkEcdsaSha2NistP256 {
 #[cfg(feature = "ecdsa")]
 impl SkEcdsaSha2NistP256 {
     /// Construct new instance of SkEcdsaSha2NistP256.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "alloc")]
     pub fn new(
         public: public::SkEcdsaSha2NistP256,
@@ -48,16 +51,19 @@ impl SkEcdsaSha2NistP256 {
     }
 
     /// Get the ECDSA/NIST P-256 public key.
+    #[must_use]
     pub fn public(&self) -> &public::SkEcdsaSha2NistP256 {
         &self.public
     }
 
     /// Get flags.
+    #[must_use]
     pub fn flags(&self) -> u8 {
         self.flags
     }
 
     /// Get FIDO/U2F key handle.
+    #[must_use]
     pub fn key_handle(&self) -> &[u8] {
         &self.key_handle
     }
@@ -117,7 +123,10 @@ pub struct SkEd25519 {
 }
 
 impl SkEd25519 {
-    /// Construct new instance of SkEd25519.
+    /// Construct new instance of [`SkEd25519`].
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] if `key_handle` is longer than 255.
     #[cfg(feature = "alloc")]
     pub fn new(
         public: public::SkEd25519,
@@ -139,16 +148,19 @@ impl SkEd25519 {
     }
 
     /// Get the Ed25519 public key.
+    #[must_use]
     pub fn public(&self) -> &public::SkEd25519 {
         &self.public
     }
 
     /// Get flags.
+    #[must_use]
     pub fn flags(&self) -> u8 {
         self.flags
     }
 
     /// Get FIDO/U2F key handle.
+    #[must_use]
     pub fn key_handle(&self) -> &[u8] {
         &self.key_handle
     }

@@ -34,6 +34,9 @@ impl DsaPublicKey {
     /// - `g`: generator of a subgroup of order `q` in the multiplicative group `GF(p)`, such
     ///   that `1 < g < p`.
     /// - `y`: the public key, where `y = gˣ mod p`.
+    ///
+    /// # Errors
+    /// Returns [`Error::FormatEncoding`] in the event any of the components are negative.
     pub fn new(p: Mpint, q: Mpint, g: Mpint, y: Mpint) -> Result<Self> {
         if p.is_positive() && q.is_positive() && g.is_positive() && y.is_positive() {
             Ok(Self { p, q, g, y })
@@ -43,22 +46,26 @@ impl DsaPublicKey {
     }
 
     /// Prime modulus.
+    #[must_use]
     pub fn p(&self) -> &Mpint {
         &self.p
     }
 
     /// Prime divisor of `p - 1`.
+    #[must_use]
     pub fn q(&self) -> &Mpint {
         &self.q
     }
 
     /// Generator of a subgroup of order `q` in the multiplicative group `GF(p)`, such that
     /// `1 < g < p`.
+    #[must_use]
     pub fn g(&self) -> &Mpint {
         &self.g
     }
 
     /// The public key, where `y = gˣ mod p`.
+    #[must_use]
     pub fn y(&self) -> &Mpint {
         &self.y
     }

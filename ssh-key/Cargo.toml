@@ -81,6 +81,8 @@ rsa = ["dep:rsa", "alloc", "encoding/bigint", "rand_core"]
 sha1 = ["dep:sha1"]
 tdes = ["cipher/tdes", "encryption"]
 
+[lints]
+workspace = true
+
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]

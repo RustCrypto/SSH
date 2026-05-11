@@ -24,15 +24,9 @@ pub struct OpaquePublicKey {
     pub key: OpaquePublicKeyBytes,
 }
 
-/// The underlying representation of an [`OpaquePublicKey`].
-///
-/// The encoded representation of an `OpaquePublicKeyBytes` consists of a 4-byte length prefix,
-/// followed by its byte representation.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct OpaquePublicKeyBytes(Vec<u8>);
-
 impl OpaquePublicKey {
     /// Create a new `OpaquePublicKey`.
+    #[must_use]
     pub fn new(key: Vec<u8>, algorithm: Algorithm) -> Self {
         Self {
             key: OpaquePublicKeyBytes(key),
@@ -41,6 +35,7 @@ impl OpaquePublicKey {
     }
 
     /// Get the [`Algorithm`] for this public key type.
+    #[must_use]
     pub fn algorithm(&self) -> Algorithm {
         self.algorithm.clone()
     }
@@ -54,24 +49,9 @@ impl OpaquePublicKey {
     }
 }
 
-impl Decode for OpaquePublicKeyBytes {
-    type Error = Error;
-
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let len = usize::decode(reader)?;
-        let mut bytes = vec![0; len];
-        reader.read(&mut bytes)?;
-        Ok(Self(bytes))
-    }
-}
-
-impl Encode for OpaquePublicKeyBytes {
-    fn encoded_len(&self) -> encoding::Result<usize> {
-        self.0.encoded_len()
-    }
-
-    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
-        self.0.encode(writer)
+impl AsRef<[u8]> for OpaquePublicKey {
+    fn as_ref(&self) -> &[u8] {
+        self.key.as_ref()
     }
 }
 
@@ -85,9 +65,28 @@ impl Encode for OpaquePublicKey {
     }
 }
 
-impl AsRef<[u8]> for OpaquePublicKey {
-    fn as_ref(&self) -> &[u8] {
-        self.key.as_ref()
+/// The underlying representation of an [`OpaquePublicKey`].
+///
+/// The encoded representation of an `OpaquePublicKeyBytes` consists of a 4-byte length prefix,
+/// followed by its byte representation.
+#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct OpaquePublicKeyBytes(Vec<u8>);
+
+impl Decode for OpaquePublicKeyBytes {
+    type Error = Error;
+
+    fn decode(reader: &mut impl Reader) -> Result<Self> {
+        Ok(Self(Vec::decode(reader)?))
+    }
+}
+
+impl Encode for OpaquePublicKeyBytes {
+    fn encoded_len(&self) -> encoding::Result<usize> {
+        self.0.encoded_len()
+    }
+
+    fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
+        self.0.encode(writer)
     }
 }
 

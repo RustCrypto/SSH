@@ -22,17 +22,17 @@ use encoding::base64::{self, Base64, Encoding};
 use encoding::{Decode, Encode, LabelError, Reader};
 
 #[derive(Debug)]
-pub enum Kdf {
+pub(crate) enum Kdf {
     Argon2 { kdf: Argon2<'static>, salt: Vec<u8> },
     PpkV2,
 }
 
 impl Kdf {
-    pub fn new_v2() -> Self {
+    pub(crate) fn new_v2() -> Self {
         Self::PpkV2
     }
 
-    pub fn new_v3(algorithm: &str, ppk: &PpkWrapper) -> Result<Self, PpkParseError> {
+    pub(crate) fn new_v3(algorithm: &str, ppk: &PpkWrapper) -> Result<Self, PpkParseError> {
         let argon_algorithm = match algorithm {
             "Argon2i" => Ok(argon2::Algorithm::Argon2i),
             "Argon2d" => Ok(argon2::Algorithm::Argon2d),
@@ -69,7 +69,7 @@ impl Kdf {
         Ok(Self::Argon2 { kdf: argon, salt })
     }
 
-    pub fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), argon2::Error> {
+    pub(crate) fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), argon2::Error> {
         match self {
             Kdf::Argon2 { kdf, salt } => kdf.hash_password_into(password, salt, output),
             Kdf::PpkV2 => Ok(()),
@@ -78,7 +78,7 @@ impl Kdf {
 }
 
 #[derive(Debug)]
-pub enum Cipher {
+pub(crate) enum Cipher {
     Aes256Cbc,
 }
 
@@ -140,11 +140,11 @@ impl Cipher {
         }
     }
 
-    pub fn derive_mac_key(&self, kdf: &Kdf, password: &str) -> Result<HmacKey, Error> {
+    pub(crate) fn derive_mac_key(&self, kdf: &Kdf, password: &str) -> Result<HmacKey, Error> {
         Ok(Cipher::derive_aes_params(kdf, password)?.2)
     }
 
-    pub fn decrypt(&self, buf: &mut [u8], kdf: &Kdf, password: &str) -> Result<(), Error> {
+    pub(crate) fn decrypt(&self, buf: &mut [u8], kdf: &Kdf, password: &str) -> Result<(), Error> {
         let (key, iv, _) = Cipher::derive_aes_params(kdf, password)?;
         match self {
             Cipher::Aes256Cbc => cipher::Cipher::Aes256Cbc
@@ -155,7 +155,7 @@ impl Cipher {
 }
 
 #[derive(Debug)]
-pub struct PpkEncryption {
+pub(crate) struct PpkEncryption {
     pub cipher: Cipher,
     pub kdf: Kdf,
     pub passphrase: String,
@@ -191,7 +191,7 @@ impl TryFrom<&str> for PpkKey {
     }
 }
 
-pub struct PpkWrapper {
+pub(crate) struct PpkWrapper {
     pub version: u8,
     pub algorithm: Algorithm,
     pub public_key: Option<Vec<u8>>,
@@ -338,13 +338,13 @@ impl TryFrom<&str> for PpkWrapper {
 }
 
 #[derive(Debug)]
-pub struct PpkContainer {
+pub(crate) struct PpkContainer {
     pub public_key: PublicKey,
     pub keypair_data: KeypairData,
 }
 
 impl PpkContainer {
-    pub fn new(mut ppk: PpkWrapper, passphrase: Option<String>) -> Result<Self, Error> {
+    pub(crate) fn new(mut ppk: PpkWrapper, passphrase: Option<String>) -> Result<Self, Error> {
         let encryption = match ppk.values.get(&PpkKey::Encryption).map(String::as_str) {
             None | Some("none") => None,
             Some("aes256-cbc") => {

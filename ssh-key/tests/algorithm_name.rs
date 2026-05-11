@@ -2,8 +2,8 @@
 
 #![cfg(feature = "alloc")]
 
+use core::str::FromStr;
 use ssh_key::AlgorithmName;
-use std::str::FromStr;
 
 #[test]
 fn additional_algorithm_name() {

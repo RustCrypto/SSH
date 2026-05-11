@@ -14,14 +14,13 @@ use encoding::{
 };
 use sha2::{Digest, Sha256, Sha512};
 
-/// Fingerprint encoding error message.
-const FINGERPRINT_ERR_MSG: &str = "fingerprint encoding error";
-
 #[cfg(feature = "alloc")]
 use alloc::string::{String, ToString};
-
 #[cfg(all(feature = "alloc", feature = "serde"))]
 use serde::{Deserialize, Serialize, de, ser};
+
+/// Fingerprint encoding error message.
+const FINGERPRINT_ERR_MSG: &str = "fingerprint encoding error";
 
 /// SSH public key fingerprints.
 ///
@@ -59,6 +58,8 @@ impl Fingerprint {
 
     /// Create a fingerprint of the given public key data using the provided
     /// hash algorithm.
+    #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "should not panic")]
     pub fn new(algorithm: HashAlg, public_key: &public::KeyData) -> Self {
         match algorithm {
             HashAlg::Sha256 => {
@@ -79,6 +80,7 @@ impl Fingerprint {
     }
 
     /// Get the hash algorithm used for this fingerprint.
+    #[must_use]
     pub fn algorithm(self) -> HashAlg {
         match self {
             Self::Sha256(_) => HashAlg::Sha256,
@@ -87,6 +89,7 @@ impl Fingerprint {
     }
 
     /// Get the name of the hash algorithm (upper case e.g. "SHA256").
+    #[must_use]
     pub fn prefix(self) -> &'static str {
         match self.algorithm() {
             HashAlg::Sha256 => "SHA256",
@@ -103,6 +106,7 @@ impl Fingerprint {
     }
 
     /// Get the raw digest output for the fingerprint as bytes.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         match self {
             Self::Sha256(bytes) => bytes.as_slice(),
@@ -111,6 +115,7 @@ impl Fingerprint {
     }
 
     /// Get the SHA-256 fingerprint, if this is one.
+    #[must_use]
     pub fn sha256(self) -> Option<[u8; HashAlg::Sha256.digest_size()]> {
         match self {
             Self::Sha256(fingerprint) => Some(fingerprint),
@@ -119,6 +124,7 @@ impl Fingerprint {
     }
 
     /// Get the SHA-512 fingerprint, if this is one.
+    #[must_use]
     pub fn sha512(self) -> Option<[u8; HashAlg::Sha512.digest_size()]> {
         match self {
             Self::Sha512(fingerprint) => Some(fingerprint),
@@ -127,16 +133,21 @@ impl Fingerprint {
     }
 
     /// Is this fingerprint SHA-256?
+    #[must_use]
     pub fn is_sha256(self) -> bool {
         matches!(self, Self::Sha256(_))
     }
 
     /// Is this fingerprint SHA-512?
+    #[must_use]
     pub fn is_sha512(self) -> bool {
         matches!(self, Self::Sha512(_))
     }
 
     /// Format "randomart" for this fingerprint using the provided formatter.
+    ///
+    /// # Errors
+    /// Propagates errors from [`fmt::Formatter`].
     pub fn fmt_randomart(self, header: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Randomart::new(header, self).fmt(f)
     }
@@ -157,6 +168,7 @@ impl Fingerprint {
     /// +----[SHA256]-----+
     /// ```
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn to_randomart(self, header: &str) -> String {
         Randomart::new(header, self).to_string()
     }

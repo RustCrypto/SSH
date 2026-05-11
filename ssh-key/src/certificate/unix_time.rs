@@ -12,11 +12,12 @@ use {
 };
 
 /// Maximum allowed value for a Unix timestamp.
-pub const MAX_SECS: u64 = i64::MAX as u64;
+#[allow(clippy::as_conversions, reason = "constant")]
+pub(super) const MAX_SECS: u64 = i64::MAX as u64;
 
 /// Sentinel value meaning "no expiry" per OpenSSH PROTOCOL.certkeys.
 /// When `valid_before` is set to this value, the certificate never expires.
-pub const FOREVER_SECS: u64 = u64::MAX;
+pub(super) const FOREVER_SECS: u64 = u64::MAX;
 
 /// Unix timestamps as used in OpenSSH certificates.
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Ord)]
@@ -38,7 +39,7 @@ impl UnixTime {
     /// than or equal to `i64::MAX`, or `u64::MAX` (the OpenSSH "no expiry"
     /// sentinel defined in PROTOCOL.certkeys).
     #[cfg(not(feature = "std"))]
-    pub fn new(secs: u64) -> Result<Self> {
+    pub(super) fn new(secs: u64) -> Result<Self> {
         if secs == FOREVER_SECS || secs <= MAX_SECS {
             Ok(Self { secs })
         } else {
@@ -55,7 +56,7 @@ impl UnixTime {
     /// `u64::MAX` is the OpenSSH "no expiry" sentinel (PROTOCOL.certkeys) and
     /// is accepted; its `SystemTime` representation is capped at `MAX_SECS`.
     #[cfg(feature = "std")]
-    pub fn new(secs: u64) -> Result<Self> {
+    pub(super) fn new(secs: u64) -> Result<Self> {
         // u64::MAX is OpenSSH's sentinel for "certificate never expires".
         // Cap the SystemTime representation at MAX_SECS so it remains valid,
         // but preserve the original secs value for encoding round-trips.
@@ -73,7 +74,7 @@ impl UnixTime {
 
     /// Get the current time as a Unix timestamp.
     #[cfg(feature = "std")]
-    pub fn now() -> Result<Self> {
+    pub(super) fn now() -> Result<Self> {
         SystemTime::now().try_into()
     }
 }

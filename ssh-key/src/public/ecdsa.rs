@@ -6,13 +6,13 @@ use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use sec1::consts::{U32, U48, U66};
 
 /// ECDSA/NIST P-256 public key.
-pub type EcdsaNistP256PublicKey = sec1::EncodedPoint<U32>;
+pub(super) type EcdsaNistP256PublicKey = sec1::EncodedPoint<U32>;
 
 /// ECDSA/NIST P-384 public key.
-pub type EcdsaNistP384PublicKey = sec1::EncodedPoint<U48>;
+pub(super) type EcdsaNistP384PublicKey = sec1::EncodedPoint<U48>;
 
 /// ECDSA/NIST P-521 public key.
-pub type EcdsaNistP521PublicKey = sec1::EncodedPoint<U66>;
+pub(super) type EcdsaNistP521PublicKey = sec1::EncodedPoint<U66>;
 
 /// Elliptic Curve Digital Signature Algorithm (ECDSA) public key.
 ///
@@ -43,6 +43,9 @@ impl EcdsaPublicKey {
     /// Parse an ECDSA public key from a SEC1-encoded point.
     ///
     /// Determines the key type from the SEC1 tag byte and length.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_sec1_bytes(bytes: &[u8]) -> Result<Self> {
         match bytes {
             [tag, rest @ ..] => {
@@ -50,8 +53,9 @@ impl EcdsaPublicKey {
                     sec1::point::Tag::CompressedEvenY | sec1::point::Tag::CompressedOddY => {
                         rest.len()
                     }
+                    #[allow(clippy::integer_division_remainder_used, reason = "public input")]
                     sec1::point::Tag::Uncompressed => rest.len() / 2,
-                    _ => return Err(Error::AlgorithmUnknown),
+                    _ => return Err(Error::FormatEncoding),
                 };
 
                 match point_size {
@@ -66,6 +70,7 @@ impl EcdsaPublicKey {
     }
 
     /// Borrow the SEC1-encoded key data as bytes.
+    #[must_use]
     pub fn as_sec1_bytes(&self) -> &[u8] {
         match self {
             EcdsaPublicKey::NistP256(point) => point.as_bytes(),
@@ -75,6 +80,7 @@ impl EcdsaPublicKey {
     }
 
     /// Get the [`Algorithm`] for this public key type.
+    #[must_use]
     pub fn algorithm(&self) -> Algorithm {
         Algorithm::Ecdsa {
             curve: self.curve(),
@@ -82,6 +88,7 @@ impl EcdsaPublicKey {
     }
 
     /// Get the [`EcdsaCurve`] for this key.
+    #[must_use]
     pub fn curve(&self) -> EcdsaCurve {
         match self {
             EcdsaPublicKey::NistP256(_) => EcdsaCurve::NistP256,

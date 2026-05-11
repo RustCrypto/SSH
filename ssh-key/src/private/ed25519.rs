@@ -29,11 +29,13 @@ impl Ed25519PrivateKey {
     }
 
     /// Parse Ed25519 private key from bytes.
+    #[must_use]
     pub fn from_bytes(bytes: &[u8; Self::BYTE_SIZE]) -> Self {
         Self(*bytes)
     }
 
     /// Convert to the inner byte array.
+    #[must_use]
     pub fn to_bytes(&self) -> [u8; Self::BYTE_SIZE] {
         self.0
     }
@@ -163,12 +165,15 @@ impl Ed25519Keypair {
 
     /// Expand a keypair from a 32-byte seed value.
     #[cfg(feature = "ed25519")]
+    #[must_use]
     pub fn from_seed(seed: &[u8; Ed25519PrivateKey::BYTE_SIZE]) -> Self {
         Ed25519PrivateKey::from_bytes(seed).into()
     }
 
-    /// Parse Ed25519 keypair from 64-bytes which comprise the serialized
-    /// private and public keys.
+    /// Parse Ed25519 keypair from 64-bytes which comprise the serialized private and public keys.
+    ///
+    /// # Errors
+    /// Returns [`Error::Crypto`] if the public key does not match the private key.
     pub fn from_bytes(bytes: &[u8; Self::BYTE_SIZE]) -> Result<Self> {
         let (priv_bytes, pub_bytes) = bytes.split_at(Ed25519PrivateKey::BYTE_SIZE);
         let private = Ed25519PrivateKey::try_from(priv_bytes)?;
@@ -184,6 +189,8 @@ impl Ed25519Keypair {
     }
 
     /// Serialize an Ed25519 keypair as bytes.
+    #[must_use]
+    #[allow(clippy::integer_division_remainder_used, reason = "constant")]
     pub fn to_bytes(&self) -> [u8; Self::BYTE_SIZE] {
         let mut result = [0u8; Self::BYTE_SIZE];
         result[..(Self::BYTE_SIZE / 2)].copy_from_slice(self.private.as_ref());
@@ -194,7 +201,7 @@ impl Ed25519Keypair {
 
 impl CtEq for Ed25519Keypair {
     fn ct_eq(&self, other: &Self) -> Choice {
-        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
+        Choice::from(u8::from(self.public == other.public)) & self.private.ct_eq(&other.private)
     }
 }
 

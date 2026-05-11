@@ -31,6 +31,9 @@ impl RsaPublicKey {
     ///
     /// - `e`: RSA public exponent.
     /// - `n`: RSA modulus.
+    ///
+    /// # Errors
+    /// Returns [`Error::FormatEncoding`] in the event one of the components is odd.
     pub fn new(e: Mpint, n: Mpint) -> Result<Self> {
         if !e.is_positive() {
             return Err(Error::FormatEncoding);
@@ -49,16 +52,19 @@ impl RsaPublicKey {
     }
 
     /// Get the RSA public exponent.
+    #[must_use]
     pub fn e(&self) -> &Mpint {
         &self.e
     }
 
     /// Get the RSA modulus.
+    #[must_use]
     pub fn n(&self) -> &Mpint {
         &self.n
     }
 
     /// Get the size of the RSA modulus in bits.
+    #[must_use]
     pub fn key_size(&self) -> u32 {
         self.bits
     }

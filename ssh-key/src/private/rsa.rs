@@ -1,7 +1,7 @@
 //! Rivest–Shamir–Adleman (RSA) private keys.
 
 use crate::{Error, Mpint, Result, public::RsaPublicKey};
-use core::fmt;
+use core::fmt::{self, Debug};
 use ctutils::{Choice, CtEq};
 use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
 use zeroize::Zeroize;
@@ -37,6 +37,9 @@ impl RsaPrivateKey {
     /// - `iqmp`: CRT coefficient: `(inverse of q) mod p`.
     /// - `p`: First prime factor of `n`.
     /// - `q`: Second prime factor of `n`.
+    ///
+    /// # Errors
+    /// Returns [`Error::FormatEncoding`] if any of the provided values are negative.
     pub fn new(d: Mpint, iqmp: Mpint, p: Mpint, q: Mpint) -> Result<Self> {
         if d.is_positive() && iqmp.is_positive() && p.is_positive() && q.is_positive() {
             Ok(Self { d, iqmp, p, q })
@@ -46,21 +49,25 @@ impl RsaPrivateKey {
     }
 
     /// RSA private exponent.
+    #[must_use]
     pub fn d(&self) -> &Mpint {
         &self.d
     }
 
     /// CRT coefficient: `(inverse of q) mod p`.
+    #[must_use]
     pub fn iqmp(&self) -> &Mpint {
         &self.iqmp
     }
 
     /// First prime factor of `n`.
+    #[must_use]
     pub fn p(&self) -> &Mpint {
         &self.p
     }
 
     /// Second prime factor of `n`.
+    #[must_use]
     pub fn q(&self) -> &Mpint {
         &self.q
     }
@@ -75,11 +82,18 @@ impl CtEq for RsaPrivateKey {
     }
 }
 
-impl Eq for RsaPrivateKey {}
+impl Debug for RsaPrivateKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RsaPrivateKey").finish_non_exhaustive()
+    }
+}
 
-impl PartialEq for RsaPrivateKey {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
+impl Drop for RsaPrivateKey {
+    fn drop(&mut self) {
+        self.d.zeroize();
+        self.iqmp.zeroize();
+        self.p.zeroize();
+        self.q.zeroize();
     }
 }
 
@@ -115,12 +129,10 @@ impl Encode for RsaPrivateKey {
     }
 }
 
-impl Drop for RsaPrivateKey {
-    fn drop(&mut self) {
-        self.d.zeroize();
-        self.iqmp.zeroize();
-        self.p.zeroize();
-        self.q.zeroize();
+impl Eq for RsaPrivateKey {}
+impl PartialEq for RsaPrivateKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
     }
 }
 
@@ -137,27 +149,34 @@ pub struct RsaKeypair {
 impl RsaKeypair {
     /// Generate a random RSA keypair of the given size.
     #[cfg(feature = "rsa")]
+    #[expect(clippy::missing_errors_doc, reason = "TODO")]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, bit_size: usize) -> Result<Self> {
         rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
     }
 
     /// Create a new keypair from the given `public` and `private` key components.
+    ///
+    /// # Errors
+    /// Returns [`Error::Crypto`] if the `public` key does not match the `private` key (TODO).
     pub fn new(public: RsaPublicKey, private: RsaPrivateKey) -> Result<Self> {
         // TODO(tarcieri): perform validation that the public and private components match?
         Ok(Self { public, private })
     }
 
     /// Get the size of the RSA modulus in bits.
+    #[must_use]
     pub fn key_size(&self) -> u32 {
         self.public.key_size()
     }
 
     /// Get the public component of the keypair.
+    #[must_use]
     pub fn public(&self) -> &RsaPublicKey {
         &self.public
     }
 
     /// Get the private component of the keypair.
+    #[must_use]
     pub fn private(&self) -> &RsaPrivateKey {
         &self.private
     }
@@ -165,15 +184,15 @@ impl RsaKeypair {
 
 impl CtEq for RsaKeypair {
     fn ct_eq(&self, other: &Self) -> Choice {
-        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
+        Choice::from(u8::from(self.public == other.public)) & self.private.ct_eq(&other.private)
     }
 }
 
-impl Eq for RsaKeypair {}
-
-impl PartialEq for RsaKeypair {
-    fn eq(&self, other: &Self) -> bool {
-        self.ct_eq(other).into()
+impl Debug for RsaKeypair {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RsaKeypair")
+            .field("public", &self.public)
+            .finish_non_exhaustive()
     }
 }
 
@@ -206,6 +225,13 @@ impl Encode for RsaKeypair {
     }
 }
 
+impl Eq for RsaKeypair {}
+impl PartialEq for RsaKeypair {
+    fn eq(&self, other: &Self) -> bool {
+        self.ct_eq(other).into()
+    }
+}
+
 impl From<RsaKeypair> for RsaPublicKey {
     fn from(keypair: RsaKeypair) -> RsaPublicKey {
         keypair.public
@@ -215,14 +241,6 @@ impl From<RsaKeypair> for RsaPublicKey {
 impl From<&RsaKeypair> for RsaPublicKey {
     fn from(keypair: &RsaKeypair) -> RsaPublicKey {
         keypair.public.clone()
-    }
-}
-
-impl fmt::Debug for RsaKeypair {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("RsaKeypair")
-            .field("public", &self.public)
-            .finish_non_exhaustive()
     }
 }
 

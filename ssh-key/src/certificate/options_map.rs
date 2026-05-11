@@ -14,6 +14,7 @@ pub struct OptionsMap(pub BTreeMap<String, String>);
 
 impl OptionsMap {
     /// Create a new [`OptionsMap`].
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -94,7 +95,7 @@ impl Encode for OptionsMap {
             if data.is_empty() {
                 0usize.encode(writer)?;
             } else {
-                data.encode_prefixed(writer)?
+                data.encode_prefixed(writer)?;
             }
         }
 

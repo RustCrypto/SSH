@@ -6,13 +6,15 @@
 //!
 //! <http://www.dirk-loss.de/sshvis/drunken_bishop.pdf>
 
+#![allow(clippy::as_conversions, clippy::integer_division_remainder_used)]
+
 use super::Fingerprint;
 use core::fmt;
 
-const WIDTH: usize = 17;
+const NVALUES: u8 = 16;
+const WIDTH: usize = (NVALUES + 1) as usize;
 const HEIGHT: usize = 9;
-const VALUES: &[u8; 17] = b" .o+=*BOX@%&#/^SE";
-const NVALUES: u8 = VALUES.len() as u8 - 1;
+const VALUES: &[u8; WIDTH] = b" .o+=*BOX@%&#/^SE";
 
 type Field = [[u8; WIDTH]; HEIGHT];
 

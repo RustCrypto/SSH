@@ -51,6 +51,7 @@ pub enum Field {
 
 impl Field {
     /// Get the field name as a string
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::PublicKey => "public key",
@@ -70,6 +71,7 @@ impl Field {
     }
 
     /// Get an [`Error`] that this field is invalid.
+    #[must_use]
     pub fn invalid_error(self) -> Error {
         Error::CertificateFieldInvalid(self)
     }

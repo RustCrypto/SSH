@@ -1,11 +1,12 @@
 //! OpenSSH certificate tests.
 
 #![cfg(feature = "alloc")]
+#![allow(clippy::unwrap_used, reason = "tests")]
 
+use core::str::FromStr;
 use encoding::{Base64Reader, Decode, Encode, Reader};
 use hex_literal::hex;
 use ssh_key::{Algorithm, Certificate, public::KeyData};
-use std::str::FromStr;
 
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
@@ -287,18 +288,18 @@ fn decode_keydata(certificate_str: &str) {
 #[cfg(feature = "ecdsa")]
 #[test]
 fn decode_ecdsa_keydata() {
-    decode_keydata(ECDSA_P256_CERT_EXAMPLE)
+    decode_keydata(ECDSA_P256_CERT_EXAMPLE);
 }
 
 #[cfg(feature = "ed25519")]
 #[test]
 fn decode_ed25519_keydata() {
-    decode_keydata(ED25519_CERT_EXAMPLE)
+    decode_keydata(ED25519_CERT_EXAMPLE);
 }
 
 #[test]
 fn decode_rsa_4096_keydata() {
-    decode_keydata(RSA_4096_CERT_EXAMPLE)
+    decode_keydata(RSA_4096_CERT_EXAMPLE);
 }
 
 fn encode_keydata(certificate_str: &str) {
@@ -399,7 +400,7 @@ fn reject_expired_certificate() {
 fn reject_certificate_with_future_valid_after() {
     let cert = Certificate::from_str(ED25519_CERT_EXAMPLE).unwrap();
     let ca = CA_FINGERPRINT.parse().unwrap();
-    assert!(cert.validate_at(PAST_TIMESTAMP, &[ca]).is_err())
+    assert!(cert.validate_at(PAST_TIMESTAMP, &[ca]).is_err());
 }
 
 #[cfg(feature = "p256")]

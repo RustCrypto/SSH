@@ -125,6 +125,9 @@ impl PublicKey {
     /// ```text
     /// ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILM+rvN+ot98qgEN796jTiQfZfG1KaT0PtFDJ/XFSqti foo@bar.com
     /// ```
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_openssh(public_key: &str) -> Result<Self> {
         let encapsulation = SshFormat::decode(public_key.trim_end().as_bytes())?;
         let mut reader = Base64Reader::new(encapsulation.base64_data)?;
@@ -145,6 +148,9 @@ impl PublicKey {
     }
 
     /// Parse a raw binary SSH public key.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
         let reader = &mut bytes;
         let key_data = KeyData::decode(reader)?;
@@ -152,6 +158,9 @@ impl PublicKey {
     }
 
     /// Encode OpenSSH-formatted public key.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn encode_openssh<'o>(&self, out: &'o mut [u8]) -> Result<&'o str> {
         #[cfg(not(feature = "alloc"))]
         let comment = "";
@@ -161,8 +170,10 @@ impl PublicKey {
         SshFormat::encode(self.algorithm().as_str(), &self.key_data, comment, out)
     }
 
-    /// Encode an OpenSSH-formatted public key, allocating a [`String`] for
-    /// the result.
+    /// Encode an OpenSSH-formatted public key, allocating a [`String`] for the result.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "alloc")]
     pub fn to_openssh(&self) -> Result<String> {
         SshFormat::encode_string(
@@ -173,6 +184,9 @@ impl PublicKey {
     }
 
     /// Serialize SSH public key as raw bytes.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "alloc")]
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         Ok(self.key_data.encode_vec()?)
@@ -232,6 +246,11 @@ impl PublicKey {
     ///
     /// [PROTOCOL.sshsig]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.sshsig?annotate=HEAD
     /// [Digest]: https://docs.rs/digest/latest/digest/trait.Digest.html
+    ///
+    /// # Errors
+    /// - Returns [`Error::PublicKey`] if this key does not match the one in the signature.
+    /// - Returns [`Error::Namespace`] if the provided `namespace` does not match the signature.
+    /// - Returns [`Error::Signature`] in the event signature verification failed.
     #[cfg(feature = "alloc")]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
         self.verify_prehash(
@@ -244,6 +263,11 @@ impl PublicKey {
     /// Verify the [`SshSig`] signature is valid the given message [`Digest`] using this public key.
     ///
     /// See [`PublicKey::verify`] for more information.
+    ///
+    /// # Errors
+    /// - Returns [`Error::PublicKey`] if this key does not match the one in the signature.
+    /// - Returns [`Error::Namespace`] if the provided `namespace` does not match the signature.
+    /// - Returns [`Error::Signature`] in the event signature verification failed.
     #[cfg(feature = "alloc")]
     pub fn verify_digest<D: AssociatedHashAlg + Digest>(
         &self,
@@ -262,6 +286,11 @@ impl PublicKey {
     /// public key.
     ///
     /// See [`PublicKey::verify`] for more information.
+    ///
+    /// # Errors
+    /// - Returns [`Error::PublicKey`] if this key does not match the one in the signature.
+    /// - Returns [`Error::Namespace`] if the provided `namespace` does not match the signature.
+    /// - Returns [`Error::Signature`] in the event signature verification failed.
     #[cfg(feature = "alloc")]
     pub fn verify_prehash(
         &self,
@@ -281,6 +310,10 @@ impl PublicKey {
     }
 
     /// Read public key from an OpenSSH-formatted source.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Io`] in the event of an I/O error.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "std")]
     pub fn read_openssh(reader: &mut impl Read) -> Result<Self> {
         let input = io::read_to_string(reader)?;
@@ -288,6 +321,10 @@ impl PublicKey {
     }
 
     /// Read public key from an OpenSSH-formatted file.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Io`] in the event of an I/O error.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "std")]
     pub fn read_openssh_file(path: impl AsRef<Path>) -> Result<Self> {
         let mut file = File::open(path)?;
@@ -295,6 +332,10 @@ impl PublicKey {
     }
 
     /// Write public key as an OpenSSH-formatted file.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Io`] in the event of an I/O error.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "std")]
     pub fn write_openssh(&self, writer: &mut impl Write) -> Result<()> {
         let mut encoded = self.to_openssh()?;
@@ -305,6 +346,10 @@ impl PublicKey {
     }
 
     /// Write public key as an OpenSSH-formatted file.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Io`] in the event of an I/O error.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
     #[cfg(feature = "std")]
     pub fn write_openssh_file(&self, path: impl AsRef<Path>) -> Result<()> {
         let mut file = File::create(path)?;
@@ -312,17 +357,20 @@ impl PublicKey {
     }
 
     /// Get the digital signature [`Algorithm`] used by this key.
+    #[must_use]
     pub fn algorithm(&self) -> Algorithm {
         self.key_data.algorithm()
     }
 
     /// Comment on the key (e.g. email address).
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn comment(&self) -> &Comment {
         &self.comment
     }
 
     /// Public key data.
+    #[must_use]
     pub fn key_data(&self) -> &KeyData {
         &self.key_data
     }
@@ -330,6 +378,7 @@ impl PublicKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.key_data.fingerprint(hash_alg)
     }

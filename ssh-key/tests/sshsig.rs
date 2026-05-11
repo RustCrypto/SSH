@@ -311,7 +311,7 @@ fn verify_ed25519() {
     // invalid message
     assert_eq!(
         verifying_key.verify(NAMESPACE_EXAMPLE, b"bogus!", &signature),
-        Err(Error::Crypto)
+        Err(Error::Signature)
     );
 }
 
@@ -336,6 +336,6 @@ fn verify_sk_ed25519() {
     // invalid message
     assert_eq!(
         verifying_key.verify(NAMESPACE_EXAMPLE, b"bogus!", &signature),
-        Err(Error::Crypto)
+        Err(Error::Signature)
     );
 }

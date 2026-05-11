@@ -37,6 +37,9 @@ pub struct AlgorithmName {
 
 impl AlgorithmName {
     /// Create a new algorithm identifier.
+    ///
+    /// # Errors
+    /// Returns [`LabelError`] in the event the identifier is invalid.
     pub fn new(id: impl Into<String>) -> Result<Self, LabelError> {
         let id = id.into();
         validate_algorithm_id(&id, MAX_ALGORITHM_NAME_LEN)?;
@@ -45,17 +48,23 @@ impl AlgorithmName {
     }
 
     /// Get the string identifier which corresponds to this algorithm name.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.id
     }
 
     /// Get the string identifier which corresponds to the OpenSSH certificate format.
+    #[must_use]
+    #[allow(clippy::missing_panics_doc, reason = "should not panic")]
     pub fn certificate_type(&self) -> String {
         let (name, domain) = split_algorithm_id(&self.id).expect("format checked in constructor");
         format!("{name}{CERT_STR_SUFFIX}@{domain}")
     }
 
     /// Create a new [`AlgorithmName`] from an OpenSSH certificate format string identifier.
+    ///
+    /// # Errors
+    /// Returns [`LabelError`] in the event the identifier is invalid.
     pub fn from_certificate_type(id: &str) -> Result<Self, LabelError> {
         validate_algorithm_id(id, MAX_CERT_STR_LEN)?;
 
@@ -65,9 +74,9 @@ impl AlgorithmName {
             .strip_suffix(CERT_STR_SUFFIX)
             .ok_or_else(|| LabelError::new(id))?;
 
-        let algorithm_name = format!("{name}@{domain}");
-
-        Ok(Self { id: algorithm_name })
+        Ok(Self {
+            id: format!("{name}@{domain}"),
+        })
     }
 }
 
