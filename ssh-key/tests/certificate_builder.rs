@@ -14,10 +14,10 @@ use ssh_key::{Algorithm, PrivateKey, certificate};
 use ssh_key::EcdsaCurve;
 
 #[cfg(all(feature = "ed25519", feature = "rsa"))]
-use std::str::FromStr;
+use core::str::FromStr;
 
 #[cfg(all(feature = "ed25519", feature = "std"))]
-use std::time::{Duration, SystemTime};
+use {core::time::Duration, std::time::SystemTime};
 
 /// Example Unix timestamp when a certificate was issued (2020-09-13 12:26:40 UTC).
 const ISSUED_AT: u64 = 1600000000;

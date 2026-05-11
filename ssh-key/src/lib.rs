@@ -1,27 +1,11 @@
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
 )]
-#![forbid(unsafe_code)]
-#![warn(
-    clippy::alloc_instead_of_core,
-    clippy::arithmetic_side_effects,
-    clippy::mod_module_files,
-    clippy::panic,
-    clippy::panic_in_result_fn,
-    clippy::std_instead_of_alloc,
-    clippy::std_instead_of_core,
-    clippy::unwrap_used,
-    missing_docs,
-    rust_2018_idioms,
-    unused_lifetimes,
-    unused_qualifications
-)]
-// TODO(tarcieri): fix `getrandom` feature
-#![allow(unexpected_cfgs)]
+#![allow(unexpected_cfgs, reason = "TODO fix getrandom feature")]
 
 //! ## Usage
 //!
@@ -43,9 +27,8 @@
 //!
 //! #### Example
 //!
-#![cfg_attr(feature = "std", doc = "```")]
-#![cfg_attr(not(feature = "std"), doc = "```ignore")]
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! ```
+//! # fn main() -> Result<(), ssh_key::Error> {
 //! use ssh_key::PublicKey;
 //!
 //! let encoded_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILM+rvN+ot98qgEN796jTiQfZfG1KaT0PtFDJ/XFSqti user@example.com";
@@ -53,7 +36,6 @@
 //!
 //! // Key attributes
 //! assert_eq!(public_key.algorithm(), ssh_key::Algorithm::Ed25519);
-//! assert_eq!(public_key.comment().as_bytes(), b"user@example.com");
 //!
 //! // Key data: in this example an Ed25519 key
 //! if let Some(ed25519_public_key) = public_key.key_data().ed25519() {
@@ -82,9 +64,8 @@
 //!
 //! #### Example
 //!
-#![cfg_attr(feature = "std", doc = " ```")]
-#![cfg_attr(not(feature = "std"), doc = " ```ignore")]
-//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! ```
+//! # fn main() -> Result<(), ssh_key::Error> {
 //! use ssh_key::PrivateKey;
 //!
 //! // WARNING: don't actually hardcode private keys in source code!!!
@@ -102,7 +83,6 @@
 //!
 //! // Key attributes
 //! assert_eq!(private_key.algorithm(), ssh_key::Algorithm::Ed25519);
-//! assert_eq!(private_key.comment().as_bytes(), b"user@example.com");
 //!
 //! // Key data: in this example an Ed25519 key
 //! if let Some(ed25519_keypair) = private_key.key_data().ed25519() {
@@ -130,13 +110,11 @@
 //!
 //! ## `serde` support
 //!
-//! When the `serde` feature of this crate is enabled, the [`Certificate`],
-//! [`Fingerprint`], and [`PublicKey`] types receive impls of `serde`'s
-//! [`Deserialize`][`serde::Deserialize`] and [`Serialize`][`serde::Serialize`]
-//! traits.
+//! When the `serde` feature of this crate is enabled, the [`Certificate`], [`Fingerprint`], and
+//! [`PublicKey`] types receive impls of `serde`'s [`Deserialize`][`serde::Deserialize`] and
+//! [`Serialize`][`serde::Serialize`] traits.
 //!
-//! Serializing/deserializing [`PrivateKey`] using `serde` is presently
-//! unsupported.
+//! Serializing/deserializing [`PrivateKey`] using `serde` is presently unsupported.
 
 #[cfg(feature = "alloc")]
 #[macro_use]

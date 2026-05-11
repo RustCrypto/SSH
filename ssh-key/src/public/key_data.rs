@@ -59,6 +59,7 @@ pub enum KeyData {
 
 impl KeyData {
     /// Get the [`Algorithm`] for this public key.
+    #[must_use]
     pub fn algorithm(&self) -> Algorithm {
         match self {
             #[cfg(feature = "alloc")]
@@ -80,6 +81,7 @@ impl KeyData {
 
     /// Get DSA public key if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn dsa(&self) -> Option<&DsaPublicKey> {
         match self {
             Self::Dsa(key) => Some(key),
@@ -89,6 +91,7 @@ impl KeyData {
 
     /// Get ECDSA public key if this key is the correct type.
     #[cfg(feature = "ecdsa")]
+    #[must_use]
     pub fn ecdsa(&self) -> Option<&EcdsaPublicKey> {
         match self {
             Self::Ecdsa(key) => Some(key),
@@ -97,6 +100,7 @@ impl KeyData {
     }
 
     /// Get Ed25519 public key if this key is the correct type.
+    #[must_use]
     pub fn ed25519(&self) -> Option<&Ed25519PublicKey> {
         match self {
             Self::Ed25519(key) => Some(key),
@@ -108,12 +112,14 @@ impl KeyData {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         Fingerprint::new(hash_alg, self)
     }
 
     /// Get RSA public key if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn rsa(&self) -> Option<&RsaPublicKey> {
         match self {
             Self::Rsa(key) => Some(key),
@@ -123,6 +129,7 @@ impl KeyData {
 
     /// Get FIDO/U2F ECDSA/NIST P-256 public key if this key is the correct type.
     #[cfg(feature = "ecdsa")]
+    #[must_use]
     pub fn sk_ecdsa_p256(&self) -> Option<&SkEcdsaSha2NistP256> {
         match self {
             Self::SkEcdsaSha2NistP256(sk) => Some(sk),
@@ -131,6 +138,7 @@ impl KeyData {
     }
 
     /// Get FIDO/U2F Ed25519 public key if this key is the correct type.
+    #[must_use]
     pub fn sk_ed25519(&self) -> Option<&SkEd25519> {
         match self {
             Self::SkEd25519(sk) => Some(sk),
@@ -140,6 +148,7 @@ impl KeyData {
 
     /// Get the custom, opaque public key if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn other(&self) -> Option<&OpaquePublicKey> {
         match self {
             Self::Other(key) => Some(key),
@@ -149,6 +158,7 @@ impl KeyData {
 
     /// Get the certificate if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn certificate(&self) -> Option<&Certificate> {
         match self {
             Self::Certificate(certificate) => Some(certificate.as_ref()),
@@ -158,6 +168,7 @@ impl KeyData {
 
     /// Get the certificate, consuming the [`KeyData`], if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn into_certificate(self) -> Option<Certificate> {
         match self {
             Self::Certificate(certificate) => Some(*certificate),
@@ -167,51 +178,64 @@ impl KeyData {
 
     /// Is this key a DSA key?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_dsa(&self) -> bool {
         matches!(self, Self::Dsa(_))
     }
 
     /// Is this key an ECDSA key?
     #[cfg(feature = "ecdsa")]
+    #[must_use]
     pub fn is_ecdsa(&self) -> bool {
         matches!(self, Self::Ecdsa(_))
     }
 
     /// Is this key an Ed25519 key?
+    #[must_use]
     pub fn is_ed25519(&self) -> bool {
         matches!(self, Self::Ed25519(_))
     }
 
     /// Is this key an RSA key?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_rsa(&self) -> bool {
         matches!(self, Self::Rsa(_))
     }
 
     /// Is this key a FIDO/U2F ECDSA/NIST P-256 key?
     #[cfg(feature = "ecdsa")]
+    #[must_use]
     pub fn is_sk_ecdsa_p256(&self) -> bool {
         matches!(self, Self::SkEcdsaSha2NistP256(_))
     }
 
     /// Is this key a FIDO/U2F Ed25519 key?
+    #[must_use]
     pub fn is_sk_ed25519(&self) -> bool {
         matches!(self, Self::SkEd25519(_))
     }
 
     /// Is this a key with a custom algorithm?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_other(&self) -> bool {
         matches!(self, Self::Other(_))
     }
 
     /// Is this a certificate?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_certificate(&self) -> bool {
         matches!(self, Self::Certificate(_))
     }
 
     /// Decode [`KeyData`] for the specified algorithm.
+    ///
+    /// # Errors
+    /// - Returns [`Error::AlgorithmUnknown`] if the provided `algorithm` is unknown or unsupported
+    ///   by this library.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
             #[cfg(feature = "alloc")]
@@ -237,6 +261,9 @@ impl KeyData {
     }
 
     /// Decode [`KeyData`] as a certificate with the specified algorithm.
+    ///
+    /// # Errors
+    /// Propagates errors from [`Certificate::decode_as`].
     #[cfg(feature = "alloc")]
     pub fn decode_as_certificate(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
         Certificate::decode_as(reader, algorithm).map(|cert| Self::Certificate(Box::new(cert)))

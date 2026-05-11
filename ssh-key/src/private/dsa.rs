@@ -26,6 +26,9 @@ pub struct DsaPrivateKey {
 
 impl DsaPrivateKey {
     /// Create a new DSA private key given the value `x`.
+    ///
+    /// # Errors
+    /// Returns [`Error::FormatEncoding`] if `x` is negative.
     pub fn new(x: Mpint) -> Result<Self> {
         if x.is_positive() {
             Ok(Self { inner: x })
@@ -35,11 +38,13 @@ impl DsaPrivateKey {
     }
 
     /// Get the serialized private key as bytes.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         self.inner.as_bytes()
     }
 
     /// Get the inner [`Mpint`].
+    #[must_use]
     pub fn as_mpint(&self) -> &Mpint {
         &self.inner
     }
@@ -155,23 +160,29 @@ impl DsaKeypair {
 
     /// Generate a random DSA private key.
     #[cfg(all(feature = "dsa", feature = "rand_core"))]
+    #[expect(clippy::missing_errors_doc, reason = "TODO")]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
         let components = dsa::Components::generate(rng, Self::KEY_SIZE);
         Ok(dsa::SigningKey::generate(rng, components).into())
     }
 
     /// Create a new [`DsaKeypair`] with the given `public` and `private` components.
+    ///
+    /// # Errors
+    /// Returns [`Error::Crypto`] if the `public` key does not match the `private` key (TODO).
     pub fn new(public: DsaPublicKey, private: DsaPrivateKey) -> Result<Self> {
-        // TODO(tarcieri): validate the `public` and `private` components match
+        // TODO(tarcieri): actually validate the `public` and `private` components match
         Ok(Self { public, private })
     }
 
     /// Get the public component of this key.
+    #[must_use]
     pub fn public(&self) -> &DsaPublicKey {
         &self.public
     }
 
     /// Get the private component of this key.
+    #[must_use]
     pub fn private(&self) -> &DsaPrivateKey {
         &self.private
     }
@@ -179,7 +190,7 @@ impl DsaKeypair {
 
 impl CtEq for DsaKeypair {
     fn ct_eq(&self, other: &Self) -> Choice {
-        Choice::from((self.public == other.public) as u8) & self.private.ct_eq(&other.private)
+        Choice::from(u8::from(self.public == other.public)) & self.private.ct_eq(&other.private)
     }
 }
 

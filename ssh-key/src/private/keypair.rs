@@ -63,6 +63,9 @@ pub enum KeypairData {
 
 impl KeypairData {
     /// Get the [`Algorithm`] for this private key.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encrypted`] if the private key is encrypted.
     pub fn algorithm(&self) -> Result<Algorithm> {
         Ok(match self {
             #[cfg(feature = "alloc")]
@@ -85,6 +88,7 @@ impl KeypairData {
 
     /// Get DSA keypair if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn dsa(&self) -> Option<&DsaKeypair> {
         match self {
             Self::Dsa(key) => Some(key),
@@ -94,6 +98,7 @@ impl KeypairData {
 
     /// Get ECDSA private key if this key is the correct type.
     #[cfg(feature = "ecdsa")]
+    #[must_use]
     pub fn ecdsa(&self) -> Option<&EcdsaKeypair> {
         match self {
             Self::Ecdsa(keypair) => Some(keypair),
@@ -102,6 +107,7 @@ impl KeypairData {
     }
 
     /// Get Ed25519 private key if this key is the correct type.
+    #[must_use]
     pub fn ed25519(&self) -> Option<&Ed25519Keypair> {
         match self {
             Self::Ed25519(key) => Some(key),
@@ -112,6 +118,7 @@ impl KeypairData {
 
     /// Get the encrypted ciphertext if this key is encrypted.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn encrypted(&self) -> Option<&[u8]> {
         match self {
             Self::Encrypted(ciphertext) => Some(ciphertext),
@@ -121,6 +128,7 @@ impl KeypairData {
 
     /// Get RSA keypair if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn rsa(&self) -> Option<&RsaKeypair> {
         match self {
             Self::Rsa(key) => Some(key),
@@ -130,6 +138,7 @@ impl KeypairData {
 
     /// Get FIDO/U2F ECDSA/NIST P-256 private key if this key is the correct type.
     #[cfg(all(feature = "alloc", feature = "ecdsa"))]
+    #[must_use]
     pub fn sk_ecdsa_p256(&self) -> Option<&SkEcdsaSha2NistP256> {
         match self {
             Self::SkEcdsaSha2NistP256(sk) => Some(sk),
@@ -139,6 +148,7 @@ impl KeypairData {
 
     /// Get FIDO/U2F Ed25519 private key if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn sk_ed25519(&self) -> Option<&SkEd25519> {
         match self {
             Self::SkEd25519(sk) => Some(sk),
@@ -148,6 +158,7 @@ impl KeypairData {
 
     /// Get the custom, opaque private key if this key is the correct type.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn other(&self) -> Option<&OpaqueKeypair> {
         match self {
             Self::Other(key) => Some(key),
@@ -157,53 +168,62 @@ impl KeypairData {
 
     /// Is this key a DSA key?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_dsa(&self) -> bool {
         matches!(self, Self::Dsa(_))
     }
 
     /// Is this key an ECDSA key?
     #[cfg(feature = "ecdsa")]
+    #[must_use]
     pub fn is_ecdsa(&self) -> bool {
         matches!(self, Self::Ecdsa(_))
     }
 
     /// Is this key an Ed25519 key?
+    #[must_use]
     pub fn is_ed25519(&self) -> bool {
         matches!(self, Self::Ed25519(_))
     }
 
     /// Is this key encrypted?
     #[cfg(not(feature = "alloc"))]
+    #[must_use]
     pub fn is_encrypted(&self) -> bool {
         false
     }
 
     /// Is this key encrypted?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_encrypted(&self) -> bool {
         matches!(self, Self::Encrypted(_))
     }
 
     /// Is this key an RSA key?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_rsa(&self) -> bool {
         matches!(self, Self::Rsa(_))
     }
 
     /// Is this key a FIDO/U2F ECDSA/NIST P-256 key?
     #[cfg(all(feature = "alloc", feature = "ecdsa"))]
+    #[must_use]
     pub fn is_sk_ecdsa_p256(&self) -> bool {
         matches!(self, Self::SkEcdsaSha2NistP256(_))
     }
 
     /// Is this key a FIDO/U2F Ed25519 key?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_sk_ed25519(&self) -> bool {
         matches!(self, Self::SkEd25519(_))
     }
 
     /// Is this a key with a custom algorithm?
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn is_other(&self) -> bool {
         matches!(self, Self::Other(_))
     }
@@ -241,6 +261,11 @@ impl KeypairData {
     }
 
     /// Decode [`KeypairData`] for the specified algorithm.
+    ///
+    /// # Errors
+    /// - Returns [`Error::AlgorithmUnknown`] if the provided `algorithm` is unknown or unsupported
+    ///   by this library.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
             #[cfg(feature = "alloc")]
@@ -286,13 +311,13 @@ impl CtEq for KeypairData {
             (Self::SkEcdsaSha2NistP256(a), Self::SkEcdsaSha2NistP256(b)) => {
                 // Security Keys store the actual private key in hardware.
                 // The key structs contain all public data.
-                Choice::from((a == b) as u8)
+                Choice::from(u8::from(a == b))
             }
             #[cfg(feature = "alloc")]
             (Self::SkEd25519(a), Self::SkEd25519(b)) => {
                 // Security Keys store the actual private key in hardware.
                 // The key structs contain all public data.
-                Choice::from((a == b) as u8)
+                Choice::from(u8::from(a == b))
             }
             #[cfg(feature = "alloc")]
             (Self::Other(a), Self::Other(b)) => a.ct_eq(b),

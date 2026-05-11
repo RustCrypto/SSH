@@ -3,15 +3,15 @@
 use super::{CertType, Certificate, Field, OptionsMap};
 use crate::{Comment, Result, Signature, SigningKey, public};
 use alloc::{string::String, vec::Vec};
+use core::fmt::{self, Debug, Formatter};
 
 #[cfg(feature = "rand_core")]
 use rand_core::CryptoRng;
-
 #[cfg(feature = "std")]
 use {super::UnixTime, std::time::SystemTime};
 
 #[cfg(doc)]
-use crate::PrivateKey;
+use crate::{Error, PrivateKey};
 
 /// OpenSSH certificate builder.
 ///
@@ -34,15 +34,12 @@ use crate::PrivateKey;
 ///
 /// ## Example
 ///
+#[cfg_attr(all(feature = "ed25519", feature = "getrandom"), doc = " ```")]
 #[cfg_attr(
-    all(feature = "ed25519", feature = "getrandom", feature = "std"),
-    doc = " ```"
-)]
-#[cfg_attr(
-    not(all(feature = "ed25519", feature = "getrandom", feature = "std")),
+    not(all(feature = "ed25519", feature = "getrandom")),
     doc = " ```ignore"
 )]
-/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # fn main() -> Result<(), ssh_key::Error> {
 /// use ssh_key::{Algorithm, PrivateKey, certificate, rand_core::{TryRngCore, OsRng}};
 /// use std::time::{SystemTime, UNIX_EPOCH};
 ///
@@ -97,8 +94,11 @@ impl Builder {
 
     /// Create a new certificate builder for the given subject's public key.
     ///
-    /// Also requires a nonce (random value typically 16 or 32 bytes long) and
-    /// the validity window of the certificate as Unix seconds.
+    /// Also requires a nonce (random value typically 16 or 32 bytes long) and the validity window
+    /// of the certificate as Unix seconds.
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if `valid_before < valid_after`.
     pub fn new(
         nonce: impl Into<Vec<u8>>,
         public_key: impl Into<public::KeyData>,
@@ -124,8 +124,10 @@ impl Builder {
         })
     }
 
-    /// Create a new certificate builder with the validity window specified
-    /// using [`SystemTime`] values.
+    /// Create a new certificate builder with the validity window specified using [`SystemTime`]s.
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if `valid_before < valid_after`.
     #[cfg(feature = "std")]
     pub fn new_with_validity_times(
         nonce: impl Into<Vec<u8>>,
@@ -142,8 +144,11 @@ impl Builder {
         Self::new(nonce, public_key, valid_after.into(), valid_before.into())
     }
 
-    /// Create a new certificate builder, generating a random nonce using the
-    /// provided random number generator.
+    /// Create a new certificate builder, generating a random nonce using the provided random number
+    /// generator.
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if `valid_before < valid_after`.
     #[cfg(feature = "rand_core")]
     pub fn new_with_random_nonce(
         rng: &mut impl CryptoRng,
@@ -159,6 +164,9 @@ impl Builder {
     /// Set certificate serial number.
     ///
     /// Default: `0`.
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if called multiple times.
     pub fn serial(&mut self, serial: u64) -> Result<&mut Self> {
         if self.serial.is_some() {
             return Err(Field::Serial.invalid_error());
@@ -171,6 +179,9 @@ impl Builder {
     /// Set certificate type: user or host.
     ///
     /// Default: [`CertType::User`].
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if called multiple times.
     pub fn cert_type(&mut self, cert_type: CertType) -> Result<&mut Self> {
         if self.cert_type.is_some() {
             return Err(Field::Type.invalid_error());
@@ -183,6 +194,9 @@ impl Builder {
     /// Set key ID: label to identify this particular certificate.
     ///
     /// Default `""`
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if called multiple times.
     pub fn key_id(&mut self, key_id: impl Into<String>) -> Result<&mut Self> {
         if self.key_id.is_some() {
             return Err(Field::KeyId.invalid_error());
@@ -193,6 +207,9 @@ impl Builder {
     }
 
     /// Add a principal (i.e. username or hostname) to `valid_principals`.
+    ///
+    /// # Errors
+    /// Currently does not return errors.
     pub fn valid_principal(&mut self, principal: impl Into<String>) -> Result<&mut Self> {
         match &mut self.valid_principals {
             Some(principals) => principals.push(principal.into()),
@@ -204,11 +221,15 @@ impl Builder {
 
     /// Mark this certificate as being valid for all principals.
     ///
-    /// # ⚠️ Security Warning
+    /// <div class="warning">
+    /// <b>Security Warning</b>
     ///
-    /// Use this method with care! It generates "golden ticket" certificates
-    /// which can e.g. authenticate as any user on a system, or impersonate
-    /// any host.
+    /// Use this method with care! It generates "golden ticket" certificates which can e.g.
+    /// authenticate as any user on a system, or impersonate any host.
+    /// </div>
+    ///
+    /// # Errors
+    /// Currently does not return errors.
     pub fn all_principals_valid(&mut self) -> Result<&mut Self> {
         self.valid_principals = Some(Vec::new());
         Ok(self)
@@ -217,6 +238,10 @@ impl Builder {
     /// Add a critical option to this certificate.
     ///
     /// Critical options must be recognized or the certificate must be rejected.
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if `name` is already configured as a critical
+    /// option.
     pub fn critical_option(
         &mut self,
         name: impl Into<String>,
@@ -236,6 +261,9 @@ impl Builder {
     /// Add an extension to this certificate.
     ///
     /// Extensions can be unrecognized without impacting the certificate.
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if `name` is already configured as an extension.
     pub fn extension(
         &mut self,
         name: impl Into<String>,
@@ -255,6 +283,9 @@ impl Builder {
     /// Add a comment to this certificate.
     ///
     /// Default `""`
+    ///
+    /// # Errors
+    /// Returns [`Error::CertificateFieldInvalid`] if called multiple times.
     pub fn comment(&mut self, comment: impl Into<Comment>) -> Result<&mut Self> {
         if self.comment.is_some() {
             return Err(Field::Comment.invalid_error());
@@ -267,6 +298,10 @@ impl Builder {
     /// Sign the certificate using the provided signer type.
     ///
     /// The [`PrivateKey`] type can be used as a signer.
+    ///
+    /// # Errors
+    /// - Returns [`Error::CertificateFieldInvalid`] if any fields are invalid.
+    /// - Returns [`Error::Signature`] if signature generation failed.
     pub fn sign<S: SigningKey>(self, signing_key: &S) -> Result<Certificate> {
         // Empty valid principals result in a "golden ticket", so this check
         // ensures that was explicitly configured via `all_principals_valid`.
@@ -303,5 +338,11 @@ impl Builder {
         )?;
 
         Ok(cert)
+    }
+}
+
+impl Debug for Builder {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Builder").finish_non_exhaustive()
     }
 }

@@ -54,6 +54,7 @@ const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque.pub");
 
 /// Get a path into the `tests/scratch` directory.
 #[cfg(feature = "std")]
+#[must_use]
 pub fn scratch_path(filename: &str) -> PathBuf {
     PathBuf::from(&format!("tests/scratch/{}.pub", filename))
 }

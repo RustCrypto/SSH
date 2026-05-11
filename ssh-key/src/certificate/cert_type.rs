@@ -18,11 +18,13 @@ pub enum CertType {
 
 impl CertType {
     /// Is this a host certificate?
+    #[must_use]
     pub fn is_host(self) -> bool {
         self == CertType::Host
     }
 
     /// Is this a user certificate?
+    #[must_use]
     pub fn is_user(self) -> bool {
         self == CertType::User
     }
@@ -48,6 +50,7 @@ impl Encode for CertType {
 }
 
 impl From<CertType> for u32 {
+    #[allow(clippy::as_conversions, reason = "repr(u32) enum")]
     fn from(cert_type: CertType) -> u32 {
         cert_type as u32
     }

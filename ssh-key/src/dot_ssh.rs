@@ -1,11 +1,15 @@
 //! `~/.ssh` support.
 
 use crate::{Fingerprint, PrivateKey, PublicKey, Result};
+use core::fmt::{self, Debug};
 use std::{
     env,
     fs::{self, ReadDir},
     path::{Path, PathBuf},
 };
+
+#[cfg(doc)]
+use crate::Error;
 
 /// `~/.ssh` directory support (or similarly structured directories).
 #[derive(Clone, Eq, PartialEq)]
@@ -17,8 +21,9 @@ impl DotSsh {
     /// Open `~/.ssh` if the home directory can be located.
     ///
     /// Returns `None` if the home directory couldn't be located.
+    #[must_use]
     pub fn new() -> Option<Self> {
-        #[allow(deprecated)] // NOTE: no longer deprecated as of Rust 1.86
+        #[allow(deprecated, reason = "TODO MSRV: Rust 1.86 un-deprecates this")]
         env::home_dir().map(|path| Self::open(path.join(".ssh")))
     }
 
@@ -35,16 +40,21 @@ impl DotSsh {
     }
 
     /// Get the path to the `~/.ssh` directory (or whatever [`DotSsh::open`] was called with).
+    #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
     }
 
     /// Get the path to the `~/.ssh/config` configuration file. Does not check if it exists.
+    #[must_use]
     pub fn config_path(&self) -> PathBuf {
         self.path.join("config")
     }
 
     /// Iterate over the private keys in the `~/.ssh` directory.
+    ///
+    /// # Errors
+    /// Returns [`Error::Io`] in the event of I/O errors.
     pub fn private_keys(&self) -> Result<impl Iterator<Item = PrivateKey>> {
         Ok(PrivateKeysIter {
             read_dir: fs::read_dir(&self.path)?,
@@ -52,6 +62,7 @@ impl DotSsh {
     }
 
     /// Find a private key whose public key has the given key fingerprint.
+    #[must_use]
     pub fn private_key_with_fingerprint(&self, fingerprint: Fingerprint) -> Option<PrivateKey> {
         self.private_keys()
             .ok()?
@@ -59,6 +70,9 @@ impl DotSsh {
     }
 
     /// Iterate over the public keys in the `~/.ssh` directory.
+    ///
+    /// # Errors
+    /// Returns [`Error::Io`] in the event of I/O errors.
     pub fn public_keys(&self) -> Result<impl Iterator<Item = PublicKey>> {
         Ok(PublicKeysIter {
             read_dir: fs::read_dir(&self.path)?,
@@ -66,6 +80,7 @@ impl DotSsh {
     }
 
     /// Find a public key with the given key fingerprint.
+    #[must_use]
     pub fn public_key_with_fingerprint(&self, fingerprint: Fingerprint) -> Option<PublicKey> {
         self.public_keys()
             .ok()?
@@ -73,13 +88,25 @@ impl DotSsh {
     }
 
     /// Write a private key into `~/.ssh`.
+    ///
+    /// # Errors
+    /// Returns [`Error::Io`] in the event of I/O errors.
     pub fn write_private_key(&self, filename: impl AsRef<Path>, key: &PrivateKey) -> Result<()> {
         key.write_openssh_file(self.path.join(filename), Default::default())
     }
 
     /// Write a public key into `~/.ssh`.
+    ///
+    /// # Errors
+    /// Returns [`Error::Io`] in the event of I/O errors.
     pub fn write_public_key(&self, filename: impl AsRef<Path>, key: &PublicKey) -> Result<()> {
         key.write_openssh_file(self.path.join(filename))
+    }
+}
+
+impl Debug for DotSsh {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("DotSsh").finish_non_exhaustive()
     }
 }
 
@@ -91,7 +118,7 @@ impl Default for DotSsh {
 }
 
 /// Iterator over the private keys in the `~/.ssh` directory.
-pub struct PrivateKeysIter {
+pub(crate) struct PrivateKeysIter {
     read_dir: ReadDir,
 }
 
@@ -110,7 +137,7 @@ impl Iterator for PrivateKeysIter {
 }
 
 /// Iterator over the public keys in the `~/.ssh` directory.
-pub struct PublicKeysIter {
+pub(crate) struct PublicKeysIter {
     read_dir: ReadDir,
 }
 

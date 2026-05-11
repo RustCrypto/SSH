@@ -84,13 +84,6 @@ The "Feature" column lists the name of `ssh-key` crate features which can
 be enabled to provide full support for the "Keygen", "Sign", and "Verify"
 functionality for a particular SSH key algorithm.
 
-## Minimum Supported Rust Version
-
-This crate requires **Rust 1.85** at a minimum.
-
-We may change the MSRV in the future, but it will be accompanied by a minor
-version bump.
-
 ## License
 
 Licensed under either of:

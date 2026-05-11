@@ -1,13 +1,13 @@
 //! Parser for `AuthorizedKeysFile`-formatted data.
 
 use crate::{Error, PublicKey, Result};
-use core::str;
+use core::{
+    fmt::{self, Debug},
+    str,
+};
 
 #[cfg(feature = "alloc")]
-use {
-    alloc::string::{String, ToString},
-    core::fmt,
-};
+use alloc::string::{String, ToString};
 
 #[cfg(feature = "std")]
 use {
@@ -44,14 +44,19 @@ pub struct AuthorizedKeys<'a> {
 
 impl<'a> AuthorizedKeys<'a> {
     /// Create a new parser for the given input buffer.
+    #[must_use]
     pub fn new(input: &'a str) -> Self {
         Self {
             lines: input.lines(),
         }
     }
 
-    /// Read an [`AuthorizedKeys`] file from the filesystem, returning an
-    /// [`Entry`] vector on success.
+    /// Read an [`AuthorizedKeys`] file from the filesystem, returning an [`Entry`] vector on
+    /// success.
+    ///
+    /// # Errors
+    /// - Returns [`Error::Io`] in event of I/O errors reading the file.
+    /// - Propagates [`Entry`] parsing errors as [`Error::FormatEncoding`].
     #[cfg(feature = "std")]
     pub fn read_file(path: impl AsRef<Path>) -> Result<Vec<Entry>> {
         // TODO(tarcieri): permissions checks
@@ -59,9 +64,7 @@ impl<'a> AuthorizedKeys<'a> {
         AuthorizedKeys::new(&input).collect()
     }
 
-    /// Get the next line, trimming any comments and trailing whitespace.
-    ///
-    /// Ignores empty lines.
+    /// Get the next line, trimming any comments and trailing whitespace. Ignores empty lines.
     fn next_line_trimmed(&mut self) -> Option<&'a str> {
         loop {
             let mut line = self.lines.next()?;
@@ -81,11 +84,17 @@ impl<'a> AuthorizedKeys<'a> {
     }
 }
 
+impl Debug for AuthorizedKeys<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("AuthorizedKeys").finish_non_exhaustive()
+    }
+}
+
 impl Iterator for AuthorizedKeys<'_> {
     type Item = Result<Entry>;
 
     fn next(&mut self) -> Option<Result<Entry>> {
-        self.next_line_trimmed().map(|line| line.parse())
+        self.next_line_trimmed().map(str::parse)
     }
 }
 
@@ -103,11 +112,13 @@ pub struct Entry {
 impl Entry {
     /// Get configuration options for this entry.
     #[cfg(feature = "alloc")]
+    #[must_use]
     pub fn config_opts(&self) -> &ConfigOpts {
         &self.config_opts
     }
 
     /// Get public key for this entry.
+    #[must_use]
     pub fn public_key(&self) -> &PublicKey {
         &self.public_key
     }
@@ -206,6 +217,9 @@ pub struct ConfigOpts(String);
 #[cfg(feature = "alloc")]
 impl ConfigOpts {
     /// Parse an options string.
+    ///
+    /// # Errors
+    ///
     pub fn new(string: impl Into<String>) -> Result<Self> {
         let ret = Self(string.into());
         ret.iter().validate()?;
@@ -213,16 +227,19 @@ impl ConfigOpts {
     }
 
     /// Borrow the configuration options as a `str`.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         self.0.as_str()
     }
 
     /// Are there no configuration options?
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
     /// Iterate over the comma-delimited configuration options.
+    #[must_use]
     pub fn iter(&self) -> ConfigOptsIter<'_> {
         ConfigOptsIter(self.as_str())
     }
@@ -259,6 +276,9 @@ impl<'a> ConfigOptsIter<'a> {
     /// Create new configuration options iterator.
     ///
     /// Validates that the options are well-formed.
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event of encoding errors.
     pub fn new(s: &'a str) -> Result<Self> {
         let ret = Self(s);
         ret.clone().validate()?;

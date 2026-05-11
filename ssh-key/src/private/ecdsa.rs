@@ -25,11 +25,13 @@ pub struct EcdsaPrivateKey<const SIZE: usize> {
 
 impl<const SIZE: usize> EcdsaPrivateKey<SIZE> {
     /// Borrow the inner byte array as a slice.
+    #[must_use]
     pub fn as_slice(&self) -> &[u8] {
         self.bytes.as_ref()
     }
 
     /// Convert to the inner byte array.
+    #[must_use]
     pub fn into_bytes(self) -> [u8; SIZE] {
         self.bytes
     }
@@ -211,6 +213,10 @@ pub enum EcdsaKeypair {
 
 impl EcdsaKeypair {
     /// Generate a random ECDSA private key.
+    ///
+    /// # Errors
+    /// Returns [`Error::AlgorithmUnsupported`] if support has not been enabled for the given
+    /// elliptic curve, e.g. the `p256`, `p384`, or `p521` crate feature has not been enabled.
     #[cfg(feature = "rand_core")]
     #[allow(unused_variables)]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, curve: EcdsaCurve) -> Result<Self> {
@@ -243,11 +249,14 @@ impl EcdsaKeypair {
                 })
             }
             #[cfg(not(all(feature = "p256", feature = "p384", feature = "p521")))]
-            _ => Err(Error::AlgorithmUnknown),
+            _ => Err(Error::AlgorithmUnsupported {
+                algorithm: curve.into(),
+            }),
         }
     }
 
     /// Get the [`Algorithm`] for this public key type.
+    #[must_use]
     pub fn algorithm(&self) -> Algorithm {
         Algorithm::Ecdsa {
             curve: self.curve(),
@@ -255,6 +264,7 @@ impl EcdsaKeypair {
     }
 
     /// Get the [`EcdsaCurve`] for this key.
+    #[must_use]
     pub fn curve(&self) -> EcdsaCurve {
         match self {
             Self::NistP256 { .. } => EcdsaCurve::NistP256,
@@ -264,6 +274,7 @@ impl EcdsaKeypair {
     }
 
     /// Get the bytes representing the public key.
+    #[must_use]
     pub fn public_key_bytes(&self) -> &[u8] {
         match self {
             Self::NistP256 { public, .. } => public.as_ref(),
@@ -273,6 +284,7 @@ impl EcdsaKeypair {
     }
 
     /// Get the bytes representing the private key.
+    #[must_use]
     pub fn private_key_bytes(&self) -> &[u8] {
         match self {
             Self::NistP256 { private, .. } => private.as_ref(),
@@ -284,8 +296,9 @@ impl EcdsaKeypair {
 
 impl CtEq for EcdsaKeypair {
     fn ct_eq(&self, other: &Self) -> Choice {
-        let public_eq =
-            Choice::from((EcdsaPublicKey::from(self) == EcdsaPublicKey::from(other)) as u8);
+        let public_eq = Choice::from(u8::from(
+            EcdsaPublicKey::from(self) == EcdsaPublicKey::from(other),
+        ));
 
         let private_key_a = match self {
             Self::NistP256 { private, .. } => private.as_slice(),

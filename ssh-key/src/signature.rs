@@ -37,7 +37,8 @@ use sha2::Sha256;
 #[cfg(any(feature = "dsa", feature = "ed25519", feature = "p256"))]
 use sha2::Digest;
 
-const DSA_SIGNATURE_SIZE: usize = 40;
+const DSA_COMPONENT_SIZE: usize = 20;
+const DSA_SIGNATURE_SIZE: usize = DSA_COMPONENT_SIZE * 2;
 const ED25519_SIGNATURE_SIZE: usize = 64;
 const SK_SIGNATURE_TRAILER_SIZE: usize = 5; // flags(u8), counter(u32)
 const SK_ED25519_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + SK_SIGNATURE_TRAILER_SIZE;
@@ -98,8 +99,8 @@ impl Signature {
     /// See specifications in toplevel [`Signature`] documentation for how to
     /// format the raw signature data for a given algorithm.
     ///
-    /// # Returns
-    /// - [`Error::Encoding`] if the signature is not the correct length.
+    /// # Errors
+    /// Returns [`Error::Encoding`] if the signature is not the correct length.
     pub fn new(algorithm: Algorithm, data: impl Into<Vec<u8>>) -> Result<Self> {
         let data = data.into();
 
@@ -119,11 +120,13 @@ impl Signature {
     }
 
     /// Get the [`Algorithm`] associated with this signature.
+    #[must_use]
     pub fn algorithm(&self) -> Algorithm {
         self.algorithm.clone()
     }
 
     /// Get the raw signature as bytes.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.data
     }
@@ -335,7 +338,7 @@ impl Signer<Signature> for DsaKeypair {
 
         for component in [signature.r(), signature.s()] {
             let bytes = component.to_be_bytes_trimmed_vartime();
-            let pad_len = (DSA_SIGNATURE_SIZE / 2).saturating_sub(bytes.len());
+            let pad_len = DSA_COMPONENT_SIZE.saturating_sub(bytes.len());
             data.extend(core::iter::repeat_n(0, pad_len));
             data.extend_from_slice(&bytes);
         }
@@ -389,12 +392,16 @@ impl TryFrom<&Signature> for dsa::Signature {
             return Err(encoding::Error::Length.into());
         }
 
-        let component_size = DSA_SIGNATURE_SIZE / 2;
-        let component_bits = component_size.saturating_mul(8) as u32;
-        let components = data.split_at(component_size);
+        let components = data.split_at(DSA_COMPONENT_SIZE);
 
-        let r = Uint::from_be_slice(components.0, component_bits)?;
-        let s = Uint::from_be_slice(components.1, component_bits)?;
+        #[expect(
+            clippy::as_conversions,
+            clippy::cast_possible_truncation,
+            reason = "constant"
+        )]
+        const COMPONENT_BITS: u32 = DSA_COMPONENT_SIZE.saturating_mul(8) as u32;
+        let r = Uint::from_be_slice(components.0, COMPONENT_BITS)?;
+        let s = Uint::from_be_slice(components.1, COMPONENT_BITS)?;
         Ok(Self::from_components(r, s).ok_or(encoding::Error::MpintEncoding)?)
     }
 }
@@ -554,9 +561,11 @@ fn zero_pad_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
     use core::mem::size_of;
 
     let bytes = m.as_positive_bytes()?;
-    size_of::<B>()
-        .checked_sub(bytes.len())
-        .map(|i| B::from_iter(core::iter::repeat_n(0u8, i).chain(bytes.iter().cloned())))
+    size_of::<B>().checked_sub(bytes.len()).map(|i| {
+        core::iter::repeat_n(0u8, i)
+            .chain(bytes.iter().cloned())
+            .collect()
+    })
 }
 
 #[cfg(feature = "p256")]
@@ -890,7 +899,7 @@ mod tests {
     #[cfg(feature = "dsa")]
     #[test]
     fn try_sign_and_verify_dsa() {
-        use super::{DSA_SIGNATURE_SIZE, DsaKeypair};
+        use super::{DSA_COMPONENT_SIZE, DsaKeypair};
         use encoding::Decode as _;
         use signature::{Signer as _, Verifier as _};
 
@@ -937,12 +946,7 @@ mod tests {
         let data = hex!(
             "F0000040713d5f6fffe0000e6421ab0b3a69774d3da02fd72b107d6b32b6dad7c1660bbf507bf3eac3304cc5058f7e6f81b04239b8471459b1f3b387e2626f7eb8f6bcdd3200000006626c616465320000000e7373682d636f6e6e656374696f6e00000009686f73746261736564000000077373682d647373000001b2000000077373682d6473730000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf2771619800000015746f6d61746f7373682e6c6f63616c646f6d61696e00000009746f6d61746f737368"
         );
-        check_signature_component_lengths(
-            &keypair,
-            &data,
-            DSA_SIGNATURE_SIZE / 2,
-            DSA_SIGNATURE_SIZE / 2,
-        );
+        check_signature_component_lengths(&keypair, &data, DSA_COMPONENT_SIZE, DSA_COMPONENT_SIZE);
         let signature = keypair.try_sign(&data[..]).expect("dsa try_sign is ok");
         keypair
             .public()
@@ -956,8 +960,8 @@ mod tests {
         check_signature_component_lengths(
             &keypair,
             &data,
-            DSA_SIGNATURE_SIZE / 2 - 1,
-            DSA_SIGNATURE_SIZE / 2,
+            DSA_COMPONENT_SIZE - 1,
+            DSA_COMPONENT_SIZE,
         );
         let signature = keypair
             .try_sign(&data[..])
