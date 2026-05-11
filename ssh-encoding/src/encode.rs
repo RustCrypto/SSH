@@ -242,9 +242,9 @@ impl_by_delegation!(
     impl Encode for Bytes where self -> self.as_ref();
 
     // While deref coercion ensures that `&E` can use the `Encode` trait methods, it will not be
-    // allowd in trait bounds, as `&E` does not implement `Encode` itself just because `E: Encode`.
+    // allowed in trait bounds, as `&E` does not implement `Encode` itself just because `E: Encode`.
     // A blanket impl for `&E` would be the most generic, but that collides with the `Label` trait's
-    // blanket impl. Instead, we can do it explicitly for the immediatley relevant base types.
+    // blanket impl. Instead, we can do it explicitly for the immediately relevant base types.
     impl Encode for &str where self -> **self;
     impl Encode for &[u8] where self -> **self;
     #[cfg(feature = "alloc")]
