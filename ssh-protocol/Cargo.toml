@@ -25,6 +25,8 @@ default = ["std"]
 alloc = ["encoding/alloc", "key/alloc"]
 std = ["alloc", "key/std"]
 
+[lints]
+workspace = true
+
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
