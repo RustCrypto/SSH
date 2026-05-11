@@ -1,24 +1,9 @@
 #![no_std]
-#![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #![doc = include_str!("../README.md")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
-)]
-#![forbid(unsafe_code)]
-#![warn(
-    clippy::alloc_instead_of_core,
-    clippy::arithmetic_side_effects,
-    clippy::mod_module_files,
-    clippy::panic,
-    clippy::panic_in_result_fn,
-    clippy::std_instead_of_alloc,
-    clippy::std_instead_of_core,
-    clippy::unwrap_used,
-    missing_docs,
-    rust_2018_idioms,
-    unused_lifetimes,
-    unused_qualifications
 )]
 
 mod error;
@@ -138,12 +123,25 @@ impl Cipher {
     /// Decode cipher algorithm from the given `ciphername`.
     ///
     /// # Supported cipher names
-    /// - `aes256-ctr`
+    /// `aes128-cbc`
+    /// `aes192-cbc`
+    /// `aes256-cbc`
+    /// `aes128-ctr`
+    /// `aes192-ctr`
+    /// `aes256-ctr`
+    /// `aes128-gcm@openssh.com`
+    /// `aes256-gcm@openssh.com`
+    /// `chacha20-poly1305@openssh.com`
+    /// `3des-cbc`
+    ///
+    /// # Errors
+    /// Returns [`LabelError`] if the provided `ciphername` is unknown.
     pub fn new(ciphername: &str) -> core::result::Result<Self, LabelError> {
         ciphername.parse()
     }
 
     /// Get the string identifier which corresponds to this algorithm.
+    #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
@@ -161,6 +159,7 @@ impl Cipher {
     }
 
     /// Get the key and IV size for this cipher in bytes.
+    #[must_use]
     pub fn key_and_iv_size(self) -> Option<(usize, usize)> {
         match self {
             Self::None => None,
@@ -178,6 +177,7 @@ impl Cipher {
     }
 
     /// Get the block size for this cipher in bytes.
+    #[must_use]
     pub fn block_size(self) -> usize {
         match self {
             Self::None | Self::ChaCha20Poly1305 | Self::TDesCbc => 8,
@@ -195,7 +195,12 @@ impl Cipher {
     /// Compute the length of padding necessary to pad the given input to
     /// the block size.
     #[allow(clippy::arithmetic_side_effects)]
+    #[must_use]
     pub fn padding_len(self, input_size: usize) -> usize {
+        #[allow(
+            clippy::integer_division_remainder_used,
+            reason = "input_size is non-secret"
+        )]
         match input_size % self.block_size() {
             0 => 0,
             input_rem => self.block_size() - input_rem,
@@ -203,6 +208,7 @@ impl Cipher {
     }
 
     /// Does this cipher have an authentication tag? (i.e. is it an AEAD mode?)
+    #[must_use]
     pub fn has_tag(self) -> bool {
         matches!(
             self,
@@ -211,17 +217,20 @@ impl Cipher {
     }
 
     /// Is this cipher `none`?
+    #[must_use]
     pub fn is_none(self) -> bool {
         self == Self::None
     }
 
     /// Is the cipher anything other than `none`?
+    #[must_use]
     pub fn is_some(self) -> bool {
         !self.is_none()
     }
 
     /// Decrypt the ciphertext in the `buffer` in-place using this cipher.
     ///
+    /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     #[cfg_attr(
@@ -280,6 +289,9 @@ impl Cipher {
     ///
     /// Only applicable to unauthenticated modes (e.g. AES-CBC, AES-CTR). Not usable with
     /// authenticated modes which are inherently one-shot (AES-GCM, ChaCha20Poly1305).
+    ///
+    /// # Errors
+    /// Propagates errors from [`Decryptor::new`].
     #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
     pub fn decryptor(self, key: &[u8], iv: &[u8]) -> Result<Decryptor> {
         Decryptor::new(self, key, iv)
@@ -287,6 +299,7 @@ impl Cipher {
 
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
     ///
+    /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     #[cfg_attr(
@@ -339,6 +352,9 @@ impl Cipher {
     ///
     /// Only applicable to unauthenticated modes (e.g. AES-CBC, AES-CTR). Not usable with
     /// authenticated modes which are inherently one-shot (AES-GCM, ChaCha20Poly1305).
+    ///
+    /// # Errors
+    /// Propagates errors from [`Encryptor::new`].
     #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
     pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<Encryptor> {
         Encryptor::new(self, key, iv)

@@ -9,6 +9,7 @@ use aead::{
     inout::InOutBuf,
 };
 use cipher::{KeyIvInit, StreamCipher, StreamCipherSeek};
+use core::fmt::{self, Debug};
 use ctutils::CtEq;
 use poly1305::{Poly1305, universal_hash::UniversalHash};
 
@@ -59,14 +60,13 @@ impl AeadCore for ChaCha20Poly1305 {
 }
 
 impl AeadInOut for ChaCha20Poly1305 {
-    // Required methods
     fn encrypt_inout_detached(
         &self,
         nonce: &ChaChaNonce,
         associated_data: &[u8],
         buffer: InOutBuf<'_, '_, u8>,
     ) -> Result<Tag> {
-        Cipher::new(&self.key, nonce).encrypt(associated_data, buffer)
+        Cipher::new(&self.key, *nonce).encrypt(associated_data, buffer)
     }
 
     fn decrypt_inout_detached(
@@ -76,7 +76,13 @@ impl AeadInOut for ChaCha20Poly1305 {
         buffer: InOutBuf<'_, '_, u8>,
         tag: &Tag,
     ) -> Result<()> {
-        Cipher::new(&self.key, nonce).decrypt(associated_data, buffer, tag)
+        Cipher::new(&self.key, *nonce).decrypt(associated_data, buffer, tag)
+    }
+}
+
+impl Debug for ChaCha20Poly1305 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ChaCha20Poly1305").finish_non_exhaustive()
     }
 }
 
@@ -98,8 +104,8 @@ struct Cipher {
 
 impl Cipher {
     /// Create a new cipher instance.
-    pub fn new(key: &ChaChaKey, nonce: &ChaChaNonce) -> Self {
-        let mut cipher = ChaCha20::new(key, nonce);
+    fn new(key: &ChaChaKey, nonce: ChaChaNonce) -> Self {
+        let mut cipher = ChaCha20::new(key, &nonce);
         let mut poly1305_key = poly1305::Key::default();
         cipher.apply_keystream(&mut poly1305_key);
 
@@ -113,7 +119,7 @@ impl Cipher {
 
     /// Encrypt the provided `buffer` in-place, returning the Poly1305 authentication tag.
     #[inline]
-    pub fn encrypt(mut self, aad: &[u8], mut buffer: InOutBuf<'_, '_, u8>) -> Result<Tag> {
+    fn encrypt(mut self, aad: &[u8], mut buffer: InOutBuf<'_, '_, u8>) -> Result<Tag> {
         self.cipher.apply_keystream_inout(buffer.reborrow());
         compute_mac(self.mac, aad, buffer.get_out())
     }
@@ -121,7 +127,7 @@ impl Cipher {
     /// Decrypt the provided `buffer` in-place, verifying it against the provided Poly1305
     /// authentication `tag`.
     #[inline]
-    pub fn decrypt(mut self, aad: &[u8], buffer: InOutBuf<'_, '_, u8>, tag: &Tag) -> Result<()> {
+    fn decrypt(mut self, aad: &[u8], buffer: InOutBuf<'_, '_, u8>, tag: &Tag) -> Result<()> {
         let expected_tag = compute_mac(self.mac, aad, buffer.get_in())?;
 
         if expected_tag.ct_eq(tag).into() {

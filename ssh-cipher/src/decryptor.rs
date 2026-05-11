@@ -2,21 +2,19 @@
 
 use crate::{Cipher, Error, Result};
 use cipher::KeyIvInit;
+use core::fmt::{self, Debug};
 
 #[cfg(feature = "aes-ctr")]
 use crate::{Ctr128BE, encryptor::ctr_encrypt as ctr_decrypt};
-
-#[cfg(feature = "tdes")]
-use des::TdesEde3;
-
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
 use aes::{Aes128, Aes192, Aes256};
-
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 use cipher::{
     Block,
     block::{BlockCipherDecrypt, BlockModeDecrypt},
 };
+#[cfg(feature = "tdes")]
+use des::TdesEde3;
 
 /// Stateful decryptor object for unauthenticated SSH symmetric ciphers.
 ///
@@ -46,7 +44,13 @@ enum Inner {
 }
 
 impl Decryptor {
-    /// Create a new decryptor object with the given [`Cipher`], key, and IV.
+    /// Create a new decryptor object with the given [`Cipher`], `key`, and `iv` (i.e.
+    /// initialization vector).
+    ///
+    /// # Errors
+    /// - Returns [`Error::Length`] if `key` or `iv` are the wrong length for the given `cipher`.
+    /// - Returns [`Error::UnsupportedCipher`] if support for the given `cipher` is not enabled
+    ///   in the crate features.
     pub fn new(cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<Self> {
         cipher.check_key_and_iv(key, iv)?;
 
@@ -73,6 +77,7 @@ impl Decryptor {
     }
 
     /// Get the cipher for this decryptor.
+    #[must_use]
     pub fn cipher(&self) -> Cipher {
         match &self.inner {
             #[cfg(feature = "aes-cbc")]
@@ -94,6 +99,7 @@ impl Decryptor {
 
     /// Decrypt the given buffer in place.
     ///
+    /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     pub fn decrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
@@ -117,6 +123,14 @@ impl Decryptor {
         .map_err(|_| Error::Length)?;
 
         Ok(())
+    }
+}
+
+impl Debug for Decryptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Decryptor")
+            .field("cipher", &self.cipher())
+            .finish_non_exhaustive()
     }
 }
 

@@ -2,21 +2,19 @@
 
 use crate::{Cipher, Error, Result};
 use cipher::{Block, BlockCipherEncrypt, KeyIvInit};
+use core::fmt::{self, Debug};
 
+#[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
+use aes::{Aes128, Aes192, Aes256};
+#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
+use cipher::block::BlockModeEncrypt;
+#[cfg(feature = "tdes")]
+use des::TdesEde3;
 #[cfg(feature = "aes-ctr")]
 use {
     crate::Ctr128BE,
     cipher::{BlockSizeUser, StreamCipherCore, array::sizes::U16},
 };
-
-#[cfg(feature = "tdes")]
-use des::TdesEde3;
-
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
-use aes::{Aes128, Aes192, Aes256};
-
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-use cipher::block::BlockModeEncrypt;
 
 /// Stateful encryptor object for unauthenticated SSH symmetric ciphers.
 ///
@@ -46,7 +44,13 @@ enum Inner {
 }
 
 impl Encryptor {
-    /// Create a new encryptor object with the given [`Cipher`], key, and IV.
+    /// Create a new encryptor object with the given [`Cipher`], `key`, and `iv` (i.e.
+    /// initialization vector).
+    ///
+    /// # Errors
+    /// - Returns [`Error::Length`] if `key` or `iv` are the wrong length for the given `cipher`.
+    /// - Returns [`Error::UnsupportedCipher`] if support for the given `cipher` is not enabled
+    ///   in the crate features.
     pub fn new(cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<Self> {
         cipher.check_key_and_iv(key, iv)?;
 
@@ -73,6 +77,7 @@ impl Encryptor {
     }
 
     /// Get the cipher for this encryptor.
+    #[must_use]
     pub fn cipher(&self) -> Cipher {
         match &self.inner {
             #[cfg(feature = "aes-cbc")]
@@ -94,6 +99,7 @@ impl Encryptor {
 
     /// Encrypt the given buffer in place.
     ///
+    /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     pub fn encrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
@@ -115,6 +121,14 @@ impl Encryptor {
         }
 
         Ok(())
+    }
+}
+
+impl Debug for Encryptor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Encryptor")
+            .field("cipher", &self.cipher())
+            .finish_non_exhaustive()
     }
 }
 
