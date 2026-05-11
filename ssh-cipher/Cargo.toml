@@ -52,6 +52,8 @@ zeroize = [
     "poly1305?/zeroize"
 ]
 
+[lints]
+workspace = true
+
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]

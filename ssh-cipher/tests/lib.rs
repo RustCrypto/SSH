@@ -1,5 +1,6 @@
-/// Integration tests for `ssh-cipher`.
+//! Integration tests for `ssh-cipher`.
 // TODO(tarcieri): test vectors for each supported cipher
+
 use ssh_cipher::Cipher;
 
 #[test]
