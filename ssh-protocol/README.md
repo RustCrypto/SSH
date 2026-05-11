@@ -14,13 +14,6 @@
 Pure Rust implementation of the SSH protocol as described in [RFC4251]/[RFC4253] as well as
 OpenSSH-specific extensions (WIP).
 
-## Minimum Supported Rust Version
-
-This crate requires **Rust 1.85** at a minimum.
-
-We may change the MSRV in the future, but it will be accompanied by a minor
-version bump.
-
 ## License
 
 Licensed under either of:
