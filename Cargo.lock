@@ -806,7 +806,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-key"
-version = "0.7.0-rc.9"
+version = "0.7.0-rc.10"
 dependencies = [
  "argon2",
  "bcrypt-pbkdf",
