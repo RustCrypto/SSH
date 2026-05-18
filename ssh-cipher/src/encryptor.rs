@@ -1,19 +1,19 @@
 //! Stateful encryptor object.
 
 use crate::{Cipher, Error, Result};
-use cipher::{Block, BlockCipherEncrypt, KeyIvInit};
+use cipher::{BlockCipherEncrypt, KeyIvInit};
 use core::fmt::{self, Debug};
 
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
 use aes::{Aes128, Aes192, Aes256};
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-use cipher::block::BlockModeEncrypt;
+use cipher::{Block, BlockModeEncrypt};
 #[cfg(feature = "tdes")]
 use des::TdesEde3;
 #[cfg(feature = "aes-ctr")]
 use {
-    crate::Ctr128BE,
-    cipher::{BlockSizeUser, StreamCipherCore, array::sizes::U16},
+    cipher::{BlockSizeUser, StreamCipher, array::sizes::U16},
+    ctr::Ctr128BE,
 };
 
 /// Stateful encryptor object for unauthenticated SSH symmetric ciphers.
@@ -155,13 +155,7 @@ pub(crate) fn ctr_encrypt<C>(encryptor: &mut Ctr128BE<C>, buffer: &mut [u8]) -> 
 where
     C: BlockCipherEncrypt + BlockSizeUser<BlockSize = U16>,
 {
-    let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
-
-    // Ensure input is block-aligned.
-    if !remaining.is_empty() {
-        return Err(Error::Length);
-    }
-
-    encryptor.apply_keystream_blocks(blocks);
-    Ok(())
+    encryptor
+        .try_apply_keystream(buffer)
+        .map_err(|_| Error::Crypto)
 }
