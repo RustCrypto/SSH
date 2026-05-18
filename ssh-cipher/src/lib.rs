@@ -77,10 +77,6 @@ pub type AesGcmNonce = Array<u8, U12>;
 /// `chacha20-poly1305@openssh.com`.
 pub type Tag = Array<u8, U16>;
 
-/// Counter mode with a 128-bit big endian counter.
-#[cfg(feature = "aes-ctr")]
-type Ctr128BE<Cipher> = ctr::CtrCore<Cipher, ctr::flavors::Ctr128BE>;
-
 /// Cipher algorithms.
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
