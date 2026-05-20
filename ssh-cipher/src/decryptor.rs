@@ -4,17 +4,19 @@ use crate::{Cipher, Error, Result};
 use cipher::KeyIvInit;
 use core::fmt::{self, Debug};
 
-#[cfg(feature = "aes-ctr")]
-use crate::{Ctr128BE, encryptor::ctr_encrypt as ctr_decrypt};
 #[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
 use aes::{Aes128, Aes192, Aes256};
 #[cfg(any(feature = "aes-cbc", feature = "tdes"))]
+use cipher::SetIvState;
+#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 use cipher::{
-    Block,
+    Block, IvState,
     block::{BlockCipherDecrypt, BlockModeDecrypt},
 };
 #[cfg(feature = "tdes")]
 use des::TdesEde3;
+#[cfg(feature = "aes-ctr")]
+use {crate::encryptor::ctr_encrypt as ctr_decrypt, cipher::StreamCipherSeek, ctr::Ctr128BE};
 
 /// Stateful decryptor object for unauthenticated SSH symmetric ciphers.
 ///
@@ -41,6 +43,16 @@ enum Inner {
     Aes256Ctr(Ctr128BE<Aes256>),
     #[cfg(feature = "tdes")]
     TDesCbc(cbc::Decryptor<TdesEde3>),
+}
+
+/// Current IV state or position within the cipher.
+enum State {
+    #[cfg(feature = "aes-cbc")]
+    AesCbc(aes::Block),
+    #[cfg(feature = "aes-ctr")]
+    AesCtr(u64),
+    #[cfg(feature = "tdes")]
+    TDesCbc(Block<TdesEde3>),
 }
 
 impl Decryptor {
@@ -123,6 +135,81 @@ impl Decryptor {
         .map_err(|_| Error::Length)?;
 
         Ok(())
+    }
+
+    /// Call the provided function with an ephemeral [`Decryptor`] state which will be reset upon
+    /// completion, returning the result of the function.
+    ///
+    /// # Errors
+    /// Returns errors propagated from `F`, or if an internal cryptographic error occurs.
+    pub fn peek<T, F>(&mut self, mut f: F) -> Result<T>
+    where
+        F: FnMut(&mut Self) -> Result<T>,
+    {
+        let state = self.state();
+        let ret = f(self);
+        self.set_state(state)?;
+        ret
+    }
+
+    /// Get the current cipher state, i.e. IV or position within the stream cipher.
+    fn state(&self) -> State {
+        match &self.inner {
+            #[cfg(feature = "aes-cbc")]
+            Inner::Aes128Cbc(cipher) => State::AesCbc(cipher.iv_state()),
+            #[cfg(feature = "aes-cbc")]
+            Inner::Aes192Cbc(cipher) => State::AesCbc(cipher.iv_state()),
+            #[cfg(feature = "aes-cbc")]
+            Inner::Aes256Cbc(cipher) => State::AesCbc(cipher.iv_state()),
+            #[cfg(feature = "aes-ctr")]
+            Inner::Aes128Ctr(cipher) => State::AesCtr(cipher.current_pos()),
+            #[cfg(feature = "aes-ctr")]
+            Inner::Aes192Ctr(cipher) => State::AesCtr(cipher.current_pos()),
+            #[cfg(feature = "aes-ctr")]
+            Inner::Aes256Ctr(cipher) => State::AesCtr(cipher.current_pos()),
+            #[cfg(feature = "tdes")]
+            Inner::TDesCbc(cipher) => State::TDesCbc(cipher.iv_state()),
+        }
+    }
+
+    /// Set the current cipher state.
+    fn set_state(&mut self, state: State) -> Result<()> {
+        match (&mut self.inner, state) {
+            #[cfg(feature = "aes-cbc")]
+            (Inner::Aes128Cbc(cipher), State::AesCbc(iv)) => {
+                cipher.set_iv(&iv);
+                Ok(())
+            }
+            #[cfg(feature = "aes-cbc")]
+            (Inner::Aes192Cbc(cipher), State::AesCbc(iv)) => {
+                cipher.set_iv(&iv);
+                Ok(())
+            }
+            #[cfg(feature = "aes-cbc")]
+            (Inner::Aes256Cbc(cipher), State::AesCbc(iv)) => {
+                cipher.set_iv(&iv);
+                Ok(())
+            }
+            #[cfg(feature = "aes-ctr")]
+            (Inner::Aes128Ctr(cipher), State::AesCtr(pos)) => {
+                cipher.try_seek(pos).map_err(|_| Error::Crypto)
+            }
+            #[cfg(feature = "aes-ctr")]
+            (Inner::Aes192Ctr(cipher), State::AesCtr(pos)) => {
+                cipher.try_seek(pos).map_err(|_| Error::Crypto)
+            }
+            #[cfg(feature = "aes-ctr")]
+            (Inner::Aes256Ctr(cipher), State::AesCtr(pos)) => {
+                cipher.try_seek(pos).map_err(|_| Error::Crypto)
+            }
+            #[cfg(feature = "tdes")]
+            (Inner::TDesCbc(cipher), State::TDesCbc(iv)) => {
+                cipher.set_iv(&iv);
+                Ok(())
+            }
+            #[allow(unreachable_patterns)]
+            _ => Err(Error::Crypto), // should be unreachable
+        }
     }
 }
 
