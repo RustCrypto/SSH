@@ -1,14 +1,37 @@
 //! Low-level block cipher interface for SSH symmetric ciphers.
 
-mod algorithm;
+#[cfg(feature = "aes")]
+mod aes;
+mod decryptor;
 
-pub use ::cipher::BlockSizeUser;
-pub use algorithm::Algorithm;
+pub use ::cipher::{BlockSizeUser, InvalidLength};
 
-/// Block ciphers used by SSH.
-pub trait BlockCipher: BlockSizeUser {
-    /// Block cipher algorithm.
-    const ALGORITHM: Algorithm;
+#[cfg(feature = "aes")]
+pub use self::aes::Aes;
+
+/// Block cipher algorithms supported by this crate which can be used with the low-level API.
+#[derive(Clone, Copy, Debug)]
+#[non_exhaustive]
+pub enum Algorithm {
+    /// Advanced Encryption Standard (preferred).
+    #[cfg(feature = "aes")]
+    Aes,
+
+    /// 3DES a.k.a. triple DES (legacy).
+    #[cfg(feature = "tdes")]
+    Tdes,
+}
+
+impl Algorithm {
+    /// Size of a block for the given cipher in bytes.
+    pub fn block_size(self) -> usize {
+        match self {
+            #[cfg(feature = "aes")]
+            Self::Aes => crate::AES_BLOCK_SIZE,
+            #[cfg(feature = "tdes")]
+            Self::Tdes => crate::TDES_BLOCK_SIZE,
+        }
+    }
 }
 
 /// Supported block cipher modes of operation.
