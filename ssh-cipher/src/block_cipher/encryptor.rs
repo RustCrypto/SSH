@@ -6,7 +6,7 @@ use core::fmt::{self, Debug};
 
 #[cfg(feature = "aes")]
 use {
-    crate::aes::Aes,
+    super::Aes,
     cipher::{InnerIvInit, StreamCipher},
     ctr::{Ctr128BE, CtrCore},
 };
