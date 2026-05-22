@@ -7,26 +7,26 @@ use ssh_cipher::Cipher;
 fn round_trip() {
     const MSG: &[u8] = b"Testing 1 2 3...";
     const CIPHERS: &[Cipher] = &[
-        #[cfg(feature = "aes-cbc")]
+        #[cfg(feature = "aes")]
         Cipher::Aes128Cbc,
-        #[cfg(feature = "aes-cbc")]
+        #[cfg(feature = "aes")]
         Cipher::Aes192Cbc,
-        #[cfg(feature = "aes-cbc")]
+        #[cfg(feature = "aes")]
         Cipher::Aes256Cbc,
-        #[cfg(feature = "aes-ctr")]
+        #[cfg(feature = "aes")]
         Cipher::Aes128Ctr,
-        #[cfg(feature = "aes-ctr")]
+        #[cfg(feature = "aes")]
         Cipher::Aes192Ctr,
-        #[cfg(feature = "aes-ctr")]
+        #[cfg(feature = "aes")]
         Cipher::Aes256Ctr,
-        #[cfg(feature = "aes-gcm")]
+        #[cfg(feature = "aes")]
         Cipher::Aes128Gcm,
-        #[cfg(feature = "aes-gcm")]
+        #[cfg(feature = "aes")]
         Cipher::Aes256Gcm,
         #[cfg(feature = "chacha20poly1305")]
         Cipher::ChaCha20Poly1305,
         #[cfg(feature = "tdes")]
-        Cipher::TDesCbc,
+        Cipher::TdesCbc,
     ];
 
     for &cipher in CIPHERS {

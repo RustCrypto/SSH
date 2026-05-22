@@ -35,8 +35,8 @@ pub type ChaChaNonce = chacha20::LegacyNonce;
 /// - In the context of SSH packet encryption, AAD will be 4 bytes and contain the encrypted length.
 /// - In the context of SSH key encryption, AAD will be empty.
 ///
-/// [PROTOCOL.chacha20poly1305]: https://web.mit.edu/freebsd/head/crypto/openssh/PROTOCOL.chacha20poly1305
 /// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
+/// [PROTOCOL.chacha20poly1305]: https://web.mit.edu/freebsd/head/crypto/openssh/PROTOCOL.chacha20poly1305
 #[derive(Clone)]
 pub struct ChaCha20Poly1305 {
     key: ChaChaKey,

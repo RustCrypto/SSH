@@ -139,7 +139,7 @@ fn decode_openssh_chacha20_poly1305() {
 fn decode_openssh_3des_cbc() {
     let key = PrivateKey::from_openssh(OPENSSH_3DES_CBC_ED25519_EXAMPLE).unwrap();
     assert_eq!(Algorithm::Ed25519, key.algorithm());
-    assert_eq!(Cipher::TDesCbc, key.cipher());
+    assert_eq!(Cipher::TdesCbc, key.cipher());
     assert_eq!(KdfAlg::Bcrypt, key.kdf().algorithm());
 
     match key.kdf() {
@@ -268,7 +268,7 @@ fn decrypt_openssh_chacha20_poly1305() {
 #[test]
 fn decrypt_openssh_3des() {
     let key_enc = PrivateKey::from_openssh(OPENSSH_3DES_CBC_ED25519_EXAMPLE).unwrap();
-    assert_eq!(Cipher::TDesCbc, key_enc.cipher());
+    assert_eq!(Cipher::TdesCbc, key_enc.cipher());
     let key_dec = key_enc.decrypt(PASSWORD).unwrap();
     assert_eq!(
         PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap(),
@@ -483,7 +483,7 @@ fn encrypt_openssh_3des() {
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
 
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::TDesCbc, PASSWORD)
+        .encrypt_with_cipher(&mut OsRng, Cipher::TdesCbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
