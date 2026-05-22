@@ -78,40 +78,73 @@ pub type AesGcmNonce = Array<u8, U12>;
 pub type Tag = Array<u8, U16>;
 
 /// Cipher algorithms.
+///
+/// A "cipher" within the context of SSH was originally described in [RFC4253 § 6.3] in the context
+/// of the packet encryption protocol, where it refers to the combination of a symmetric block
+/// cipher, such as AES or 3DES, with a particular mode of operation, such as CBC or CTR.
+///
+/// This has been subsequently expanded by other standards documents, and now includes modern
+/// authenticated or "AEAD" modes such as AES-GCM and ChaCha20Poly1305, which we recommend and are
+/// marked with a ✅ in the table below.
+///
+/// Below is a table of the ciphers we support and what standards document defines them, along with
+/// which crate feature needs to be enabled to perform encryption with a given algorithm:
+///
+/// | Cipher name                     | Feature | AEAD | Algorithm   | Standard
+/// |---------------------------------|---------|------|-------------|---------
+/// | `3des-cbc`                      | `tdes`  | ⛔   | 3DES-CBC    | [RFC4253 § 6.3]
+/// | `aes128‑cbc`                    | `aes`   | ⛔   | AES-128-CBC | [RFC4253 § 6.3]
+/// | `aes192‑cbc`                    | `aes`   | ⛔   | AES-192-CBC | [RFC4253 § 6.3]
+/// | `aes256‑cbc`                    | `aes`   | ⛔   | AES-256-CBC | [RFC4253 § 6.3]
+/// | `aes128‑ctr`                    | `aes`   | ⛔   | AES-128-CTR | [RFC4344]
+/// | `aes192‑ctr`                    | `aes`   | ⛔   | AES-192-CTR | [RFC4344]
+/// | `aes256‑ctr`                    | `aes`   | ⛔   | AES-256-CTR | [RFC4344]
+/// | `aes128‑gcm@openssh.com`        | `aes`   | ✅   | AES-128-GCM | [RFC5647]
+/// | `aes256‑gcm@openssh.com`        | `aes`   | ✅   | AES-256-GCM | [RFC5647]
+/// | `chacha20‑poly1305@openssh.com` | `chacha20poly1305` | ✅ | ChaCha20Poly1305† | [PROTOCOL.chacha20poly1305]
+///
+/// † The construction called "ChaCha20Poly1305" as used by OpenSSH is different from other
+/// constructions with that name including the one defined in RFC8439 and the one found in NaCl
+/// variants like libsodium. See [`ChaCha20Poly1305`] for more information.
+///
+/// [RFC4253 § 6.3]: https://datatracker.ietf.org/doc/html/rfc4253#section-6.3
+/// [RFC4344]: https://datatracker.ietf.org/doc/html/rfc4344
+/// [RFC5647]: https://datatracker.ietf.org/doc/html/rfc5647
+/// [PROTOCOL.chacha20poly1305]: https://web.mit.edu/freebsd/head/crypto/openssh/PROTOCOL.chacha20poly1305
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum Cipher {
-    /// No cipher.
+    /// `none`: no cipher.
     None,
 
-    /// AES-128 in cipher block chaining (CBC) mode.
+    /// `aes128-cbc`: AES-128 in cipher block chaining (CBC) mode.
     Aes128Cbc,
 
-    /// AES-192 in cipher block chaining (CBC) mode.
+    /// `aes192-cbc`: AES-192 in cipher block chaining (CBC) mode.
     Aes192Cbc,
 
-    /// AES-256 in cipher block chaining (CBC) mode.
+    /// `aes256-cbc`: AES-256 in cipher block chaining (CBC) mode.
     Aes256Cbc,
 
-    /// AES-128 in counter (CTR) mode.
+    /// `aes128-ctr`: AES-128 in counter (CTR) mode.
     Aes128Ctr,
 
-    /// AES-192 in counter (CTR) mode.
+    /// `aes192-ctr`: AES-192 in counter (CTR) mode.
     Aes192Ctr,
 
-    /// AES-256 in counter (CTR) mode.
+    /// `aes256-ctr`: AES-256 in counter (CTR) mode.
     Aes256Ctr,
 
-    /// AES-128 in Galois/Counter Mode (GCM).
+    /// `aes128-gcm@openssh.com`: AES-128 in Galois/Counter Mode (GCM).
     Aes128Gcm,
 
-    /// AES-256 in Galois/Counter Mode (GCM).
+    /// `aes256-gcm@openssh.com`: AES-256 in Galois/Counter Mode (GCM).
     Aes256Gcm,
 
-    /// ChaCha20-Poly1305
+    /// `chacha20-poly1305@openssh.com`: ChaCha20-Poly1305
     ChaCha20Poly1305,
 
-    /// TripleDES in block chaining (CBC) mode
+    /// `3des-cbc`: TripleDES in block chaining (CBC) mode
     TDesCbc,
 }
 

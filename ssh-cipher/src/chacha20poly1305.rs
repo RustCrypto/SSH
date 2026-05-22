@@ -22,8 +22,8 @@ pub type ChaChaKey = chacha20::Key;
 /// Nonce for `chacha20-poly1305@openssh.com`.
 pub type ChaChaNonce = chacha20::LegacyNonce;
 
-/// OpenSSH variant of ChaCha20Poly1305: `chacha20-poly1305@openssh.com`
-/// as described in [PROTOCOL.chacha20poly1305].
+/// OpenSSH variant of ChaCha20Poly1305: `chacha20-poly1305@openssh.com` as described in
+/// [PROTOCOL.chacha20poly1305].
 ///
 /// Differences from ChaCha20Poly1305-IETF as described in [RFC8439]:
 /// - Nonce is 64-bit instead of 96-bit (i.e. uses legacy "djb" ChaCha20 variant).
@@ -35,7 +35,7 @@ pub type ChaChaNonce = chacha20::LegacyNonce;
 /// - In the context of SSH packet encryption, AAD will be 4 bytes and contain the encrypted length.
 /// - In the context of SSH key encryption, AAD will be empty.
 ///
-/// [PROTOCOL.chacha20poly1305]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.chacha20poly1305?annotate=HEAD
+/// [PROTOCOL.chacha20poly1305]: https://web.mit.edu/freebsd/head/crypto/openssh/PROTOCOL.chacha20poly1305
 /// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
 #[derive(Clone)]
 pub struct ChaCha20Poly1305 {
