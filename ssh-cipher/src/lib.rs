@@ -6,22 +6,15 @@
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
 )]
 
-mod error;
+#[cfg(any(feature = "aes", feature = "tdes"))]
+pub mod block_cipher;
 
-#[cfg(feature = "aes")]
-mod aes;
 #[cfg(feature = "chacha20poly1305")]
 mod chacha20poly1305;
-#[cfg(any(feature = "aes", feature = "tdes"))]
-mod decryptor;
-#[cfg(any(feature = "aes", feature = "tdes"))]
-mod encryptor;
+mod error;
 
 pub use crate::error::{Error, Result};
 pub use cipher;
-
-#[cfg(any(feature = "aes", feature = "tdes"))]
-pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
 
 #[cfg(feature = "chacha20poly1305")]
 pub use crate::chacha20poly1305::{ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaNonce};
@@ -30,36 +23,30 @@ use cipher::array::{Array, typenum::U16};
 use core::{fmt, str};
 use encoding::{Label, LabelError};
 
+#[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
+use aead::{AeadInOut, KeyInit};
 #[cfg(feature = "aes")]
 use {
     aead::array::typenum::U12,
     aes_gcm::{Aes128Gcm, Aes256Gcm},
 };
 
-#[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
-use aead::{AeadInOut, KeyInit};
-
 /// AES-128 in block chaining (CBC) mode
 const AES128_CBC: &str = "aes128-cbc";
-
 /// AES-192 in block chaining (CBC) mode
 const AES192_CBC: &str = "aes192-cbc";
-
 /// AES-256 in block chaining (CBC) mode
 const AES256_CBC: &str = "aes256-cbc";
 
 /// AES-128 in counter (CTR) mode
 const AES128_CTR: &str = "aes128-ctr";
-
 /// AES-192 in counter (CTR) mode
 const AES192_CTR: &str = "aes192-ctr";
-
 /// AES-256 in counter (CTR) mode
 const AES256_CTR: &str = "aes256-ctr";
 
 /// AES-128 in Galois/Counter Mode (GCM).
 const AES128_GCM: &str = "aes128-gcm@openssh.com";
-
 /// AES-256 in Galois/Counter Mode (GCM).
 const AES256_GCM: &str = "aes256-gcm@openssh.com";
 
@@ -81,7 +68,7 @@ pub type Tag = Array<u8, U16>;
 
 /// Cipher algorithms.
 ///
-/// A "cipher" within the context of SSH was originally described in [RFC4253 § 6.3] in the context
+/// A "cipher" within the scope of SSH was originally described in [RFC4253 § 6.3] as a part of
 /// of the packet encryption protocol, where it refers to the combination of a symmetric block
 /// cipher, such as AES or 3DES, with a particular mode of operation, such as CBC or CTR.
 ///
@@ -313,16 +300,16 @@ impl Cipher {
         }
     }
 
-    /// Get a stateful [`Decryptor`] for the given key and IV.
+    /// Get a stateful [`block_cipher::Decryptor`] for the given key and IV.
     ///
     /// Only applicable to unauthenticated modes (e.g. AES-CBC, AES-CTR). Not usable with
     /// authenticated modes which are inherently one-shot (AES-GCM, ChaCha20Poly1305).
     ///
     /// # Errors
-    /// Propagates errors from [`Decryptor::new`].
+    /// Propagates errors from [`block_cipher::Decryptor::new`].
     #[cfg(any(feature = "aes", feature = "tdes"))]
-    pub fn decryptor(self, key: &[u8], iv: &[u8]) -> Result<Decryptor> {
-        Decryptor::new(self, key, iv)
+    pub fn decryptor(self, key: &[u8], iv: &[u8]) -> Result<block_cipher::Decryptor> {
+        block_cipher::Decryptor::new(self, key, iv)
     }
 
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
@@ -373,16 +360,16 @@ impl Cipher {
         }
     }
 
-    /// Get a stateful [`Encryptor`] for the given key and IV.
+    /// Get a stateful [`block_cipher::Encryptor`] for the given key and IV.
     ///
     /// Only applicable to unauthenticated modes (e.g. AES-CBC, AES-CTR). Not usable with
     /// authenticated modes which are inherently one-shot (AES-GCM, ChaCha20Poly1305).
     ///
     /// # Errors
-    /// Propagates errors from [`Encryptor::new`].
+    /// Propagates errors from [`block_cipher::Encryptor::new`].
     #[cfg(any(feature = "aes", feature = "tdes"))]
-    pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<Encryptor> {
-        Encryptor::new(self, key, iv)
+    pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<block_cipher::Encryptor> {
+        block_cipher::Encryptor::new(self, key, iv)
     }
 
     /// Check that the key and IV are the expected length for this cipher.
