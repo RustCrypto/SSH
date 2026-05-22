@@ -207,7 +207,10 @@ impl Encode for Signature {
 
         self.algorithm().encode(writer)?;
 
-        if self.algorithm == Algorithm::SkEd25519 {
+        if matches!(
+            self.algorithm,
+            Algorithm::SkEd25519 | Algorithm::SkEcdsaSha2NistP256
+        ) {
             let signature_length = self
                 .as_bytes()
                 .len()
@@ -784,6 +787,9 @@ mod tests {
     const SK_ED25519_SIGNATURE: &[u8] = &hex!(
         "0000001a736b2d7373682d65643235353139406f70656e7373682e636f6d000000402f5670b6f93465d17423878a74084bf331767031ed240c627c8eb79ab8fa1b935a1fd993f52f5a13fec1797f8a434f943a6096246aea8dd5c8aa922cba3d95060100000009"
     );
+    const SK_ECDSA_SHA2_P256_SIGNATURE: &[u8] = &hex!(
+        "00000022736b2d65636473612d736861322d6e69737470323536406f70656e7373682e636f6d00000048000000201298ab320720a32139cda8a40c97a13dc54ce032ea3c6f09ea9e87501e48fa1d0000002046e4ac697a6424a9870b9ef04ca1182cd741965f989bd1f1f4a26fd83cf703480100000009"
+    );
     const RSA_SHA512_SIGNATURE: &[u8] = &hex!(
         "0000000c7273612d736861322d3531320000018085a4ad1a91a62c00c85de7bb511f38088ff2bce763d76f4786febbe55d47624f9e2cffce58a680183b9ad162c7f0191ea26cab001ac5f5055743eced58e9981789305c208fc98d2657954e38eb28c7e7f3fbe92393a14324ed77aebb772a41aa7a107b38cb9bd1d9ad79b275135d1d7e019bb1d56d74f2450be6db0771f48f6707d3fcf9789592ca2e55595acc16b6e8d0139b56c5d1360b3a1e060f4151a3d7841df2c2a8c94d6f8a1bf633165ee0bcadac5642763df0dd79d3235ae5506595145f199d8abe8f9980411bf70a16e30f273736324d047043317044c36374d6a5ed34cac251e01c6795e4578393f9090bf4ae3e74a0009275a197315fc9c62f1c9aec1ba3b2d37c3b207e5500df19e090e7097ebc038fb9c9e35aea9161479ba6b5190f48e89e1abe51e8ec0e120ef89776e129687ca52d1892c8e88e6ef062a7d96b8a87682ca6a42ff1df0cdf5815c3645aeed7267ca7093043db0565e0f109b796bf117b9d2bb6d6debc0c67a4c9fb3aae3e29b00c7bd70f6c11cf53c295ff"
     );
@@ -858,6 +864,12 @@ mod tests {
     }
 
     #[test]
+    fn decode_sk_ecdsa_sha2_p256() {
+        let signature = Signature::try_from(SK_ECDSA_SHA2_P256_SIGNATURE).unwrap();
+        assert_eq!(Algorithm::SkEcdsaSha2NistP256, signature.algorithm());
+    }
+
+    #[test]
     fn decode_rsa() {
         let signature = Signature::try_from(RSA_SHA512_SIGNATURE).unwrap();
         assert_eq!(
@@ -894,6 +906,15 @@ mod tests {
         let signature = Signature::try_from(SK_ED25519_SIGNATURE).unwrap();
         let result = signature.encode_vec().unwrap();
         assert_eq!(SK_ED25519_SIGNATURE, &result);
+    }
+
+    #[test]
+    fn encode_sk_ecdsa_sha2_p256() {
+        let signature = Signature::try_from(SK_ECDSA_SHA2_P256_SIGNATURE).unwrap();
+
+        let mut result = Vec::new();
+        signature.encode(&mut result).unwrap();
+        assert_eq!(SK_ECDSA_SHA2_P256_SIGNATURE, &result);
     }
 
     #[cfg(feature = "dsa")]
