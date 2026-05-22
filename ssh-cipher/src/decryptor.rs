@@ -1,22 +1,19 @@
 //! Stateful decryptor object.
 
 use crate::{Cipher, Error, Result};
-use cipher::KeyIvInit;
-use core::fmt::{self, Debug};
-
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr"))]
-use aes::{Aes128, Aes192, Aes256};
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
-use cipher::SetIvState;
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
 use cipher::{
-    Block, IvState,
+    Block, IvState, SetIvState,
     block::{BlockCipherDecrypt, BlockModeDecrypt},
 };
+use core::fmt::{self, Debug};
+#[cfg(feature = "aes")]
+use {
+    crate::aes::Aes,
+    cipher::{InnerIvInit, StreamCipher, StreamCipherSeek},
+    ctr::{Ctr128BE, CtrCore},
+};
 #[cfg(feature = "tdes")]
-use des::TdesEde3;
-#[cfg(feature = "aes-ctr")]
-use {crate::encryptor::ctr_encrypt as ctr_decrypt, cipher::StreamCipherSeek, ctr::Ctr128BE};
+use {cipher::KeyIvInit, des::TdesEde3};
 
 /// Stateful decryptor object for unauthenticated SSH symmetric ciphers.
 ///
@@ -25,31 +22,26 @@ use {crate::encryptor::ctr_encrypt as ctr_decrypt, cipher::StreamCipherSeek, ctr
 pub struct Decryptor {
     /// Inner enum over possible decryption ciphers.
     inner: Inner,
+
+    /// Cipher in use by this `Encryptor`.
+    cipher: Cipher,
 }
 
 /// Inner decryptor enum which is deliberately kept out of the public API.
 enum Inner {
-    #[cfg(feature = "aes-cbc")]
-    Aes128Cbc(cbc::Decryptor<Aes128>),
-    #[cfg(feature = "aes-cbc")]
-    Aes192Cbc(cbc::Decryptor<Aes192>),
-    #[cfg(feature = "aes-cbc")]
-    Aes256Cbc(cbc::Decryptor<Aes256>),
-    #[cfg(feature = "aes-ctr")]
-    Aes128Ctr(Ctr128BE<Aes128>),
-    #[cfg(feature = "aes-ctr")]
-    Aes192Ctr(Ctr128BE<Aes192>),
-    #[cfg(feature = "aes-ctr")]
-    Aes256Ctr(Ctr128BE<Aes256>),
+    #[cfg(feature = "aes")]
+    AesCbc(cbc::Decryptor<Aes>),
+    #[cfg(feature = "aes")]
+    AesCtr(Ctr128BE<Aes>),
     #[cfg(feature = "tdes")]
     TDesCbc(cbc::Decryptor<TdesEde3>),
 }
 
 /// Current IV state or position within the cipher.
 enum State {
-    #[cfg(feature = "aes-cbc")]
+    #[cfg(feature = "aes")]
     AesCbc(aes::Block),
-    #[cfg(feature = "aes-ctr")]
+    #[cfg(feature = "aes")]
     AesCtr(u64),
     #[cfg(feature = "tdes")]
     TDesCbc(Block<TdesEde3>),
@@ -67,46 +59,28 @@ impl Decryptor {
         cipher.check_key_and_iv(key, iv)?;
 
         let inner = match cipher {
-            #[cfg(feature = "aes-cbc")]
-            Cipher::Aes128Cbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::Aes128Cbc),
-            #[cfg(feature = "aes-cbc")]
-            Cipher::Aes192Cbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::Aes192Cbc),
-            #[cfg(feature = "aes-cbc")]
-            Cipher::Aes256Cbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::Aes256Cbc),
-            #[cfg(feature = "aes-ctr")]
-            Cipher::Aes128Ctr => Ctr128BE::new_from_slices(key, iv).map(Inner::Aes128Ctr),
-            #[cfg(feature = "aes-ctr")]
-            Cipher::Aes192Ctr => Ctr128BE::new_from_slices(key, iv).map(Inner::Aes192Ctr),
-            #[cfg(feature = "aes-ctr")]
-            Cipher::Aes256Ctr => Ctr128BE::new_from_slices(key, iv).map(Inner::Aes256Ctr),
+            #[cfg(feature = "aes")]
+            Cipher::Aes128Cbc | Cipher::Aes192Cbc | Cipher::Aes256Cbc => {
+                cbc::Decryptor::inner_iv_slice_init(Aes::new(key)?, iv).map(Inner::AesCbc)
+            }
+            #[cfg(feature = "aes")]
+            Cipher::Aes128Ctr | Cipher::Aes192Ctr | Cipher::Aes256Ctr => {
+                let core = CtrCore::inner_iv_slice_init(Aes::new(key)?, iv)?;
+                Ok(Inner::AesCtr(Ctr128BE::from_core(core)))
+            }
             #[cfg(feature = "tdes")]
             Cipher::TDesCbc => cbc::Decryptor::new_from_slices(key, iv).map(Inner::TDesCbc),
             _ => return Err(cipher.unsupported()),
         }
         .map_err(|_| Error::Length)?;
 
-        Ok(Self { inner })
+        Ok(Self { inner, cipher })
     }
 
     /// Get the cipher for this decryptor.
     #[must_use]
     pub fn cipher(&self) -> Cipher {
-        match &self.inner {
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes128Cbc(_) => Cipher::Aes128Cbc,
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes192Cbc(_) => Cipher::Aes192Cbc,
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes256Cbc(_) => Cipher::Aes256Cbc,
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes128Ctr(_) => Cipher::Aes128Ctr,
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes192Ctr(_) => Cipher::Aes192Ctr,
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes256Ctr(_) => Cipher::Aes256Ctr,
-            #[cfg(feature = "tdes")]
-            Inner::TDesCbc(_) => Cipher::TDesCbc,
-        }
+        self.cipher
     }
 
     /// Decrypt the given buffer in place.
@@ -115,24 +89,16 @@ impl Decryptor {
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     pub fn decrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
-        #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
         match &mut self.inner {
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes128Cbc(cipher) => cbc_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes192Cbc(cipher) => cbc_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes256Cbc(cipher) => cbc_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes128Ctr(cipher) => ctr_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes192Ctr(cipher) => ctr_decrypt(cipher, buffer),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes256Ctr(cipher) => ctr_decrypt(cipher, buffer),
+            #[cfg(feature = "aes")]
+            Inner::AesCbc(cipher) => cbc_decrypt(cipher, buffer)?,
+            #[cfg(feature = "aes")]
+            Inner::AesCtr(cipher) => cipher
+                .try_apply_keystream(buffer)
+                .map_err(|_| Error::Crypto)?,
             #[cfg(feature = "tdes")]
-            Inner::TDesCbc(cipher) => cbc_decrypt(cipher, buffer),
+            Inner::TDesCbc(cipher) => cbc_decrypt(cipher, buffer)?,
         }
-        .map_err(|_| Error::Length)?;
 
         Ok(())
     }
@@ -155,18 +121,10 @@ impl Decryptor {
     /// Get the current cipher state, i.e. IV or position within the stream cipher.
     fn state(&self) -> State {
         match &self.inner {
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes128Cbc(cipher) => State::AesCbc(cipher.iv_state()),
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes192Cbc(cipher) => State::AesCbc(cipher.iv_state()),
-            #[cfg(feature = "aes-cbc")]
-            Inner::Aes256Cbc(cipher) => State::AesCbc(cipher.iv_state()),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes128Ctr(cipher) => State::AesCtr(cipher.current_pos()),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes192Ctr(cipher) => State::AesCtr(cipher.current_pos()),
-            #[cfg(feature = "aes-ctr")]
-            Inner::Aes256Ctr(cipher) => State::AesCtr(cipher.current_pos()),
+            #[cfg(feature = "aes")]
+            Inner::AesCbc(cipher) => State::AesCbc(cipher.iv_state()),
+            #[cfg(feature = "aes")]
+            Inner::AesCtr(cipher) => State::AesCtr(cipher.current_pos()),
             #[cfg(feature = "tdes")]
             Inner::TDesCbc(cipher) => State::TDesCbc(cipher.iv_state()),
         }
@@ -175,31 +133,13 @@ impl Decryptor {
     /// Set the current cipher state.
     fn set_state(&mut self, state: State) -> Result<()> {
         match (&mut self.inner, state) {
-            #[cfg(feature = "aes-cbc")]
-            (Inner::Aes128Cbc(cipher), State::AesCbc(iv)) => {
+            #[cfg(feature = "aes")]
+            (Inner::AesCbc(cipher), State::AesCbc(iv)) => {
                 cipher.set_iv(&iv);
                 Ok(())
             }
-            #[cfg(feature = "aes-cbc")]
-            (Inner::Aes192Cbc(cipher), State::AesCbc(iv)) => {
-                cipher.set_iv(&iv);
-                Ok(())
-            }
-            #[cfg(feature = "aes-cbc")]
-            (Inner::Aes256Cbc(cipher), State::AesCbc(iv)) => {
-                cipher.set_iv(&iv);
-                Ok(())
-            }
-            #[cfg(feature = "aes-ctr")]
-            (Inner::Aes128Ctr(cipher), State::AesCtr(pos)) => {
-                cipher.try_seek(pos).map_err(|_| Error::Crypto)
-            }
-            #[cfg(feature = "aes-ctr")]
-            (Inner::Aes192Ctr(cipher), State::AesCtr(pos)) => {
-                cipher.try_seek(pos).map_err(|_| Error::Crypto)
-            }
-            #[cfg(feature = "aes-ctr")]
-            (Inner::Aes256Ctr(cipher), State::AesCtr(pos)) => {
+            #[cfg(feature = "aes")]
+            (Inner::AesCtr(cipher), State::AesCtr(pos)) => {
                 cipher.try_seek(pos).map_err(|_| Error::Crypto)
             }
             #[cfg(feature = "tdes")]
@@ -222,7 +162,7 @@ impl Debug for Decryptor {
 }
 
 /// CBC mode decryption helper which assumes the input is unpadded and block-aligned.
-#[cfg(any(feature = "aes-cbc", feature = "tdes"))]
+#[cfg(any(feature = "aes", feature = "tdes"))]
 fn cbc_decrypt<C>(decryptor: &mut cbc::Decryptor<C>, buffer: &mut [u8]) -> Result<()>
 where
     C: BlockCipherDecrypt,

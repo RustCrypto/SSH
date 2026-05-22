@@ -38,9 +38,7 @@ zeroize = { version = "1", optional = true, default-features = false }
 hex-literal = "1"
 
 [features]
-aes-cbc = ["dep:aes", "dep:cbc"]
-aes-ctr = ["dep:aes", "dep:ctr"]
-aes-gcm = ["dep:aead", "dep:aes", "dep:aes-gcm"]
+aes = ["dep:aead", "dep:aes", "dep:aes-gcm", "dep:cbc", "dep:ctr"]
 chacha20poly1305 = ["dep:aead", "dep:chacha20", "dep:poly1305", "dep:ctutils"]
 tdes = ["dep:des", "dep:cbc"]
 zeroize = [

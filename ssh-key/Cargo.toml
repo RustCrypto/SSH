@@ -67,16 +67,14 @@ ed25519 = ["dep:ed25519-dalek", "rand_core"]
 encryption = [
     "dep:bcrypt-pbkdf",
     "alloc",
-    "cipher/aes-cbc",
-    "cipher/aes-ctr",
-    "cipher/aes-gcm",
+    "cipher/aes",
     "cipher/chacha20poly1305",
     "rand_core"
 ]
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 p521 = ["dep:p521", "ecdsa"]
-ppk = ["dep:hex", "alloc", "cipher/aes-cbc", "dep:hmac", "dep:argon2", "dep:sha1"]
+ppk = ["dep:hex", "alloc", "cipher/aes", "dep:hmac", "dep:argon2", "dep:sha1"]
 rsa = ["dep:rsa", "alloc", "encoding/bigint", "rand_core"]
 sha1 = ["dep:sha1"]
 tdes = ["cipher/tdes", "encryption"]

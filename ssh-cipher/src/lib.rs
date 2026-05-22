@@ -8,17 +8,19 @@
 
 mod error;
 
+#[cfg(feature = "aes")]
+mod aes;
 #[cfg(feature = "chacha20poly1305")]
 mod chacha20poly1305;
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+#[cfg(any(feature = "aes", feature = "tdes"))]
 mod decryptor;
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+#[cfg(any(feature = "aes", feature = "tdes"))]
 mod encryptor;
 
 pub use crate::error::{Error, Result};
 pub use cipher;
 
-#[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+#[cfg(any(feature = "aes", feature = "tdes"))]
 pub use crate::{decryptor::Decryptor, encryptor::Encryptor};
 
 #[cfg(feature = "chacha20poly1305")]
@@ -28,13 +30,13 @@ use cipher::array::{Array, typenum::U16};
 use core::{fmt, str};
 use encoding::{Label, LabelError};
 
-#[cfg(feature = "aes-gcm")]
+#[cfg(feature = "aes")]
 use {
     aead::array::typenum::U12,
     aes_gcm::{Aes128Gcm, Aes256Gcm},
 };
 
-#[cfg(any(feature = "aes-gcm", feature = "chacha20poly1305"))]
+#[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
 use aead::{AeadInOut, KeyInit};
 
 /// AES-128 in block chaining (CBC) mode
@@ -68,7 +70,7 @@ const CHACHA20_POLY1305: &str = "chacha20-poly1305@openssh.com";
 const TDES_CBC: &str = "3des-cbc";
 
 /// Nonce for `aes128-gcm@openssh.com`/`aes256-gcm@openssh.com`.
-#[cfg(feature = "aes-gcm")]
+#[cfg(feature = "aes")]
 pub type AesGcmNonce = Array<u8, U12>;
 
 /// Authentication tag for ciphertext data.
@@ -262,13 +264,10 @@ impl Cipher {
     /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
-    #[cfg_attr(
-        not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")),
-        allow(unused_variables)
-    )]
+    #[cfg_attr(not(any(feature = "aes", feature = "tdes")), allow(unused_variables))]
     pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
         match self {
-            #[cfg(feature = "aes-gcm")]
+            #[cfg(feature = "aes")]
             Self::Aes128Gcm => {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
@@ -279,7 +278,7 @@ impl Cipher {
 
                 Ok(())
             }
-            #[cfg(feature = "aes-gcm")]
+            #[cfg(feature = "aes")]
             Self::Aes256Gcm => {
                 let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
@@ -300,7 +299,7 @@ impl Cipher {
                     .map_err(|_| Error::Crypto)
             }
             // Use `Decryptor` for non-AEAD modes
-            #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+            #[cfg(any(feature = "aes", feature = "tdes"))]
             _ => {
                 // Non-AEAD modes don't take a tag.
                 if tag.is_some() {
@@ -309,7 +308,7 @@ impl Cipher {
 
                 self.decryptor(key, iv)?.decrypt(buffer)
             }
-            #[cfg(not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")))]
+            #[cfg(not(any(feature = "aes", feature = "tdes")))]
             _ => Err(self.unsupported()),
         }
     }
@@ -321,7 +320,7 @@ impl Cipher {
     ///
     /// # Errors
     /// Propagates errors from [`Decryptor::new`].
-    #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+    #[cfg(any(feature = "aes", feature = "tdes"))]
     pub fn decryptor(self, key: &[u8], iv: &[u8]) -> Result<Decryptor> {
         Decryptor::new(self, key, iv)
     }
@@ -331,13 +330,10 @@ impl Cipher {
     /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
-    #[cfg_attr(
-        not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")),
-        allow(unused_variables)
-    )]
+    #[cfg_attr(not(any(feature = "aes", feature = "tdes")), allow(unused_variables))]
     pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<Option<Tag>> {
         match self {
-            #[cfg(feature = "aes-gcm")]
+            #[cfg(feature = "aes")]
             Self::Aes128Gcm => {
                 let cipher = Aes128Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
@@ -347,7 +343,7 @@ impl Cipher {
 
                 Ok(Some(tag))
             }
-            #[cfg(feature = "aes-gcm")]
+            #[cfg(feature = "aes")]
             Self::Aes256Gcm => {
                 let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| Error::KeySize)?;
                 let nonce = iv.try_into().map_err(|_| Error::IvSize)?;
@@ -367,12 +363,12 @@ impl Cipher {
                 Ok(Some(tag))
             }
             // Use `Encryptor` for non-AEAD modes
-            #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+            #[cfg(any(feature = "aes", feature = "tdes"))]
             _ => {
                 self.encryptor(key, iv)?.encrypt(buffer)?;
                 Ok(None)
             }
-            #[cfg(not(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes")))]
+            #[cfg(not(any(feature = "aes", feature = "tdes")))]
             _ => Err(self.unsupported()),
         }
     }
@@ -384,13 +380,13 @@ impl Cipher {
     ///
     /// # Errors
     /// Propagates errors from [`Encryptor::new`].
-    #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+    #[cfg(any(feature = "aes", feature = "tdes"))]
     pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<Encryptor> {
         Encryptor::new(self, key, iv)
     }
 
     /// Check that the key and IV are the expected length for this cipher.
-    #[cfg(any(feature = "aes-cbc", feature = "aes-ctr", feature = "tdes"))]
+    #[cfg(any(feature = "aes", feature = "tdes"))]
     fn check_key_and_iv(self, key: &[u8], iv: &[u8]) -> Result<()> {
         let (key_size, iv_size) = self
             .key_and_iv_size()

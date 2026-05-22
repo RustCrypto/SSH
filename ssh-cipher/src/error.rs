@@ -43,3 +43,9 @@ impl fmt::Display for Error {
 }
 
 impl core::error::Error for Error {}
+
+impl From<cipher::InvalidLength> for Error {
+    fn from(_: cipher::InvalidLength) -> Error {
+        Error::Length
+    }
+}
