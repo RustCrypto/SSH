@@ -2,11 +2,10 @@
 name = "ssh-cipher"
 version = "0.3.0-rc.9"
 description = """
-Pure Rust implementation of SSH symmetric encryption including support for the
-modern aes128-gcm@openssh.com/aes256-gcm@openssh.com and
-chacha20-poly1305@openssh.com algorithms as well as legacy support for older
-ciphers. Built on the pure Rust cryptography implementations maintained by the
-RustCrypto organization.
+Pure Rust implementation of SSH symmetric encryption including support for the modern
+aes128-gcm@openssh.com/aes256-gcm@openssh.com and chacha20-poly1305@openssh.com algorithms as well
+as legacy support for older ciphers. Built on the pure Rust cryptography implementations maintained
+by the RustCrypto organization.
 """
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
