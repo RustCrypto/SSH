@@ -1,7 +1,7 @@
 //! Error types.
 
 use crate::Cipher;
-use core::fmt;
+use core::{array::TryFromSliceError, fmt};
 
 /// Result type with `ssh-cipher` crate's [`Error`] as the error type.
 pub type Result<T> = core::result::Result<T, Error>;
@@ -43,6 +43,12 @@ impl fmt::Display for Error {
 }
 
 impl core::error::Error for Error {}
+
+impl From<TryFromSliceError> for Error {
+    fn from(_: TryFromSliceError) -> Error {
+        Error::Length
+    }
+}
 
 impl From<cipher::InvalidLength> for Error {
     fn from(_: cipher::InvalidLength) -> Error {

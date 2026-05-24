@@ -26,7 +26,7 @@ fn round_trip() {
         #[cfg(feature = "chacha20poly1305")]
         Cipher::ChaCha20Poly1305,
         #[cfg(feature = "tdes")]
-        Cipher::TDesCbc,
+        Cipher::TdesCbc,
     ];
 
     for &cipher in CIPHERS {

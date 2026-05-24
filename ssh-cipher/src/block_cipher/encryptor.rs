@@ -1,118 +1,81 @@
 //! Stateful encryptor object.
 
+use super::{BlockMode, State, sealed::BlockCipher};
 use crate::{Cipher, Error, Result};
-use cipher::{Block, BlockCipherEncrypt, BlockModeEncrypt};
+use ::cipher::{Block, typenum::Unsigned};
 use core::fmt::{self, Debug};
 
-#[cfg(feature = "aes")]
-use {
-    super::Aes,
-    cipher::{InnerIvInit, StreamCipher},
-    ctr::{Ctr128BE, CtrCore},
-};
-#[cfg(feature = "tdes")]
-use {cipher::KeyIvInit, des::TdesEde3};
+/// Stateful encryptor object for unauthenticated symmetric ciphers used in the SSH packet
+/// encryption protocol.
+pub struct Encryptor<C: BlockCipher> {
+    /// Inner block cipher.
+    cipher: C,
 
-/// Stateful encryptor object for unauthenticated SSH symmetric ciphers.
-///
-/// Note that this deliberately does not support AEAD modes such as AES-GCM and ChaCha20Poly1305,
-/// which are one-shot by design.
-pub struct Encryptor {
-    /// Inner enum over possible encryption ciphers.
-    inner: Inner,
-
-    /// Cipher in use by this `Encryptor`.
-    cipher: Cipher,
+    /// State of the block cipher's mode of operation.
+    state: State<C::BlockSize>,
 }
 
-/// Inner encryptor enum which is deliberately kept out of the public API.
-enum Inner {
-    #[cfg(feature = "aes")]
-    AesCbc(cbc::Encryptor<Aes>),
-    #[cfg(feature = "aes")]
-    AesCtr(Ctr128BE<Aes>),
-    #[cfg(feature = "tdes")]
-    TDesCbc(cbc::Encryptor<TdesEde3>),
-}
-
-impl Encryptor {
+impl<C: BlockCipher> Encryptor<C> {
     /// Create a new encryptor object with the given [`Cipher`], `key`, and `iv` (i.e.
     /// initialization vector).
     ///
     /// # Errors
+    /// - Returns [`Error::Crypto`] if the given `cipher` cannot be used with `Encryptor`.
     /// - Returns [`Error::Length`] if `key` or `iv` are the wrong length for the given `cipher`.
     /// - Returns [`Error::UnsupportedCipher`] if support for the given `cipher` is not enabled
     ///   in the crate features.
     pub fn new(cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<Self> {
-        cipher.check_key_and_iv(key, iv)?;
-
-        let inner = match cipher {
-            #[cfg(feature = "aes")]
-            Cipher::Aes128Cbc | Cipher::Aes192Cbc | Cipher::Aes256Cbc => {
-                cbc::Encryptor::inner_iv_slice_init(Aes::new(key)?, iv).map(Inner::AesCbc)
-            }
-            #[cfg(feature = "aes")]
-            Cipher::Aes128Ctr | Cipher::Aes192Ctr | Cipher::Aes256Ctr => {
-                let core = CtrCore::inner_iv_slice_init(Aes::new(key)?, iv)?;
-                Ok(Inner::AesCtr(Ctr128BE::from_core(core)))
-            }
-            #[cfg(feature = "tdes")]
-            Cipher::TDesCbc => cbc::Encryptor::new_from_slices(key, iv).map(Inner::TDesCbc),
-            _ => return Err(cipher.unsupported()),
+        if !C::is_supported(cipher) {
+            return Err(Error::UnsupportedCipher(cipher));
         }
-        .map_err(|_| Error::Length)?;
 
-        Ok(Self { inner, cipher })
+        let mode = cipher.block_mode().ok_or(Error::Crypto)?;
+        let cipher = C::new_from_slice(key)?;
+        let state = State::new_from_slice(mode, iv)?;
+        Ok(Self { cipher, state })
     }
 
-    /// Get the cipher for this encryptor.
-    #[must_use]
-    pub fn cipher(&self) -> Cipher {
-        self.cipher
-    }
-
-    /// Encrypt the given buffer in place.
+    /// Encrypt the given buffer in-place.
     ///
     /// # Errors
     /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
     /// block size.
     pub fn encrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
-        match &mut self.inner {
-            #[cfg(feature = "aes")]
-            Inner::AesCbc(cipher) => cbc_encrypt(cipher, buffer)?,
-            #[cfg(feature = "aes")]
-            Inner::AesCtr(cipher) => cipher
-                .try_apply_keystream(buffer)
-                .map_err(|_| Error::Crypto)?,
-            #[cfg(feature = "tdes")]
-            Inner::TDesCbc(cipher) => cbc_encrypt(cipher, buffer)?,
+        #[allow(clippy::integer_division_remainder_used, reason = "non-secret length")]
+        if buffer.len() % C::BlockSize::USIZE != 0 {
+            return Err(Error::Length);
+        }
+
+        for block in Block::<C>::slice_as_chunks_mut(buffer).0 {
+            self.encrypt_block(block);
         }
 
         Ok(())
     }
+
+    /// Encrypt a single block.
+    ///
+    /// # Panics
+    /// If `block` is not the correct block size for this cipher.
+    fn encrypt_block(&mut self, block: &mut Block<C>) {
+        match self.state.mode() {
+            BlockMode::Cbc => {
+                self.state.xor_into(block);
+                self.cipher.encrypt_block(block);
+                self.state.as_mut().copy_from_slice(block);
+            }
+            BlockMode::Ctr => {
+                let mut pad = self.state.clone();
+                self.cipher.encrypt_block(pad.as_mut());
+                pad.xor_into(block);
+                self.state.increment_counter();
+            }
+        }
+    }
 }
 
-impl Debug for Encryptor {
+impl<C: BlockCipher> Debug for Encryptor<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Encryptor")
-            .field("cipher", &self.cipher())
-            .finish_non_exhaustive()
+        f.debug_struct("Encryptor").finish_non_exhaustive()
     }
-}
-
-/// CBC mode encryption helper which assumes the input is unpadded and block-aligned.
-#[cfg(any(feature = "aes", feature = "tdes"))]
-fn cbc_encrypt<C>(encryptor: &mut cbc::Encryptor<C>, buffer: &mut [u8]) -> Result<()>
-where
-    C: BlockCipherEncrypt,
-{
-    let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
-
-    // Ensure input is block-aligned.
-    if !remaining.is_empty() {
-        return Err(Error::Length);
-    }
-
-    encryptor.encrypt_blocks(blocks);
-    Ok(())
 }

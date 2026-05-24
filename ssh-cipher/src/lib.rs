@@ -23,8 +23,14 @@ use cipher::array::{Array, typenum::U16};
 use core::{fmt, str};
 use encoding::{Label, LabelError};
 
+#[cfg(feature = "aes")]
+use self::block_cipher::Aes;
+#[cfg(feature = "tdes")]
+use self::block_cipher::Tdes;
+#[cfg(any(feature = "aes", feature = "tdes"))]
+use self::block_cipher::{BlockMode, sealed::BlockCipher};
 #[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
-use aead::{AeadInOut, KeyInit};
+use ::aead::{AeadInOut, KeyInit};
 #[cfg(feature = "aes")]
 use {
     aead::array::typenum::U12,
@@ -134,7 +140,7 @@ pub enum Cipher {
     ChaCha20Poly1305,
 
     /// `3des-cbc`: TripleDES in block chaining (CBC) mode
-    TDesCbc,
+    TdesCbc,
 }
 
 impl Cipher {
@@ -172,7 +178,7 @@ impl Cipher {
             Self::Aes128Gcm => AES128_GCM,
             Self::Aes256Gcm => AES256_GCM,
             Self::ChaCha20Poly1305 => CHACHA20_POLY1305,
-            Self::TDesCbc => TDES_CBC,
+            Self::TdesCbc => TDES_CBC,
         }
     }
 
@@ -190,7 +196,7 @@ impl Cipher {
             Self::Aes128Gcm => Some((16, 12)),
             Self::Aes256Gcm => Some((32, 12)),
             Self::ChaCha20Poly1305 => Some((32, 8)),
-            Self::TDesCbc => Some((24, 8)),
+            Self::TdesCbc => Some((24, 8)),
         }
     }
 
@@ -198,7 +204,7 @@ impl Cipher {
     #[must_use]
     pub fn block_size(self) -> usize {
         match self {
-            Self::None | Self::ChaCha20Poly1305 | Self::TDesCbc => 8,
+            Self::None | Self::ChaCha20Poly1305 | Self::TdesCbc => 8,
             Self::Aes128Cbc
             | Self::Aes192Cbc
             | Self::Aes256Cbc
@@ -285,18 +291,30 @@ impl Cipher {
                     .decrypt_inout_detached(nonce, &[], buffer.into(), &tag)
                     .map_err(|_| Error::Crypto)
             }
-            // Use `Decryptor` for non-AEAD modes
-            #[cfg(any(feature = "aes", feature = "tdes"))]
-            _ => {
+            #[cfg(feature = "aes")]
+            Self::Aes128Cbc
+            | Self::Aes192Cbc
+            | Self::Aes256Cbc
+            | Self::Aes128Ctr
+            | Self::Aes192Ctr
+            | Self::Aes256Ctr => {
                 // Non-AEAD modes don't take a tag.
                 if tag.is_some() {
                     return Err(Error::Crypto);
                 }
 
-                self.decryptor(key, iv)?.decrypt(buffer)
+                self.decryptor::<Aes>(key, iv)?.decrypt(buffer)
             }
-            #[cfg(not(any(feature = "aes", feature = "tdes")))]
-            _ => Err(self.unsupported()),
+            #[cfg(feature = "tdes")]
+            Self::TdesCbc => {
+                // Non-AEAD modes don't take a tag.
+                if tag.is_some() {
+                    return Err(Error::Crypto);
+                }
+
+                self.decryptor::<Tdes>(key, iv)?.decrypt(buffer)
+            }
+            _ => Err(Error::UnsupportedCipher(self)),
         }
     }
 
@@ -308,7 +326,10 @@ impl Cipher {
     /// # Errors
     /// Propagates errors from [`block_cipher::Decryptor::new`].
     #[cfg(any(feature = "aes", feature = "tdes"))]
-    pub fn decryptor(self, key: &[u8], iv: &[u8]) -> Result<block_cipher::Decryptor> {
+    pub fn decryptor<C>(self, key: &[u8], iv: &[u8]) -> Result<block_cipher::Decryptor<C>>
+    where
+        C: BlockCipher,
+    {
         block_cipher::Decryptor::new(self, key, iv)
     }
 
@@ -349,14 +370,22 @@ impl Cipher {
                     .map_err(|_| Error::Crypto)?;
                 Ok(Some(tag))
             }
-            // Use `Encryptor` for non-AEAD modes
-            #[cfg(any(feature = "aes", feature = "tdes"))]
-            _ => {
-                self.encryptor(key, iv)?.encrypt(buffer)?;
+            #[cfg(feature = "aes")]
+            Self::Aes128Cbc
+            | Self::Aes192Cbc
+            | Self::Aes256Cbc
+            | Self::Aes128Ctr
+            | Self::Aes192Ctr
+            | Self::Aes256Ctr => {
+                self.encryptor::<Aes>(key, iv)?.encrypt(buffer)?;
                 Ok(None)
             }
-            #[cfg(not(any(feature = "aes", feature = "tdes")))]
-            _ => Err(self.unsupported()),
+            #[cfg(feature = "tdes")]
+            Self::TdesCbc => {
+                self.encryptor::<Tdes>(key, iv)?.encrypt(buffer)?;
+                Ok(None)
+            }
+            _ => Err(Error::UnsupportedCipher(self)),
         }
     }
 
@@ -368,31 +397,25 @@ impl Cipher {
     /// # Errors
     /// Propagates errors from [`block_cipher::Encryptor::new`].
     #[cfg(any(feature = "aes", feature = "tdes"))]
-    pub fn encryptor(self, key: &[u8], iv: &[u8]) -> Result<block_cipher::Encryptor> {
+    pub fn encryptor<C>(self, key: &[u8], iv: &[u8]) -> Result<block_cipher::Encryptor<C>>
+    where
+        C: BlockCipher,
+    {
         block_cipher::Encryptor::new(self, key, iv)
     }
 
-    /// Check that the key and IV are the expected length for this cipher.
+    /// Get the block cipher mode of operation for this `Cipher`, if applicable.
     #[cfg(any(feature = "aes", feature = "tdes"))]
-    fn check_key_and_iv(self, key: &[u8], iv: &[u8]) -> Result<()> {
-        let (key_size, iv_size) = self
-            .key_and_iv_size()
-            .ok_or(Error::UnsupportedCipher(self))?;
-
-        if key.len() != key_size {
-            return Err(Error::KeySize);
+    pub(crate) fn block_mode(self) -> Option<BlockMode> {
+        match self {
+            #[cfg(feature = "aes")]
+            Self::Aes128Cbc | Self::Aes192Cbc | Self::Aes256Cbc => Some(BlockMode::Cbc),
+            #[cfg(feature = "aes")]
+            Self::Aes128Ctr | Self::Aes192Ctr | Self::Aes256Ctr => Some(BlockMode::Ctr),
+            #[cfg(feature = "tdes")]
+            Self::TdesCbc => Some(BlockMode::Cbc),
+            _ => None,
         }
-
-        if iv.len() != iv_size {
-            return Err(Error::IvSize);
-        }
-
-        Ok(())
-    }
-
-    /// Create an unsupported cipher error.
-    fn unsupported(self) -> Error {
-        Error::UnsupportedCipher(self)
     }
 }
 
@@ -425,7 +448,7 @@ impl str::FromStr for Cipher {
             AES128_GCM => Ok(Self::Aes128Gcm),
             AES256_GCM => Ok(Self::Aes256Gcm),
             CHACHA20_POLY1305 => Ok(Self::ChaCha20Poly1305),
-            TDES_CBC => Ok(Self::TDesCbc),
+            TDES_CBC => Ok(Self::TdesCbc),
             _ => Err(LabelError::new(ciphername)),
         }
     }
