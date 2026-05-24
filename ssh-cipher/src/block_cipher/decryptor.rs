@@ -2,7 +2,10 @@
 
 use super::{BlockMode, State, sealed::BlockCipher};
 use crate::{Cipher, Error, Result};
-use ::cipher::{Block, typenum::Unsigned};
+use ::cipher::{
+    Block, BlockModeDecClosure, BlockModeDecrypt,
+    common::{BlockSizeUser, InnerUser},
+};
 use core::fmt::{self, Debug};
 
 /// Stateful decryptor object for unauthenticated symmetric ciphers used in the SSH packet
@@ -38,24 +41,6 @@ impl<C: BlockCipher> Decryptor<C> {
         Ok(Self { cipher, state })
     }
 
-    /// Decrypt the given buffer in place.
-    ///
-    /// # Errors
-    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
-    /// block size.
-    pub fn decrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
-        #[allow(clippy::integer_division_remainder_used, reason = "non-secret length")]
-        if buffer.len() % C::BlockSize::USIZE != 0 {
-            return Err(Error::Length);
-        }
-
-        for block in Block::<C>::slice_as_chunks_mut(buffer).0 {
-            self.decrypt_block(block);
-        }
-
-        Ok(())
-    }
-
     /// Call the provided function with an ephemeral [`Decryptor`] state which will be reset upon
     /// completion, returning the result of the function.
     pub fn peek<T, F>(&mut self, mut f: F) -> T
@@ -67,12 +52,14 @@ impl<C: BlockCipher> Decryptor<C> {
         self.state = state;
         ret
     }
+}
 
-    /// Decrypt a single block.
-    ///
-    /// # Panics
-    /// If `block` is not the correct block size for this cipher.
-    fn decrypt_block(&mut self, block: &mut Block<C>) {
+impl<C: BlockCipher> BlockModeDecrypt for Decryptor<C> {
+    fn decrypt_with_backend(&mut self, _f: impl BlockModeDecClosure<BlockSize = Self::BlockSize>) {
+        unimplemented!("CTR mode support is incompatible with BlockModeDecrypt")
+    }
+
+    fn decrypt_block(&mut self, block: &mut Block<Self>) {
         match self.state.mode() {
             BlockMode::Cbc => {
                 let pad = self.state.clone();
@@ -88,10 +75,24 @@ impl<C: BlockCipher> Decryptor<C> {
             }
         }
     }
+
+    fn decrypt_blocks(&mut self, blocks: &mut [Block<Self>]) {
+        // TODO(tarcieri): parallel decryption support
+        for block in blocks {
+            self.decrypt_block(block);
+        }
+    }
+}
+impl<C: BlockCipher> BlockSizeUser for Decryptor<C> {
+    type BlockSize = C::BlockSize;
 }
 
 impl<C: BlockCipher> Debug for Decryptor<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Decryptor").finish_non_exhaustive()
     }
+}
+
+impl<C: BlockCipher> InnerUser for Decryptor<C> {
+    type Inner = C;
 }
