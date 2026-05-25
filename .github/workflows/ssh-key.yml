@@ -48,12 +48,11 @@ jobs:
       - run: ${{ matrix.deps }}
       - run: cargo build --target ${{ matrix.target }} --release --all-features
 
-  # Disabled until we get rid of [patch.crates-io] in the workspace
-  #minimal-versions:
-  #  uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
-  #  with:
-  #    stable-cmd: cargo test --all-features --release
-  #    working-directory: ${{ github.workflow }}
+  minimal-versions:
+    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
+    with:
+      stable-cmd: cargo test --all-features --release
+      working-directory: ${{ github.workflow }}
 
   no_std:
     runs-on: ubuntu-latest
