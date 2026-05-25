@@ -37,6 +37,8 @@ hex-literal = "1"
 [features]
 aes = ["dep:aead", "dep:aes", "dep:aes-gcm"]
 chacha20poly1305 = ["dep:aead", "dep:chacha20", "dep:poly1305", "dep:ctutils"]
+getrandom = ["rand_core", "aead?/getrandom", "cipher/getrandom"]
+rand_core = ["aead?/rand_core", "cipher/rand_core"]
 tdes = ["dep:des"]
 zeroize = [
     "dep:zeroize",
