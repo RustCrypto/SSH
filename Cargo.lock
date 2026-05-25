@@ -875,7 +875,7 @@ dependencies = [
 
 [[package]]
 name = "ssh-cipher"
-version = "0.3.0-rc.9"
+version = "0.3.0-rc.10"
 dependencies = [
  "aead",
  "aes",

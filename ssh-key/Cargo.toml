@@ -19,7 +19,7 @@ rust-version = "1.85"
 
 # ssh-cipher
 [dependencies.cipher]
-version = "0.3.0-rc.9"
+version = "0.3.0-rc.10"
 package = "ssh-cipher"
 features = ["zeroize"]
 
