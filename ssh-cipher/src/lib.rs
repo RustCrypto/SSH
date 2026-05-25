@@ -27,10 +27,13 @@ use encoding::{Label, LabelError};
 use self::block_cipher::Aes;
 #[cfg(feature = "tdes")]
 use self::block_cipher::Tdes;
-#[cfg(any(feature = "aes", feature = "tdes"))]
-use self::block_cipher::{BlockMode, sealed::BlockCipher};
 #[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
 use ::aead::{AeadInOut, KeyInit};
+#[cfg(any(feature = "aes", feature = "tdes"))]
+use {
+    self::block_cipher::{BlockMode, sealed::BlockCipher},
+    ::cipher::{Block, BlockModeDecrypt, BlockModeEncrypt},
+};
 #[cfg(feature = "aes")]
 use {
     aead::array::typenum::U12,
@@ -302,8 +305,7 @@ impl Cipher {
                 if tag.is_some() {
                     return Err(Error::Crypto);
                 }
-
-                self.decryptor::<Aes>(key, iv)?.decrypt(buffer)
+                self.decrypt_with_block_cipher::<Aes>(key, iv, buffer)
             }
             #[cfg(feature = "tdes")]
             Self::TdesCbc => {
@@ -311,11 +313,33 @@ impl Cipher {
                 if tag.is_some() {
                     return Err(Error::Crypto);
                 }
-
-                self.decryptor::<Tdes>(key, iv)?.decrypt(buffer)
+                self.decrypt_with_block_cipher::<Tdes>(key, iv, buffer)
             }
             _ => Err(Error::UnsupportedCipher(self)),
         }
+    }
+
+    /// Perform decryption using a dynamically selected block cipher mode of operation.
+    ///
+    /// Note that this does not support any form of padding currently.
+    ///
+    /// # Errors
+    /// Returns [`Error::Length`] unless the length of `buffer` is a multiple of the block size.
+    #[cfg(any(feature = "aes", feature = "tdes"))]
+    fn decrypt_with_block_cipher<C: BlockCipher>(
+        self,
+        key: &[u8],
+        iv: &[u8],
+        buffer: &mut [u8],
+    ) -> Result<()> {
+        let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
+
+        if !remaining.is_empty() {
+            return Err(Error::Length);
+        }
+
+        self.decryptor::<C>(key, iv)?.decrypt_blocks(blocks);
+        Ok(())
     }
 
     /// Get a stateful [`block_cipher::Decryptor`] for the given key and IV.
@@ -377,16 +401,39 @@ impl Cipher {
             | Self::Aes128Ctr
             | Self::Aes192Ctr
             | Self::Aes256Ctr => {
-                self.encryptor::<Aes>(key, iv)?.encrypt(buffer)?;
+                self.encrypt_with_block_cipher::<Aes>(key, iv, buffer)?;
                 Ok(None)
             }
             #[cfg(feature = "tdes")]
             Self::TdesCbc => {
-                self.encryptor::<Tdes>(key, iv)?.encrypt(buffer)?;
+                self.encrypt_with_block_cipher::<Tdes>(key, iv, buffer)?;
                 Ok(None)
             }
             _ => Err(Error::UnsupportedCipher(self)),
         }
+    }
+
+    /// Perform decryption using a dynamically selected block cipher mode of operation.
+    ///
+    /// Note that this does not support any form of padding currently.
+    ///
+    /// # Errors
+    /// Returns [`Error::Length`] unless the length of `buffer` is a multiple of the block size.
+    #[cfg(any(feature = "aes", feature = "tdes"))]
+    fn encrypt_with_block_cipher<C: BlockCipher>(
+        self,
+        key: &[u8],
+        iv: &[u8],
+        buffer: &mut [u8],
+    ) -> Result<()> {
+        let (blocks, remaining) = Block::<C>::slice_as_chunks_mut(buffer);
+
+        if !remaining.is_empty() {
+            return Err(Error::Length);
+        }
+
+        self.encryptor::<C>(key, iv)?.encrypt_blocks(blocks);
+        Ok(())
     }
 
     /// Get a stateful [`block_cipher::Encryptor`] for the given key and IV.

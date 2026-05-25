@@ -2,7 +2,15 @@
 
 use super::{BlockMode, State, sealed::BlockCipher};
 use crate::{Cipher, Error, Result};
-use ::cipher::{Block, typenum::Unsigned};
+use ::cipher::{
+    Block, BlockCipherEncBackend, BlockCipherEncClosure, BlockModeEncBackend, BlockModeEncClosure,
+    BlockModeEncrypt,
+    common::{
+        BlockSizeUser, InnerUser, ParBlocksSizeUser,
+        array::{ArraySize, sizes::U1},
+    },
+    inout::InOut,
+};
 use core::fmt::{self, Debug};
 
 /// Stateful encryptor object for unauthenticated symmetric ciphers used in the SSH packet
@@ -34,48 +42,114 @@ impl<C: BlockCipher> Encryptor<C> {
         let state = State::new_from_slice(mode, iv)?;
         Ok(Self { cipher, state })
     }
+}
 
-    /// Encrypt the given buffer in-place.
-    ///
-    /// # Errors
-    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
-    /// block size.
-    pub fn encrypt(&mut self, buffer: &mut [u8]) -> Result<()> {
-        #[allow(clippy::integer_division_remainder_used, reason = "non-secret length")]
-        if buffer.len() % C::BlockSize::USIZE != 0 {
-            return Err(Error::Length);
+impl<C: BlockCipher> BlockModeEncrypt for Encryptor<C> {
+    fn encrypt_with_backend(&mut self, f: impl BlockModeEncClosure<BlockSize = Self::BlockSize>) {
+        struct Closure<'a, BS, BC>
+        where
+            BS: ArraySize,
+            BC: BlockModeEncClosure<BlockSize = BS>,
+        {
+            state: &'a mut State<BS>,
+            f: BC,
         }
 
-        for block in Block::<C>::slice_as_chunks_mut(buffer).0 {
-            self.encrypt_block(block);
+        impl<BS, BC> BlockSizeUser for Closure<'_, BS, BC>
+        where
+            BS: ArraySize,
+            BC: BlockModeEncClosure<BlockSize = BS>,
+        {
+            type BlockSize = BS;
         }
 
-        Ok(())
-    }
-
-    /// Encrypt a single block.
-    ///
-    /// # Panics
-    /// If `block` is not the correct block size for this cipher.
-    fn encrypt_block(&mut self, block: &mut Block<C>) {
-        match self.state.mode() {
-            BlockMode::Cbc => {
-                self.state.xor_into(block);
-                self.cipher.encrypt_block(block);
-                self.state.as_mut().copy_from_slice(block);
+        impl<BS, BC> BlockCipherEncClosure for Closure<'_, BS, BC>
+        where
+            BS: ArraySize,
+            BC: BlockModeEncClosure<BlockSize = BS>,
+        {
+            #[inline(always)]
+            fn call<B: BlockCipherEncBackend<BlockSize = Self::BlockSize>>(
+                self,
+                cipher_backend: &B,
+            ) {
+                let Self { state, f } = self;
+                f.call(&mut Backend {
+                    state,
+                    cipher_backend,
+                });
             }
-            BlockMode::Ctr => {
-                let mut pad = self.state.clone();
-                self.cipher.encrypt_block(pad.as_mut());
-                pad.xor_into(block);
-                self.state.increment_counter();
-            }
         }
+
+        let Self { cipher, state } = self;
+        cipher.encrypt_with_backend(Closure { state, f });
     }
+}
+
+impl<C: BlockCipher> BlockSizeUser for Encryptor<C> {
+    type BlockSize = C::BlockSize;
 }
 
 impl<C: BlockCipher> Debug for Encryptor<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Encryptor").finish_non_exhaustive()
+    }
+}
+
+impl<C: BlockCipher> InnerUser for Encryptor<C> {
+    type Inner = C;
+}
+
+struct Backend<'a, BS, BK>
+where
+    BS: ArraySize,
+    BK: BlockCipherEncBackend<BlockSize = BS>,
+{
+    state: &'a mut State<BS>,
+    cipher_backend: &'a BK,
+}
+
+impl<BS, BK> BlockSizeUser for Backend<'_, BS, BK>
+where
+    BS: ArraySize,
+    BK: BlockCipherEncBackend<BlockSize = BS>,
+{
+    type BlockSize = BS;
+}
+
+impl<BS, BK> ParBlocksSizeUser for Backend<'_, BS, BK>
+where
+    BS: ArraySize,
+    BK: BlockCipherEncBackend<BlockSize = BS>,
+{
+    // CBC encryption cannot be performed in parallel
+    // TODO(tarcieri): parallel encryption support for CTR mode, serial for CBC
+    type ParBlocksSize = U1;
+}
+
+impl<BS, BK> BlockModeEncBackend for Backend<'_, BS, BK>
+where
+    BS: ArraySize,
+    BK: BlockCipherEncBackend<BlockSize = BS>,
+{
+    #[inline(always)]
+    fn encrypt_block(&mut self, mut block: InOut<'_, '_, Block<Self>>) {
+        let mut t = block.clone_in();
+
+        match self.state.mode() {
+            BlockMode::Cbc => {
+                self.state.xor_into(&mut t);
+                self.cipher_backend.encrypt_block(InOut::from(&mut t));
+                self.state.as_mut().copy_from_slice(&t);
+            }
+            BlockMode::Ctr => {
+                let mut pad = self.state.clone();
+                self.cipher_backend.encrypt_block(pad.as_mut().into());
+                pad.xor_into(&mut t);
+                self.state.increment_counter();
+            }
+        }
+
+        *block.get_out() = t;
     }
 }

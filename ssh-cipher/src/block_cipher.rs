@@ -9,19 +9,20 @@ mod decryptor;
 mod encryptor;
 mod state;
 
+pub use self::{decryptor::Decryptor, encryptor::Encryptor};
+pub use ::cipher::{
+    Block, BlockModeDecrypt, BlockModeEncrypt, common::BlockSizeUser, common::InvalidLength,
+};
+
 #[cfg(feature = "aes")]
 pub use self::aes::Aes;
-pub use self::{decryptor::Decryptor, encryptor::Encryptor};
 #[cfg(feature = "tdes")]
 pub use ::des::TdesEde3 as Tdes;
 
 use self::state::State;
 
 #[cfg(feature = "tdes")]
-use {
-    crate::Cipher,
-    ::cipher::common::{InvalidLength, KeyInit},
-};
+use {crate::Cipher, ::cipher::common::KeyInit};
 
 /// Seal the `BlockCipher` trait so others cannot implement it.
 pub(crate) mod sealed {
