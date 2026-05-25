@@ -18,12 +18,11 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  # Disabled until we get rid of [patch.crates-io] in the workspace
-  #minimal-versions:
-  #  uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
-  #  with:
-  #    stable-cmd: cargo test --all-features --release
-  #    working-directory: ${{ github.workflow }}
+  minimal-versions:
+    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
+    with:
+      stable-cmd: cargo test --all-features --release
+      working-directory: ${{ github.workflow }}
 
   no_std:
     runs-on: ubuntu-latest
