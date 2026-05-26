@@ -924,6 +924,7 @@ dependencies = [
  "ctutils",
  "dsa",
  "ed25519-dalek",
+ "getrandom",
  "hex",
  "hex-literal",
  "hmac",

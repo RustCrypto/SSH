@@ -5,7 +5,6 @@
     html_logo_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg",
     html_favicon_url = "https://raw.githubusercontent.com/RustCrypto/media/6ee8e381/logo.svg"
 )]
-#![allow(unexpected_cfgs, reason = "TODO fix getrandom feature")]
 
 //! ## Usage
 //!
@@ -160,6 +159,14 @@ pub use cipher::{self, Cipher};
 pub use encoding::{self, pem::LineEnding};
 pub use sha2;
 
+#[cfg(feature = "std")]
+pub use crate::dot_ssh::DotSsh;
+#[cfg(feature = "getrandom")]
+pub use cipher::cipher::common::getrandom;
+#[cfg(feature = "rand_core")]
+pub use rand_core;
+#[cfg(feature = "ecdsa")]
+pub use sec1;
 #[cfg(feature = "alloc")]
 pub use {
     crate::{
@@ -172,12 +179,3 @@ pub use {
     },
     encoding::Mpint,
 };
-
-#[cfg(feature = "ecdsa")]
-pub use sec1;
-
-#[cfg(feature = "rand_core")]
-pub use rand_core;
-
-#[cfg(feature = "std")]
-pub use crate::dot_ssh::DotSsh;

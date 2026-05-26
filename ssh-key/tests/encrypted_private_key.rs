@@ -1,8 +1,6 @@
 //! Encrypted SSH private key tests.
 
 #![cfg(feature = "alloc")]
-// TODO(tarcieri): fix `getrandom` feature
-#![allow(unexpected_cfgs)]
 
 use hex_literal::hex;
 use ssh_key::{Algorithm, Cipher, Kdf, KdfAlg, PrivateKey};
@@ -297,11 +295,12 @@ fn encode_openssh_aes256_gcm() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes128_cbc() {
-    use rand_core::{OsRng, TryRngCore};
+    use getrandom::{SysRng, rand_core::UnwrapErr};
 
+    let mut rng = UnwrapErr(SysRng);
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng.unwrap_err(), Cipher::Aes128Cbc, PASSWORD)
+        .encrypt_with_cipher(&mut rng, Cipher::Aes128Cbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -317,11 +316,11 @@ fn encrypt_openssh_aes128_cbc() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes192_cbc() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes192Cbc, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::Aes192Cbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -337,11 +336,11 @@ fn encrypt_openssh_aes192_cbc() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes256_cbc() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes256Cbc, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::Aes256Cbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -357,11 +356,11 @@ fn encrypt_openssh_aes256_cbc() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes128_ctr() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes128Ctr, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::Aes128Ctr, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -377,11 +376,11 @@ fn encrypt_openssh_aes128_ctr() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes192_ctr() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes192Ctr, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::Aes192Ctr, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -397,10 +396,10 @@ fn encrypt_openssh_aes192_ctr() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes256_ctr() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
-    let key_enc = key_dec.encrypt(&mut OsRng, PASSWORD).unwrap();
+    let key_enc = key_dec.encrypt(&mut SysRng, PASSWORD).unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
     let key_enc_str = key_enc.to_openssh(Default::default()).unwrap();
@@ -415,12 +414,12 @@ fn encrypt_openssh_aes256_ctr() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes128_gcm() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
 
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes128Gcm, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::Aes128Gcm, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -436,12 +435,12 @@ fn encrypt_openssh_aes128_gcm() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_aes256_gcm() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
 
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::Aes256Gcm, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::Aes256Gcm, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -457,12 +456,12 @@ fn encrypt_openssh_aes256_gcm() {
 #[cfg(all(feature = "encryption", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_chacha20_poly1305() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
 
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::ChaCha20Poly1305, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::ChaCha20Poly1305, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
@@ -478,12 +477,12 @@ fn encrypt_openssh_chacha20_poly1305() {
 #[cfg(all(feature = "tdes", feature = "getrandom"))]
 #[test]
 fn encrypt_openssh_3des() {
-    use rand_core::OsRng;
+    use getrandom::SysRng;
 
     let key_dec = PrivateKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
 
     let key_enc = key_dec
-        .encrypt_with_cipher(&mut OsRng, Cipher::TdesCbc, PASSWORD)
+        .encrypt_with_cipher(&mut SysRng, Cipher::TdesCbc, PASSWORD)
         .unwrap();
 
     // Ensure encrypted key round trips through encoder/decoder
