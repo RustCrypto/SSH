@@ -40,16 +40,17 @@ use crate::{Error, PrivateKey};
     doc = " ```ignore"
 )]
 /// # fn main() -> Result<(), ssh_key::Error> {
-/// use ssh_key::{Algorithm, PrivateKey, certificate, rand_core::{TryRngCore, OsRng}};
+/// use ssh_key::{Algorithm, PrivateKey, certificate, getrandom::SysRng, rand_core::UnwrapErr};
 /// use std::time::{SystemTime, UNIX_EPOCH};
 ///
 /// // Generate the certificate authority's private key
-/// let ca_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
+/// let mut rng = UnwrapErr(SysRng);
+/// let ca_key = PrivateKey::random(&mut rng, Algorithm::Ed25519)?;
 ///
 /// // Generate a "subject" key to be signed by the certificate authority.
 /// // Normally a user or host would do this locally and give the certificate
 /// // authority the public key.
-/// let subject_private_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
+/// let subject_private_key = PrivateKey::random(&mut rng, Algorithm::Ed25519)?;
 /// let subject_public_key = subject_private_key.public_key();
 ///
 /// // Create certificate validity window
@@ -58,7 +59,7 @@ use crate::{Error, PrivateKey};
 ///
 /// // Initialize certificate builder
 /// let mut cert_builder = certificate::Builder::new_with_random_nonce(
-///     &mut OsRng.unwrap_err(),
+///     &mut rng,
 ///     subject_public_key,
 ///     valid_after,
 ///     valid_before,

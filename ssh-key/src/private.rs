@@ -55,15 +55,16 @@
     doc = " ```ignore"
 )]
 //! # fn main() -> Result<(), ssh_key::Error> {
-//! use ssh_key::{Algorithm, PrivateKey, rand_core::{OsRng, TryRngCore}};
+//! use ssh_key::{Algorithm, PrivateKey, getrandom::SysRng, rand_core::UnwrapErr};
 //!
 //! // Generate a random key
-//! let unencrypted_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
+//! let mut rng = UnwrapErr(SysRng);
+//! let unencrypted_key = PrivateKey::random(&mut rng, Algorithm::Ed25519)?;
 //!
 //! // WARNING: don't hardcode passwords, and this one's bad anyway
 //! let password = "hunter42";
 //!
-//! let encrypted_key = unencrypted_key.encrypt(&mut OsRng, password)?;
+//! let encrypted_key = unencrypted_key.encrypt(&mut SysRng, password)?;
 //! assert!(encrypted_key.is_encrypted());
 //! # Ok(())
 //! # }
@@ -84,9 +85,10 @@
     doc = " ```ignore"
 )]
 //! # fn main() -> Result<(), ssh_key::Error> {
-//! use ssh_key::{Algorithm, PrivateKey, rand_core::{OsRng, TryRngCore}};
+//! use ssh_key::{Algorithm, PrivateKey, getrandom::SysRng, rand_core::UnwrapErr};
 //!
-//! let private_key = PrivateKey::random(&mut OsRng.unwrap_err(), Algorithm::Ed25519)?;
+//! let mut rng = UnwrapErr(SysRng);
+//! let private_key = PrivateKey::random(&mut rng, Algorithm::Ed25519)?;
 //! # Ok(())
 //! # }
 //! ```
