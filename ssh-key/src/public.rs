@@ -14,8 +14,12 @@ mod opaque;
 mod rsa;
 mod sk;
 mod ssh_format;
+mod mldsa44_ed25519;
 
-pub use self::{ed25519::Ed25519PublicKey, key_data::KeyData, sk::SkEd25519};
+pub use self::{
+    ed25519::Ed25519PublicKey, key_data::KeyData, mldsa44_ed25519::Mldsa44Ed25519PublicKey,
+    sk::SkEd25519,
+};
 
 #[cfg(feature = "alloc")]
 pub use self::{

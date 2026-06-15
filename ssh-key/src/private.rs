@@ -105,10 +105,12 @@ mod opaque;
 mod rsa;
 #[cfg(feature = "alloc")]
 mod sk;
+mod mldsa44_ed25519;
 
 pub use self::{
     ed25519::{Ed25519Keypair, Ed25519PrivateKey},
     keypair::KeypairData,
+    mldsa44_ed25519::{Mldsa44Ed25519Keypair, Mldsa44Ed25519PrivateKey},
 };
 
 #[cfg(feature = "alloc")]

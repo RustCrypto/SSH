@@ -33,6 +33,9 @@ const OPENSSH_ECDSA_P521_EXAMPLE: &str = include_str!("examples/id_ecdsa_p521.pu
 /// Ed25519 OpenSSH-formatted public key
 const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519.pub");
 
+/// ML-DSA-44 + Ed25519 OpenSSH-formatted public key
+const OPENSSH_MLDSA44_ED25519_EXAMPLE: &str = include_str!("examples/id_mldsa44_ed25519.pub");
+
 /// RSA (3072-bit) OpenSSH-formatted public key
 #[cfg(feature = "alloc")]
 const OPENSSH_RSA_3072_EXAMPLE: &str = include_str!("examples/id_rsa_3072.pub");
@@ -210,6 +213,27 @@ fn decode_ed25519_openssh() {
 
     assert_eq!(
         "SHA256:UCUiLr7Pjs9wFFJMDByLgc3NrtdU344OgUM45wZPcIQ",
+        &key.fingerprint(Default::default()).to_string(),
+    );
+}
+
+#[test]
+fn decode_mldsa44_ed25519_openssh() {
+    let key = PublicKey::from_openssh(OPENSSH_MLDSA44_ED25519_EXAMPLE).unwrap();
+
+    assert_eq!(Algorithm::Mldsa44Ed25519, key.key_data().algorithm());
+
+    // TODO fix:
+    // assert_eq!(
+    //     &hex!("b33eaef37ea2df7caa010defdea34e241f65f1b529a4f43ed14327f5c54aab62"),
+    //     key.key_data().ed25519().unwrap().as_ref(),
+    // );
+
+    #[cfg(feature = "alloc")]
+    assert_eq!(b"user@example.com", key.comment().as_bytes());
+
+    assert_eq!(
+        "SHA256:41XYQTAqXq5f2wChH+sjXQ1YhsyzS2JmWrXzPaOmOts",
         &key.fingerprint(Default::default()).to_string(),
     );
 }
@@ -415,6 +439,13 @@ fn encode_ecdsa_p521_openssh() {
 fn encode_ed25519_openssh() {
     let key = PublicKey::from_openssh(OPENSSH_ED25519_EXAMPLE).unwrap();
     assert_eq!(OPENSSH_ED25519_EXAMPLE.trim_end(), &key.to_string());
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn encode_mldsa44_ed25519_openssh() {
+    let key = PublicKey::from_openssh(OPENSSH_MLDSA44_ED25519_EXAMPLE).unwrap();
+    assert_eq!(OPENSSH_MLDSA44_ED25519_EXAMPLE.trim_end(), &key.to_string());
 }
 
 #[cfg(feature = "alloc")]

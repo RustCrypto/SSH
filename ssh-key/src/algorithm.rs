@@ -86,6 +86,12 @@ const SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256@openssh.com";
 /// U2F/FIDO security key with Ed25519
 const SK_SSH_ED25519: &str = "sk-ssh-ed25519@openssh.com";
 
+/// ML-DSA-44 + Ed25519 key
+const SSH_MLDSA44_ED25519: &str = "ssh-mldsa44-ed25519@openssh.com";
+
+/// OpenSSH certificate for ML-DSA-44 + Ed25519 key
+const CERT_SSH_MLDSA44_ED25519: &str = "ssh-mldsa44-ed25519-cert-v01@openssh.com";
+
 /// SSH key algorithms, i.e. digital signature algorithms used with SSH private/public keys.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
@@ -120,6 +126,9 @@ pub enum Algorithm {
 
     /// FIDO/U2F key with Ed25519
     SkEd25519,
+
+    /// ML-DSA-44 + Ed25519
+    Mldsa44Ed25519,
 
     /// Other
     #[cfg(feature = "alloc")]
@@ -215,6 +224,7 @@ impl Algorithm {
             },
             Algorithm::SkEcdsaSha2NistP256 => SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => SK_SSH_ED25519,
+            Algorithm::Mldsa44Ed25519 => SSH_MLDSA44_ED25519,
             #[cfg(feature = "alloc")]
             Algorithm::Other(algorithm) => algorithm.as_str(),
         }
@@ -247,6 +257,7 @@ impl Algorithm {
             } => CERT_RSA_SHA2_512,
             Algorithm::SkEcdsaSha2NistP256 => CERT_SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => CERT_SK_SSH_ED25519,
+            Algorithm::Mldsa44Ed25519 => CERT_SSH_MLDSA44_ED25519,
             Algorithm::Other(algorithm) => return algorithm.certificate_type(),
         }
         .to_owned()
@@ -322,6 +333,7 @@ impl str::FromStr for Algorithm {
             SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
             SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            SSH_MLDSA44_ED25519 => Ok(Algorithm::Mldsa44Ed25519),
             #[cfg(feature = "alloc")]
             _ => Ok(Algorithm::Other(AlgorithmName::from_str(id)?)),
             #[cfg(not(feature = "alloc"))]

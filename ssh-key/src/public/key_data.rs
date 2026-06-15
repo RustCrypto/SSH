@@ -10,7 +10,7 @@ use {
     crate::Certificate,
     alloc::boxed::Box,
 };
-
+use crate::public::mldsa44_ed25519::Mldsa44Ed25519PublicKey;
 #[cfg(feature = "ecdsa")]
 use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
 
@@ -28,6 +28,9 @@ pub enum KeyData {
 
     /// Ed25519 public key data.
     Ed25519(Ed25519PublicKey),
+
+    /// ML-DSA-44 + Ed25519 public key data.
+    Mldsa44Ed25519(Mldsa44Ed25519PublicKey),
 
     /// RSA public key data.
     #[cfg(feature = "alloc")]
@@ -67,6 +70,7 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Self::Ecdsa(key) => key.algorithm(),
             Self::Ed25519(_) => Algorithm::Ed25519,
+            Self::Mldsa44Ed25519(_) => Algorithm::Mldsa44Ed25519,
             #[cfg(feature = "alloc")]
             Self::Rsa(_) => Algorithm::Rsa { hash: None },
             #[cfg(feature = "ecdsa")]
@@ -104,6 +108,16 @@ impl KeyData {
     pub fn ed25519(&self) -> Option<&Ed25519PublicKey> {
         match self {
             Self::Ed25519(key) => Some(key),
+            #[allow(unreachable_patterns)]
+            _ => None,
+        }
+    }
+
+    /// Get ML-DSA-44 + Ed25519 public key if this key is the correct type.
+    #[must_use]
+    pub fn mldsa44ed25519(&self) -> Option<&Mldsa44Ed25519PublicKey> {
+        match self {
+            Self::Mldsa44Ed25519(key) => Some(key),
             #[allow(unreachable_patterns)]
             _ => None,
         }
@@ -196,6 +210,12 @@ impl KeyData {
         matches!(self, Self::Ed25519(_))
     }
 
+    /// Is this key an ML-DSA-44 + Ed25519 key?
+    #[must_use]
+    pub fn is_mldsa44ed25519(&self) -> bool {
+        matches!(self, Self::Mldsa44Ed25519(_))
+    }
+
     /// Is this key an RSA key?
     #[cfg(feature = "alloc")]
     #[must_use]
@@ -246,6 +266,7 @@ impl KeyData {
                 _ => Err(Error::AlgorithmUnknown),
             },
             Algorithm::Ed25519 => Ed25519PublicKey::decode(reader).map(Self::Ed25519),
+            Algorithm::Mldsa44Ed25519 => Mldsa44Ed25519PublicKey::decode(reader).map(Self::Mldsa44Ed25519),
             #[cfg(feature = "alloc")]
             Algorithm::Rsa { .. } => RsaPublicKey::decode(reader).map(Self::Rsa),
             #[cfg(feature = "ecdsa")]
@@ -278,6 +299,7 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Self::Ecdsa(key) => key.encoded_len(),
             Self::Ed25519(key) => key.encoded_len(),
+            Self::Mldsa44Ed25519(key) => key.encoded_len(),
             #[cfg(feature = "alloc")]
             Self::Rsa(key) => key.encoded_len(),
             #[cfg(feature = "ecdsa")]
@@ -298,6 +320,7 @@ impl KeyData {
             #[cfg(feature = "ecdsa")]
             Self::Ecdsa(key) => key.encode(writer),
             Self::Ed25519(key) => key.encode(writer),
+            Self::Mldsa44Ed25519(key) => key.encode(writer),
             #[cfg(feature = "alloc")]
             Self::Rsa(key) => key.encode(writer),
             #[cfg(feature = "ecdsa")]
@@ -370,6 +393,12 @@ impl From<EcdsaPublicKey> for KeyData {
 impl From<Ed25519PublicKey> for KeyData {
     fn from(public_key: Ed25519PublicKey) -> KeyData {
         Self::Ed25519(public_key)
+    }
+}
+
+impl From<Mldsa44Ed25519PublicKey> for KeyData {
+    fn from(public_key: Mldsa44Ed25519PublicKey) -> KeyData {
+        Self::Mldsa44Ed25519(public_key)
     }
 }
 

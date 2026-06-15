@@ -50,6 +50,9 @@ const OPENSSH_ECDSA_P521_EXAMPLE: &str = include_str!("examples/id_ecdsa_p521");
 /// Ed25519 OpenSSH-formatted private key
 const OPENSSH_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519");
 
+/// ML-DSA-44 + Ed25519 OpenSSH-formatted private key
+const OPENSSH_MLDSA44_ED25519_EXAMPLE: &str = include_str!("examples/id_mldsa44_ed25519");
+
 /// Same key, converted by puttygen
 #[cfg(all(feature = "ppk", feature = "ed25519"))]
 const PPK_ED25519_EXAMPLE: &str = include_str!("examples/id_ed25519.ppk");
@@ -331,6 +334,11 @@ fn decode_ed25519_openssh() {
 }
 
 #[test]
+fn decode_mldsa44_ed25519_openssh() {
+    validate_mldsa44_ed25519(PrivateKey::from_openssh(OPENSSH_MLDSA44_ED25519_EXAMPLE).unwrap());
+}
+
+#[test]
 #[cfg(all(feature = "ppk", feature = "ed25519"))]
 fn decode_ed25519_ppk() {
     validate_ed25519(PrivateKey::from_ppk(PPK_ED25519_EXAMPLE, None).unwrap());
@@ -359,6 +367,26 @@ fn validate_ed25519(key: PrivateKey) {
         &hex!("b606c222d10c16dae16c70a4d45173472ec617e05c656920d26e56c08fb591ed"),
         ed25519_keypair.private.as_ref(),
     );
+
+    #[cfg(feature = "alloc")]
+    assert_eq!(key.comment().as_bytes(), b"user@example.com");
+}
+
+fn validate_mldsa44_ed25519(key: PrivateKey) {
+    assert_eq!(Algorithm::Mldsa44Ed25519, key.algorithm());
+    assert_eq!(Cipher::None, key.cipher());
+    assert_eq!(KdfAlg::None, key.kdf().algorithm());
+    assert!(key.kdf().is_none());
+
+    let mldsa44_ed25519_keypair = key.key_data().mldsa44ed25519().unwrap();
+    // assert_eq!(
+    //     &hex!("b33eaef37ea2df7caa010defdea34e241f65f1b529a4f43ed14327f5c54aab62"),
+    //     mldsa44_ed25519_keypair.public.as_ref(),
+    // );
+    // assert_eq!(
+    //     &hex!("b606c222d10c16dae16c70a4d45173472ec617e05c656920d26e56c08fb591ed"),
+    //     mldsa44_ed25519_keypair.private.as_ref(),
+    // );
 
     #[cfg(feature = "alloc")]
     assert_eq!(key.comment().as_bytes(), b"user@example.com");
@@ -641,6 +669,12 @@ fn encode_ecdsa_p521_openssh() {
 #[test]
 fn encode_ed25519_openssh() {
     encoding_test(OPENSSH_ED25519_EXAMPLE);
+}
+
+#[cfg(feature = "alloc")]
+#[test]
+fn encode_mldsa44_ed25519_openssh() {
+    encoding_test(OPENSSH_MLDSA44_ED25519_EXAMPLE);
 }
 
 #[cfg(feature = "alloc")]

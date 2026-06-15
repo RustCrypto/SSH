@@ -50,6 +50,7 @@ rsa = { version = "0.10.0-rc.18", optional = true, default-features = false, fea
 sec1 = { version = "0.8", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1.0.16", optional = true }
 sha1 = { version = "0.11", optional = true, default-features = false, features = ["oid"] }
+libcrux-ml-dsa = { version = "0.0.9", optional = true }
 
 [dev-dependencies]
 hex-literal = "1"
@@ -64,7 +65,7 @@ std = ["alloc"]
 crypto = ["ed25519", "p256", "p384", "p521", "rsa"] # NOTE: `dsa` is obsolete/weak
 dsa = ["dep:dsa", "dep:sha1", "alloc", "encoding/bigint", "signature/rand_core"]
 ecdsa = ["dep:sec1"]
-ed25519 = ["dep:ed25519-dalek", "rand_core"]
+ed25519 = ["dep:ed25519-dalek", "dep:libcrux-ml-dsa", "rand_core"]
 encryption = [
     "dep:bcrypt-pbkdf",
     "alloc",
