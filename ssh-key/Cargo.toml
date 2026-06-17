@@ -33,7 +33,7 @@ features = ["base64", "digest", "pem", "ctutils", "zeroize"]
 ctutils = { version = "0.4", default-features = false }
 sha2 = { version = "0.11", default-features = false }
 signature = { version = "3", default-features = false }
-zeroize = { version = "1", default-features = false }
+zeroize = { version = "1.9", default-features = false }
 
 # optional dependencies
 argon2 = { version = "0.6.0-rc.8", optional = true, default-features = false, features = ["alloc"] }
@@ -42,9 +42,9 @@ dsa = { version = "0.7.0-rc.15", optional = true, default-features = false, feat
 ed25519-dalek = { version = "3.0.0-rc.0", optional = true, default-features = false }
 hex = { version = "0.4", optional = true, default-features = false, features = ["alloc"] }
 hmac = { version = "0.13", optional = true }
-p256 = { version = "0.14.0-rc.10", optional = true, default-features = false, features = ["ecdsa"] }
-p384 = { version = "0.14.0-rc.10", optional = true, default-features = false, features = ["ecdsa"] }
-p521 = { version = "0.14.0-rc.10", optional = true, default-features = false, features = ["ecdsa"] }
+p256 = { version = "0.14.0-rc.12", optional = true, default-features = false, features = ["ecdsa"] }
+p384 = { version = "0.14.0-rc.12", optional = true, default-features = false, features = ["ecdsa"] }
+p521 = { version = "0.14.0-rc.12", optional = true, default-features = false, features = ["ecdsa"] }
 rand_core = { version = "0.10", optional = true, default-features = false }
 rsa = { version = "0.10.0-rc.18", optional = true, default-features = false, features = ["sha2"] }
 sec1 = { version = "0.8", optional = true, default-features = false, features = ["point"] }
