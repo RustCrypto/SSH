@@ -21,7 +21,6 @@ pub use crate::chacha20poly1305::{ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaN
 
 use cipher::array::{Array, typenum::U16};
 use core::{fmt, str};
-use encoding::{Label, LabelError};
 
 #[cfg(feature = "aes")]
 use self::block_cipher::Aes;
@@ -29,6 +28,8 @@ use self::block_cipher::Aes;
 use self::block_cipher::Tdes;
 #[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
 use ::aead::{AeadInOut, KeyInit};
+#[cfg(feature = "encoding")]
+use encoding::{Label, LabelError};
 #[cfg(any(feature = "aes", feature = "tdes"))]
 use {
     self::block_cipher::{BlockMode, sealed::BlockCipher},
@@ -163,6 +164,7 @@ impl Cipher {
     ///
     /// # Errors
     /// Returns [`LabelError`] if the provided `ciphername` is unknown.
+    #[cfg(feature = "encoding")]
     pub fn new(ciphername: &str) -> core::result::Result<Self, LabelError> {
         ciphername.parse()
     }
@@ -472,6 +474,7 @@ impl AsRef<str> for Cipher {
     }
 }
 
+#[cfg(feature = "encoding")]
 impl Label for Cipher {}
 
 impl fmt::Display for Cipher {
@@ -480,6 +483,7 @@ impl fmt::Display for Cipher {
     }
 }
 
+#[cfg(feature = "encoding")]
 impl str::FromStr for Cipher {
     type Err = LabelError;
 
