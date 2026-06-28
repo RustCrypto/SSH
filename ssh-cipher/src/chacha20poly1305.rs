@@ -35,6 +35,71 @@ pub type ChaChaNonce = chacha20::LegacyNonce;
 /// - In the context of SSH packet encryption, AAD will be 4 bytes and contain the encrypted length.
 /// - In the context of SSH key encryption, AAD will be empty.
 ///
+/// ## Implementing packet encryption
+/// The [`ChaCha20Poly1305`] type implements *just* the AEAD primitive used by OpenSSH, and takes
+/// a 32-byte/256-bit key. However, the full construction used for packet encryption requires
+/// 64-byte/512-bit keys, which are split into two 32-byte/256-bit keys (`K_1` and `K_2`), where
+/// `K_1` is used for length encryption, and `K_2` for the packet body in addition to authenticating
+/// the ciphertext encrypted under `K_1`.
+///
+/// ## Packet encryption example
+///
+/// ```
+/// use ssh_cipher::{
+///     ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaNonce, Tag,
+///     aead::{AeadInOut, KeyInit},
+///     cipher::{KeyIvInit, StreamCipher},
+/// };
+///
+/// fn encrypt_packet(
+///     key: &[u8; 64],
+///     seq_num: u32,
+///     packet: &mut [u8],
+/// ) -> Result<([u8; 4], Tag), aead::Error> {
+///     let (k1, k2) = split_key(key);
+///     let mut nonce = ChaChaNonce::default();
+///     nonce[4..].copy_from_slice(&seq_num.to_be_bytes());
+///
+///     // Encrypt 4-byte packet length under `K_1` using raw `ChaCha20`.
+///     let packet_len = u32::try_from(packet.len()).map_err(|_| aead::Error)?;
+///     let mut len_bytes = packet_len.to_be_bytes();
+///     let mut len_cipher = ChaCha20::new(&k1, &nonce);
+///     len_cipher.apply_keystream(&mut len_bytes);
+///
+///     // Encrypt packet body while authenticating encrypted `len_ct` as AAD.
+///     let body_cipher = ChaCha20Poly1305::new(&k2);
+///     let tag = body_cipher.encrypt_inout_detached(&nonce, &len_bytes, packet.into())?;
+///     Ok((len_bytes, tag))
+/// }
+///
+/// fn decrypt_packet(
+///     key: &[u8; 64],
+///     seq_num: u32,
+///     mut enc_len: [u8; 4],
+///     packet: &mut [u8],
+///     tag: &Tag,
+/// ) -> Result<u32, aead::Error> {
+///     let (k1, k2) = split_key(key);
+///     let mut nonce = ChaChaNonce::default();
+///     nonce[4..].copy_from_slice(&seq_num.to_be_bytes());
+///
+///     // Authenticate length and decrypt body
+///     let aead = ChaCha20Poly1305::new(&k2);
+///     aead.decrypt_inout_detached(&nonce, &enc_len, packet.into(), tag)?;
+///
+///     // If ciphertext is authentic, decrypt the length
+///     let mut len_cipher = ChaCha20::new(&k2, &nonce);
+///     len_cipher.apply_keystream(&mut enc_len);
+///     Ok(u32::from_be_bytes(enc_len))
+/// }
+///
+/// // Split 512-bit key into `K_1` and `K_2`
+/// fn split_key(key: &[u8; 64]) -> (ChaChaKey, ChaChaKey) {
+///     let (k1, k2) = key.split_at(32);
+///     (ChaChaKey::try_from(k1).unwrap(), ChaChaKey::try_from(k2).unwrap())
+/// }
+/// ```
+///
 /// [PROTOCOL.chacha20poly1305]: https://web.mit.edu/freebsd/head/crypto/openssh/PROTOCOL.chacha20poly1305
 /// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
 #[derive(Clone)]

@@ -18,6 +18,8 @@ pub use cipher;
 
 #[cfg(feature = "chacha20poly1305")]
 pub use crate::chacha20poly1305::{ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaNonce};
+#[cfg(any(feature = "aes", feature = "chacha20poly1305"))]
+pub use aead;
 
 use cipher::array::{Array, typenum::U16};
 use core::{fmt, str};
