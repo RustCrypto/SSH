@@ -21,7 +21,7 @@ rust-version = "1.85"
 [dependencies.cipher]
 version = "0.3.0-rc.10"
 package = "ssh-cipher"
-features = ["zeroize"]
+features = ["encoding", "zeroize"]
 
 # ssh-encoding
 [dependencies.encoding]
