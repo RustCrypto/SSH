@@ -22,9 +22,9 @@ cipher = "0.5"
 encoding = { package = "ssh-encoding", version = "0.3" }
 
 # optional dependencies
-aead = { version = "0.6.0-rc.10", optional = true, default-features = false }
+aead = { version = "0.6", optional = true, default-features = false }
 aes = { version = "0.9", optional = true, default-features = false }
-aes-gcm = { version = "0.11.0-rc.4", optional = true, default-features = false, features = ["aes"] }
+aes-gcm = { version = "0.11", optional = true, default-features = false, features = ["aes"] }
 ctutils = { version = "0.4", optional = true, default-features = false }
 chacha20 = { version = "0.10", optional = true, default-features = false, features = ["cipher", "legacy"] }
 des = { version = "0.9", optional = true, default-features = false }
