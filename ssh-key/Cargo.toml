@@ -17,20 +17,10 @@ readme = "README.md"
 edition = "2024"
 rust-version = "1.85"
 
-# ssh-cipher
-[dependencies.cipher]
-version = "0.3.0-rc.10"
-package = "ssh-cipher"
-features = ["encoding", "zeroize"]
-
-# ssh-encoding
-[dependencies.encoding]
-version = "0.3"
-package = "ssh-encoding"
-features = ["base64", "digest", "pem", "ctutils", "zeroize"]
-
 [dependencies]
+cipher = { package = "ssh-cipher", version = "0.3", features = ["encoding", "zeroize"] }
 ctutils = { version = "0.4", default-features = false }
+encoding = { package = "ssh-encoding", version = "0.3", features = ["base64", "digest", "pem", "ctutils", "zeroize"] }
 sha2 = { version = "0.11", default-features = false }
 signature = { version = "3", default-features = false }
 zeroize = { version = "1.9", default-features = false }
