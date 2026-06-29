@@ -8,7 +8,6 @@ use zeroize::Zeroize;
 
 #[cfg(feature = "dsa")]
 use encoding::Uint;
-
 #[cfg(all(feature = "dsa", feature = "rand_core"))]
 use rand_core::CryptoRng;
 
@@ -162,8 +161,10 @@ impl DsaKeypair {
     #[cfg(all(feature = "dsa", feature = "rand_core"))]
     #[expect(clippy::missing_errors_doc, reason = "TODO")]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R) -> Result<Self> {
-        let components = dsa::Components::generate(rng, Self::KEY_SIZE);
-        Ok(dsa::SigningKey::generate(rng, components).into())
+        let Ok(components) =
+            dsa::Components::try_generate_from_rng_with_key_size(rng, Self::KEY_SIZE);
+        let Ok(sk) = dsa::SigningKey::try_generate_from_rng_with_components(rng, components);
+        Ok(sk.into())
     }
 
     /// Create a new [`DsaKeypair`] with the given `public` and `private` components.
