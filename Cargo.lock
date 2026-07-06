@@ -295,9 +295,9 @@ dependencies = [
 
 [[package]]
 name = "dsa"
-version = "0.7.0-rc.16"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21ad6498b7fb25e0c5838632395b7ddfdf1ad4f2d6c50832074058788bb0e5b9"
+checksum = "5c8573b60d07b5b5cecadc1f978c9b71d5504151e703cbb0439ee4ad301338f3"
 dependencies = [
  "crypto-bigint",
  "crypto-common",
@@ -631,9 +631,9 @@ checksum = "63b8176103e19a2643978565ca18b50549f6101881c443590420e4dc998a3c69"
 
 [[package]]
 name = "rfc6979"
-version = "0.6.0-rc.0"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b056b3ce73e99ed2e78481b3db9c30722b1eab738e25b71ca57c9d9285e6276"
+checksum = "b4a459cddafb3fe76b31fd8f1108007566c40301feb64dc7b54656eb7388172b"
 dependencies = [
  "crypto-bigint",
  "hmac",
