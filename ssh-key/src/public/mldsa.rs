@@ -4,7 +4,7 @@
 //!
 //! [FIPS204]: https://csrc.nist.gov/pubs/fips/204/final
 
-use crate::{Algorithm, MlDsaParams, Result};
+use crate::{Algorithm, Error, MlDsaParams, Result};
 use alloc::boxed::Box;
 use encoding::{Encode, Reader, Writer};
 use ml_dsa::{EncodedVerifyingKey, MlDsa44, MlDsa65, MlDsa87};
@@ -90,6 +90,19 @@ impl MlDsaPublicKey {
         let key = reader.read_byten(&mut buf)?;
         Self::new(params, key)
     }
+
+    /// Verify a raw ML-DSA signature over the given message using "pure" ML-DSA
+    /// with an empty context string.
+    ///
+    /// # Errors
+    /// Returns [`Error::Signature`] if the signature is malformed or invalid.
+    pub(crate) fn verify_msg(&self, msg: &[u8], signature: &[u8]) -> Result<()> {
+        match self {
+            Self::MlDsa44(key) => verify_with_params::<MlDsa44>(key, msg, signature),
+            Self::MlDsa65(key) => verify_with_params::<MlDsa65>(key, msg, signature),
+            Self::MlDsa87(key) => verify_with_params::<MlDsa87>(key, msg, signature),
+        }
+    }
 }
 
 impl AsRef<[u8]> for MlDsaPublicKey {
@@ -106,4 +119,22 @@ impl Encode for MlDsaPublicKey {
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
         self.as_bytes().encode(writer)
     }
+}
+
+/// Verify an ML-DSA signature over `msg` with the concrete ML-DSA parameter set `P`.
+fn verify_with_params<P: ml_dsa::MlDsaParams>(
+    key: &EncodedVerifyingKey<P>,
+    msg: &[u8],
+    signature: &[u8],
+) -> Result<()> {
+    use signature::Verifier;
+
+    let verifying_key = ml_dsa::VerifyingKey::<P>::decode(key);
+    let signature = ml_dsa::Signature::<P>::try_from(signature).map_err(|_| Error::Signature)?;
+
+    // The `Verifier` impl uses "pure" ML-DSA with an empty context string, as
+    // required by draft-sfluhrer-ssh-mldsa.
+    verifying_key
+        .verify(msg, &signature)
+        .map_err(|_| Error::Signature)
 }

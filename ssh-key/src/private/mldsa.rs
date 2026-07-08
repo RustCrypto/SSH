@@ -196,6 +196,19 @@ fn derive_public<P: ml_dsa::MlDsaParams>(seed: &[u8; SEED_SIZE]) -> Vec<u8> {
     signing_key.verifying_key().encode().as_slice().to_vec()
 }
 
+/// Sign a message with "pure" ML-DSA (empty context) for the concrete parameter set `P`.
+fn sign_with_params<P: ml_dsa::MlDsaParams>(seed: &[u8; SEED_SIZE], msg: &[u8]) -> Result<Vec<u8>> {
+    use signature::Signer;
+
+    let seed = ml_dsa::B32::from(*seed);
+    let signing_key = ml_dsa::SigningKey::<P>::from_seed(&seed);
+
+    // The `Signer` impl uses "pure" ML-DSA with an empty context string, as
+    // required by draft-sfluhrer-ssh-mldsa.
+    let signature = signing_key.try_sign(msg)?;
+    Ok(signature.encode().as_slice().to_vec())
+}
+
 impl MlDsaKeypair {
     /// Generate a random ML-DSA keypair for the given parameter set.
     ///
@@ -222,6 +235,16 @@ impl MlDsaKeypair {
             public: MlDsaPublicKey::new(params, key)?,
             private: MlDsaPrivateKey::from_bytes(seed),
         })
+    }
+
+    /// Sign a message, producing the raw ML-DSA signature bytes.
+    pub(crate) fn sign_msg(&self, msg: &[u8]) -> Result<Vec<u8>> {
+        let seed = self.private.as_ref();
+        match self.public.params() {
+            MlDsaParams::MlDsa44 => sign_with_params::<ml_dsa::MlDsa44>(seed, msg),
+            MlDsaParams::MlDsa65 => sign_with_params::<ml_dsa::MlDsa65>(seed, msg),
+            MlDsaParams::MlDsa87 => sign_with_params::<ml_dsa::MlDsa87>(seed, msg),
+        }
     }
 
     /// Verify that the stored public key matches the key derived from the seed.

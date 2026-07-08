@@ -9,6 +9,9 @@ use signature::{SignatureEncoding, Signer, Verifier};
 #[cfg(feature = "ed25519")]
 use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 
+#[cfg(feature = "mldsa")]
+use crate::{private::MlDsaKeypair, public::MlDsaPublicKey};
+
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
@@ -112,6 +115,7 @@ impl Signature {
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEcdsaSha2NistP256 => ecdsa_sig_size(&data, EcdsaCurve::NistP256, true)?,
             Algorithm::Rsa { .. } => (),
+            Algorithm::MlDsa { params } if data.len() == params.signature_size() => (),
             Algorithm::Other(_) if !data.is_empty() => (),
             _ => return Err(encoding::Error::Length.into()),
         }
@@ -293,6 +297,8 @@ impl Signer<Signature> for private::KeypairData {
             Self::Ed25519(keypair) => keypair.try_sign(message),
             #[cfg(feature = "rsa")]
             Self::Rsa(keypair) => keypair.try_sign(message),
+            #[cfg(feature = "mldsa")]
+            Self::MlDsa(keypair) => keypair.try_sign(message),
             _ => Err(self.algorithm()?.unsupported_error().into()),
         }
     }
@@ -320,6 +326,8 @@ impl Verifier<Signature> for public::KeyData {
             Self::SkEcdsaSha2NistP256(pk) => pk.verify(message, signature),
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
+            #[cfg(feature = "mldsa")]
+            Self::MlDsa(pk) => pk.verify(message, signature),
             #[allow(unreachable_patterns)]
             _ => Err(self.algorithm().unsupported_error().into()),
         }
@@ -449,6 +457,30 @@ impl Verifier<Signature> for Ed25519PublicKey {
     fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
         let signature = ed25519_dalek::Signature::try_from(signature)?;
         ed25519_dalek::VerifyingKey::try_from(self)?.verify(message, &signature)
+    }
+}
+
+#[cfg(feature = "mldsa")]
+impl Signer<Signature> for MlDsaKeypair {
+    fn try_sign(&self, message: &[u8]) -> signature::Result<Signature> {
+        let data = self.sign_msg(message)?;
+
+        Ok(Signature {
+            algorithm: self.algorithm(),
+            data,
+        })
+    }
+}
+
+#[cfg(feature = "mldsa")]
+impl Verifier<Signature> for MlDsaPublicKey {
+    fn verify(&self, message: &[u8], signature: &Signature) -> signature::Result<()> {
+        // The signature's algorithm (including parameter set) must match this key.
+        if signature.algorithm() != self.algorithm() {
+            return Err(Error::Signature.into());
+        }
+
+        Ok(self.verify_msg(message, signature.as_bytes())?)
     }
 }
 
@@ -767,10 +799,19 @@ mod tests {
     use encoding::Encode;
     use hex_literal::hex;
 
-    #[cfg(any(feature = "ed25519", all(feature = "rsa", feature = "sha1")))]
-    use signature::Verifier;
     #[cfg(feature = "ed25519")]
-    use {super::Ed25519Keypair, signature::Signer};
+    use super::Ed25519Keypair;
+    #[cfg(any(feature = "ed25519", feature = "mldsa"))]
+    use signature::Signer;
+    #[cfg(any(
+        feature = "ed25519",
+        feature = "mldsa",
+        all(feature = "rsa", feature = "sha1")
+    ))]
+    use signature::Verifier;
+
+    #[cfg(feature = "mldsa")]
+    use {super::MlDsaKeypair, crate::MlDsaParams};
 
     #[cfg(feature = "p256")]
     use super::{Mpint, zero_pad_field_bytes};
@@ -922,7 +963,6 @@ mod tests {
     fn try_sign_and_verify_dsa() {
         use super::{DSA_COMPONENT_SIZE, DsaKeypair};
         use encoding::Decode as _;
-        use signature::{Signer as _, Verifier as _};
 
         fn check_signature_component_lengths(
             keypair: &DsaKeypair,
@@ -999,6 +1039,59 @@ mod tests {
         let keypair = Ed25519Keypair::from_seed(&[42; 32]);
         let signature = keypair.sign(EXAMPLE_MSG);
         assert!(keypair.public.verify(EXAMPLE_MSG, &signature).is_ok());
+    }
+
+    #[cfg(feature = "mldsa")]
+    #[test]
+    fn sign_and_verify_mldsa() {
+        let msg = b"Hello, world!";
+
+        for params in [
+            MlDsaParams::MlDsa44,
+            MlDsaParams::MlDsa65,
+            MlDsaParams::MlDsa87,
+        ] {
+            let keypair = MlDsaKeypair::from_seed(params, &[42; 32]).unwrap();
+            let signature = keypair.sign(msg);
+
+            assert_eq!(signature.algorithm(), Algorithm::MlDsa { params });
+            assert_eq!(signature.as_bytes().len(), params.signature_size());
+            assert!(keypair.public.verify(msg, &signature).is_ok());
+
+            // Signing is deterministic (empty context, deterministic variant).
+            assert_eq!(keypair.sign(msg), signature);
+
+            // A tampered message must fail verification.
+            assert!(keypair.public.verify(b"tampered", &signature).is_err());
+
+            // Signature encode/decode round-trips.
+            let encoded = signature.encode_vec().unwrap();
+            let decoded = Signature::try_from(&encoded[..]).unwrap();
+            assert_eq!(decoded, signature);
+        }
+    }
+
+    #[cfg(feature = "mldsa")]
+    #[test]
+    fn mldsa_key_roundtrip() {
+        use crate::{private::KeypairData, public::KeyData};
+        use encoding::Decode;
+
+        let params = MlDsaParams::MlDsa65;
+        let keypair = MlDsaKeypair::from_seed(params, &[7; 32]).unwrap();
+
+        // Public key wire-format round-trips and reports the correct algorithm.
+        let public: KeyData = keypair.public.clone().into();
+        let encoded = public.encode_vec().unwrap();
+        let decoded = KeyData::decode(&mut &encoded[..]).unwrap();
+        assert_eq!(decoded, public);
+        assert_eq!(decoded.algorithm(), Algorithm::MlDsa { params });
+
+        // Keypair wire-format round-trips.
+        let keypair_data = KeypairData::from(keypair);
+        let encoded = keypair_data.encode_vec().unwrap();
+        let decoded = KeypairData::decode(&mut &encoded[..]).unwrap();
+        assert_eq!(decoded, keypair_data);
     }
 
     #[test]
