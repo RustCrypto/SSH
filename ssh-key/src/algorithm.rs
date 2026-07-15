@@ -425,7 +425,7 @@ pub enum HashAlg {
 }
 
 impl HashAlg {
-    /// Decode elliptic curve from the given string identifier.
+    /// Decode hash algorithm from the given string identifier.
     ///
     /// # Supported hash algorithms
     ///
