@@ -47,6 +47,15 @@ const CERT_SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256-cert-v01@openssh.c
 /// OpenSSH certificate for Ed25519 U2F/FIDO security key
 const CERT_SK_SSH_ED25519: &str = "sk-ssh-ed25519-cert-v01@openssh.com";
 
+/// OpenSSH certificate for ML-DSA-44 public key
+const CERT_MLDSA_44: &str = "ssh-mldsa-44-cert-v01@openssh.com";
+
+/// OpenSSH certificate for ML-DSA-65 public key
+const CERT_MLDSA_65: &str = "ssh-mldsa-65-cert-v01@openssh.com";
+
+/// OpenSSH certificate for ML-DSA-87 public key
+const CERT_MLDSA_87: &str = "ssh-mldsa-87-cert-v01@openssh.com";
+
 /// ECDSA with SHA-256 + NIST P-256
 const ECDSA_SHA2_P256: &str = "ecdsa-sha2-nistp256";
 
@@ -86,6 +95,15 @@ const SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256@openssh.com";
 /// U2F/FIDO security key with Ed25519
 const SK_SSH_ED25519: &str = "sk-ssh-ed25519@openssh.com";
 
+/// ML-DSA-44 (FIPS 204, security category 2)
+const SSH_MLDSA_44: &str = "ssh-mldsa-44";
+
+/// ML-DSA-65 (FIPS 204, security category 3)
+const SSH_MLDSA_65: &str = "ssh-mldsa-65";
+
+/// ML-DSA-87 (FIPS 204, security category 5)
+const SSH_MLDSA_87: &str = "ssh-mldsa-87";
+
 /// SSH key algorithms, i.e. digital signature algorithms used with SSH private/public keys.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
@@ -121,6 +139,12 @@ pub enum Algorithm {
     /// FIDO/U2F key with Ed25519
     SkEd25519,
 
+    /// ML-DSA
+    MlDsa {
+        /// ML-DSA parameter set to use.
+        params: MlDsaParams,
+    },
+
     /// Other
     #[cfg(feature = "alloc")]
     Other(AlgorithmName),
@@ -138,6 +162,9 @@ impl Algorithm {
     /// - `ssh-rsa`
     /// - `sk-ecdsa-sha2-nistp256@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519@openssh.com` (FIDO/U2F key)
+    /// - `ssh-mldsa-44`
+    /// - `ssh-mldsa-65`
+    /// - `ssh-mldsa-87`
     ///
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     ///
@@ -161,6 +188,9 @@ impl Algorithm {
     /// - `ssh-ed25519-cert-v01@openssh.com`
     /// - `sk-ecdsa-sha2-nistp256-cert-v01@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519-cert-v01@openssh.com` (FIDO/U2F key)
+    /// - `ssh-mldsa-44-cert-v01@openssh.com`
+    /// - `ssh-mldsa-65-cert-v01@openssh.com`
+    /// - `ssh-mldsa-87-cert-v01@openssh.com`
     ///
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     ///
@@ -190,6 +220,15 @@ impl Algorithm {
             }),
             CERT_SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             CERT_SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            CERT_MLDSA_44 => Ok(Algorithm::MlDsa {
+                params: MlDsaParams::MlDsa44,
+            }),
+            CERT_MLDSA_65 => Ok(Algorithm::MlDsa {
+                params: MlDsaParams::MlDsa65,
+            }),
+            CERT_MLDSA_87 => Ok(Algorithm::MlDsa {
+                params: MlDsaParams::MlDsa87,
+            }),
             #[cfg(feature = "alloc")]
             _ => Ok(Algorithm::Other(AlgorithmName::from_certificate_type(id)?)),
             #[cfg(not(feature = "alloc"))]
@@ -215,6 +254,11 @@ impl Algorithm {
             },
             Algorithm::SkEcdsaSha2NistP256 => SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => SK_SSH_ED25519,
+            Algorithm::MlDsa { params } => match params {
+                MlDsaParams::MlDsa44 => SSH_MLDSA_44,
+                MlDsaParams::MlDsa65 => SSH_MLDSA_65,
+                MlDsaParams::MlDsa87 => SSH_MLDSA_87,
+            },
             #[cfg(feature = "alloc")]
             Algorithm::Other(algorithm) => algorithm.as_str(),
         }
@@ -247,6 +291,11 @@ impl Algorithm {
             } => CERT_RSA_SHA2_512,
             Algorithm::SkEcdsaSha2NistP256 => CERT_SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => CERT_SK_SSH_ED25519,
+            Algorithm::MlDsa { params } => match params {
+                MlDsaParams::MlDsa44 => CERT_MLDSA_44,
+                MlDsaParams::MlDsa65 => CERT_MLDSA_65,
+                MlDsaParams::MlDsa87 => CERT_MLDSA_87,
+            },
             Algorithm::Other(algorithm) => return algorithm.certificate_type(),
         }
         .to_owned()
@@ -274,6 +323,12 @@ impl Algorithm {
     #[must_use]
     pub fn is_rsa(self) -> bool {
         matches!(self, Algorithm::Rsa { .. })
+    }
+
+    /// Is the algorithm ML-DSA?
+    #[must_use]
+    pub fn is_mldsa(self) -> bool {
+        matches!(self, Algorithm::MlDsa { .. })
     }
 
     /// Return an error indicating this algorithm is unsupported.
@@ -322,6 +377,15 @@ impl str::FromStr for Algorithm {
             SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
             SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            SSH_MLDSA_44 => Ok(Algorithm::MlDsa {
+                params: MlDsaParams::MlDsa44,
+            }),
+            SSH_MLDSA_65 => Ok(Algorithm::MlDsa {
+                params: MlDsaParams::MlDsa65,
+            }),
+            SSH_MLDSA_87 => Ok(Algorithm::MlDsa {
+                params: MlDsaParams::MlDsa87,
+            }),
             #[cfg(feature = "alloc")]
             _ => Ok(Algorithm::Other(AlgorithmName::from_str(id)?)),
             #[cfg(not(feature = "alloc"))]
@@ -407,6 +471,108 @@ impl str::FromStr for EcdsaCurve {
             "nistp256" => Ok(EcdsaCurve::NistP256),
             "nistp384" => Ok(EcdsaCurve::NistP384),
             "nistp521" => Ok(EcdsaCurve::NistP521),
+            _ => Err(LabelError::new(id)),
+        }
+    }
+}
+
+/// ML-DSA parameter sets supported for use with SSH as specified in [FIPS204].
+///
+/// Each parameter set corresponds to a NIST security category.
+///
+/// [FIPS204]: https://csrc.nist.gov/pubs/fips/204/final
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
+pub enum MlDsaParams {
+    /// ML-DSA-44 (security category 2).
+    MlDsa44,
+
+    /// ML-DSA-65 (security category 3)
+    MlDsa65,
+
+    /// ML-DSA-87 (security category 5).
+    MlDsa87,
+}
+
+impl MlDsaParams {
+    /// Decode an ML-DSA parameter set from the given SSH algorithm identifier.
+    ///
+    /// # Supported identifiers
+    ///
+    /// - `ssh-mldsa-44`
+    /// - `ssh-mldsa-65`
+    /// - `ssh-mldsa-87`
+    ///
+    /// # Errors
+    /// Returns [`Error::Encoding`] in the event the identifier is not known.
+    pub fn new(id: &str) -> Result<Self> {
+        Ok(id.parse()?)
+    }
+
+    /// Get the SSH algorithm identifier which corresponds to this parameter set.
+    #[must_use]
+    pub fn as_str(self) -> &'static str {
+        match self {
+            MlDsaParams::MlDsa44 => SSH_MLDSA_44,
+            MlDsaParams::MlDsa65 => SSH_MLDSA_65,
+            MlDsaParams::MlDsa87 => SSH_MLDSA_87,
+        }
+    }
+
+    /// Size in bytes of a FIPS 204 public key for this parameter set.
+    #[must_use]
+    pub const fn public_key_size(self) -> usize {
+        match self {
+            MlDsaParams::MlDsa44 => 1312,
+            MlDsaParams::MlDsa65 => 1952,
+            MlDsaParams::MlDsa87 => 2592,
+        }
+    }
+
+    /// Size in bytes of a FIPS 204 signature for this parameter set.
+    #[must_use]
+    pub const fn signature_size(self) -> usize {
+        match self {
+            MlDsaParams::MlDsa44 => 2420,
+            MlDsaParams::MlDsa65 => 3309,
+            MlDsaParams::MlDsa87 => 4627,
+        }
+    }
+
+    /// Size in bytes of the seed (ξ) used to derive an ML-DSA key.
+    ///
+    /// This is 32 bytes for all parameter sets.
+    #[must_use]
+    pub const fn seed_size(self) -> usize {
+        32
+    }
+}
+
+impl AsRef<str> for MlDsaParams {
+    fn as_ref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl From<MlDsaParams> for Algorithm {
+    fn from(params: MlDsaParams) -> Algorithm {
+        Algorithm::MlDsa { params }
+    }
+}
+
+impl fmt::Display for MlDsaParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl str::FromStr for MlDsaParams {
+    type Err = LabelError;
+
+    fn from_str(id: &str) -> core::result::Result<Self, LabelError> {
+        match id {
+            SSH_MLDSA_44 => Ok(MlDsaParams::MlDsa44),
+            SSH_MLDSA_65 => Ok(MlDsaParams::MlDsa65),
+            SSH_MLDSA_87 => Ok(MlDsaParams::MlDsa87),
             _ => Err(LabelError::new(id)),
         }
     }

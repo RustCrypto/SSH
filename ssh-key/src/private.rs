@@ -99,6 +99,8 @@ mod dsa;
 mod ecdsa;
 mod ed25519;
 mod keypair;
+#[cfg(feature = "mldsa")]
+mod mldsa;
 #[cfg(feature = "alloc")]
 mod opaque;
 #[cfg(feature = "alloc")]
@@ -122,6 +124,9 @@ pub use crate::{
     },
     sha2::Digest,
 };
+
+#[cfg(feature = "mldsa")]
+pub use crate::private::mldsa::{MlDsaKeypair, MlDsaPrivateKey};
 
 #[cfg(feature = "ecdsa")]
 pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
@@ -622,6 +627,8 @@ impl PrivateKey {
             Algorithm::Rsa { .. } => {
                 KeypairData::from(RsaKeypair::random(rng, DEFAULT_RSA_KEY_SIZE)?)
             }
+            #[cfg(feature = "mldsa")]
+            Algorithm::MlDsa { params } => KeypairData::from(MlDsaKeypair::random(rng, params)?),
             _ => return Err(Error::AlgorithmUnknown),
         };
         let public_key = public::KeyData::try_from(&key_data)?;
@@ -996,6 +1003,15 @@ impl From<Ed25519Keypair> for PrivateKey {
 #[cfg(feature = "alloc")]
 impl From<RsaKeypair> for PrivateKey {
     fn from(keypair: RsaKeypair) -> PrivateKey {
+        KeypairData::from(keypair)
+            .try_into()
+            .expect(CONVERSION_ERROR_MSG)
+    }
+}
+
+#[cfg(feature = "mldsa")]
+impl From<MlDsaKeypair> for PrivateKey {
+    fn from(keypair: MlDsaKeypair) -> PrivateKey {
         KeypairData::from(keypair)
             .try_into()
             .expect(CONVERSION_ERROR_MSG)

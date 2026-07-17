@@ -32,6 +32,7 @@ dsa = { version = "0.7", optional = true, default-features = false, features = [
 ed25519-dalek = { version = "3", optional = true, default-features = false }
 hex = { version = "0.4", optional = true, default-features = false, features = ["alloc"] }
 hmac = { version = "0.13", optional = true }
+ml-dsa = { version = "0.1", optional = true, default-features = false, features = ["alloc", "zeroize"] }
 p256 = { version = "0.14", optional = true, default-features = false, features = ["ecdsa"] }
 p384 = { version = "0.14", optional = true, default-features = false, features = ["ecdsa"] }
 p521 = { version = "0.14", optional = true, default-features = false, features = ["ecdsa"] }
@@ -51,7 +52,7 @@ default = ["ecdsa", "rand_core", "std"]
 alloc = ["encoding/alloc", "signature/alloc", "zeroize/alloc", ]
 std = ["alloc"]
 
-crypto = ["ed25519", "p256", "p384", "p521", "rsa"] # NOTE: `dsa` is obsolete/weak
+crypto = ["ed25519", "mldsa", "p256", "p384", "p521", "rsa"] # NOTE: `dsa` is obsolete/weak
 dsa = ["dep:dsa", "dep:sha1", "alloc", "encoding/bigint", "signature/rand_core"]
 ecdsa = ["dep:sec1"]
 ed25519 = ["dep:ed25519-dalek", "rand_core"]
@@ -63,6 +64,8 @@ encryption = [
     "rand_core"
 ]
 getrandom = ["cipher/getrandom", "rand_core"]
+# This is based on draft-sfluhrer-ssh-mldsa, which is still in draft and has not been adopted
+mldsa = ["dep:ml-dsa", "alloc", "rand_core"]
 p256 = ["dep:p256", "ecdsa"]
 p384 = ["dep:p384", "ecdsa"]
 p521 = ["dep:p521", "ecdsa"]

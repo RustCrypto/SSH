@@ -147,7 +147,7 @@ mod signature;
 mod sshsig;
 
 pub use crate::{
-    algorithm::{Algorithm, AssociatedHashAlg, EcdsaCurve, HashAlg, KdfAlg},
+    algorithm::{Algorithm, AssociatedHashAlg, EcdsaCurve, HashAlg, KdfAlg, MlDsaParams},
     authorized_keys::AuthorizedKeys,
     error::{Error, Result},
     fingerprint::Fingerprint,

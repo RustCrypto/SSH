@@ -14,6 +14,9 @@ use {
 #[cfg(feature = "ecdsa")]
 use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
 
+#[cfg(feature = "mldsa")]
+use super::MlDsaPublicKey;
+
 /// Public key data.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
@@ -32,6 +35,10 @@ pub enum KeyData {
     /// RSA public key data.
     #[cfg(feature = "alloc")]
     Rsa(RsaPublicKey),
+
+    /// ML-DSA public key data.
+    #[cfg(feature = "mldsa")]
+    MlDsa(MlDsaPublicKey),
 
     /// Security Key (FIDO/U2F) using ECDSA/NIST P-256 as specified in [PROTOCOL.u2f].
     ///
@@ -69,6 +76,8 @@ impl KeyData {
             Self::Ed25519(_) => Algorithm::Ed25519,
             #[cfg(feature = "alloc")]
             Self::Rsa(_) => Algorithm::Rsa { hash: None },
+            #[cfg(feature = "mldsa")]
+            Self::MlDsa(key) => key.algorithm(),
             #[cfg(feature = "ecdsa")]
             Self::SkEcdsaSha2NistP256(_) => Algorithm::SkEcdsaSha2NistP256,
             Self::SkEd25519(_) => Algorithm::SkEd25519,
@@ -123,6 +132,16 @@ impl KeyData {
     pub fn rsa(&self) -> Option<&RsaPublicKey> {
         match self {
             Self::Rsa(key) => Some(key),
+            _ => None,
+        }
+    }
+
+    /// Get ML-DSA public key if this key is the correct type.
+    #[cfg(feature = "mldsa")]
+    #[must_use]
+    pub fn mldsa(&self) -> Option<&MlDsaPublicKey> {
+        match self {
+            Self::MlDsa(key) => Some(key),
             _ => None,
         }
     }
@@ -203,6 +222,13 @@ impl KeyData {
         matches!(self, Self::Rsa(_))
     }
 
+    /// Is this key an ML-DSA key?
+    #[cfg(feature = "mldsa")]
+    #[must_use]
+    pub fn is_mldsa(&self) -> bool {
+        matches!(self, Self::MlDsa(_))
+    }
+
     /// Is this key a FIDO/U2F ECDSA/NIST P-256 key?
     #[cfg(feature = "ecdsa")]
     #[must_use]
@@ -248,6 +274,10 @@ impl KeyData {
             Algorithm::Ed25519 => Ed25519PublicKey::decode(reader).map(Self::Ed25519),
             #[cfg(feature = "alloc")]
             Algorithm::Rsa { .. } => RsaPublicKey::decode(reader).map(Self::Rsa),
+            #[cfg(feature = "mldsa")]
+            Algorithm::MlDsa { params } => {
+                MlDsaPublicKey::decode_as(reader, params).map(Self::MlDsa)
+            }
             #[cfg(feature = "ecdsa")]
             Algorithm::SkEcdsaSha2NistP256 => {
                 SkEcdsaSha2NistP256::decode(reader).map(Self::SkEcdsaSha2NistP256)
@@ -280,6 +310,8 @@ impl KeyData {
             Self::Ed25519(key) => key.encoded_len(),
             #[cfg(feature = "alloc")]
             Self::Rsa(key) => key.encoded_len(),
+            #[cfg(feature = "mldsa")]
+            Self::MlDsa(key) => key.encoded_len(),
             #[cfg(feature = "ecdsa")]
             Self::SkEcdsaSha2NistP256(sk) => sk.encoded_len(),
             Self::SkEd25519(sk) => sk.encoded_len(),
@@ -300,6 +332,8 @@ impl KeyData {
             Self::Ed25519(key) => key.encode(writer),
             #[cfg(feature = "alloc")]
             Self::Rsa(key) => key.encode(writer),
+            #[cfg(feature = "mldsa")]
+            Self::MlDsa(key) => key.encode(writer),
             #[cfg(feature = "ecdsa")]
             Self::SkEcdsaSha2NistP256(sk) => sk.encode(writer),
             Self::SkEd25519(sk) => sk.encode(writer),
@@ -377,6 +411,13 @@ impl From<Ed25519PublicKey> for KeyData {
 impl From<RsaPublicKey> for KeyData {
     fn from(public_key: RsaPublicKey) -> KeyData {
         Self::Rsa(public_key)
+    }
+}
+
+#[cfg(feature = "mldsa")]
+impl From<MlDsaPublicKey> for KeyData {
+    fn from(public_key: MlDsaPublicKey) -> KeyData {
+        Self::MlDsa(public_key)
     }
 }
 
