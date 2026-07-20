@@ -50,10 +50,10 @@ const CERT_SK_SSH_ED25519: &str = "sk-ssh-ed25519-cert-v01@openssh.com";
 /// ECDSA with SHA-256 + NIST P-256
 const ECDSA_SHA2_P256: &str = "ecdsa-sha2-nistp256";
 
-/// ECDSA with SHA-256 + NIST P-256
+/// ECDSA with SHA-256 + NIST P-384
 const ECDSA_SHA2_P384: &str = "ecdsa-sha2-nistp384";
 
-/// ECDSA with SHA-256 + NIST P-256
+/// ECDSA with SHA-256 + NIST P-521
 const ECDSA_SHA2_P521: &str = "ecdsa-sha2-nistp521";
 
 /// None
