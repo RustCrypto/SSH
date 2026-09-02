@@ -47,13 +47,16 @@ const CERT_SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256-cert-v01@openssh.c
 /// OpenSSH certificate for Ed25519 U2F/FIDO security key
 const CERT_SK_SSH_ED25519: &str = "sk-ssh-ed25519-cert-v01@openssh.com";
 
+/// OpenSSH certificate for MLDSA44-Ed25519 composite public key
+const CERT_MLDSA44_ED25519: &str = "ssh-mldsa44-ed25519-cert-v01@openssh.com";
+
 /// ECDSA with SHA-256 + NIST P-256
 const ECDSA_SHA2_P256: &str = "ecdsa-sha2-nistp256";
 
-/// ECDSA with SHA-256 + NIST P-256
+/// ECDSA with SHA-256 + NIST P-384
 const ECDSA_SHA2_P384: &str = "ecdsa-sha2-nistp384";
 
-/// ECDSA with SHA-256 + NIST P-256
+/// ECDSA with SHA-256 + NIST P-521
 const ECDSA_SHA2_P521: &str = "ecdsa-sha2-nistp521";
 
 /// None
@@ -85,6 +88,9 @@ const SK_ECDSA_SHA2_P256: &str = "sk-ecdsa-sha2-nistp256@openssh.com";
 
 /// U2F/FIDO security key with Ed25519
 const SK_SSH_ED25519: &str = "sk-ssh-ed25519@openssh.com";
+
+/// MLDSA44-Ed25519-SHA512 composite signature algorithm
+const SSH_MLDSA44_ED25519: &str = "ssh-mldsa44-ed25519@openssh.com";
 
 /// SSH key algorithms, i.e. digital signature algorithms used with SSH private/public keys.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -121,6 +127,9 @@ pub enum Algorithm {
     /// FIDO/U2F key with Ed25519
     SkEd25519,
 
+    /// MLDSA44-Ed25519-SHA512 composite signature algorithm.
+    MlDsa44Ed25519,
+
     /// Other
     #[cfg(feature = "alloc")]
     Other(AlgorithmName),
@@ -138,6 +147,7 @@ impl Algorithm {
     /// - `ssh-rsa`
     /// - `sk-ecdsa-sha2-nistp256@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519@openssh.com` (FIDO/U2F key)
+    /// - `ssh-mldsa44-ed25519@openssh.com`
     ///
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     ///
@@ -161,6 +171,7 @@ impl Algorithm {
     /// - `ssh-ed25519-cert-v01@openssh.com`
     /// - `sk-ecdsa-sha2-nistp256-cert-v01@openssh.com` (FIDO/U2F key)
     /// - `sk-ssh-ed25519-cert-v01@openssh.com` (FIDO/U2F key)
+    /// - `ssh-mldsa44-ed25519-cert-v01@openssh.com`
     ///
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     ///
@@ -190,6 +201,7 @@ impl Algorithm {
             }),
             CERT_SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             CERT_SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            CERT_MLDSA44_ED25519 => Ok(Algorithm::MlDsa44Ed25519),
             #[cfg(feature = "alloc")]
             _ => Ok(Algorithm::Other(AlgorithmName::from_certificate_type(id)?)),
             #[cfg(not(feature = "alloc"))]
@@ -215,6 +227,7 @@ impl Algorithm {
             },
             Algorithm::SkEcdsaSha2NistP256 => SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => SK_SSH_ED25519,
+            Algorithm::MlDsa44Ed25519 => SSH_MLDSA44_ED25519,
             #[cfg(feature = "alloc")]
             Algorithm::Other(algorithm) => algorithm.as_str(),
         }
@@ -247,6 +260,7 @@ impl Algorithm {
             } => CERT_RSA_SHA2_512,
             Algorithm::SkEcdsaSha2NistP256 => CERT_SK_ECDSA_SHA2_P256,
             Algorithm::SkEd25519 => CERT_SK_SSH_ED25519,
+            Algorithm::MlDsa44Ed25519 => CERT_MLDSA44_ED25519,
             Algorithm::Other(algorithm) => return algorithm.certificate_type(),
         }
         .to_owned()
@@ -274,6 +288,12 @@ impl Algorithm {
     #[must_use]
     pub fn is_rsa(self) -> bool {
         matches!(self, Algorithm::Rsa { .. })
+    }
+
+    /// Is the algorithm the MLDSA44-Ed25519 composite scheme?
+    #[must_use]
+    pub fn is_mldsa44_ed25519(self) -> bool {
+        matches!(self, Algorithm::MlDsa44Ed25519)
     }
 
     /// Return an error indicating this algorithm is unsupported.
@@ -322,6 +342,7 @@ impl str::FromStr for Algorithm {
             SSH_RSA => Ok(Algorithm::Rsa { hash: None }),
             SK_ECDSA_SHA2_P256 => Ok(Algorithm::SkEcdsaSha2NistP256),
             SK_SSH_ED25519 => Ok(Algorithm::SkEd25519),
+            SSH_MLDSA44_ED25519 => Ok(Algorithm::MlDsa44Ed25519),
             #[cfg(feature = "alloc")]
             _ => Ok(Algorithm::Other(AlgorithmName::from_str(id)?)),
             #[cfg(not(feature = "alloc"))]
@@ -425,7 +446,7 @@ pub enum HashAlg {
 }
 
 impl HashAlg {
-    /// Decode elliptic curve from the given string identifier.
+    /// Decode hash algorithm from the given string identifier.
     ///
     /// # Supported hash algorithms
     ///

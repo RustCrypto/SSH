@@ -123,6 +123,9 @@ pub use crate::{
     sha2::Digest,
 };
 
+#[cfg(feature = "mldsa-eddsa")]
+pub use crate::composite::{MlDsa44Ed25519Keypair, MlDsa44Ed25519PrivateKey};
+
 #[cfg(feature = "ecdsa")]
 pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
 
@@ -622,6 +625,8 @@ impl PrivateKey {
             Algorithm::Rsa { .. } => {
                 KeypairData::from(RsaKeypair::random(rng, DEFAULT_RSA_KEY_SIZE)?)
             }
+            #[cfg(feature = "mldsa-eddsa")]
+            Algorithm::MlDsa44Ed25519 => KeypairData::from(MlDsa44Ed25519Keypair::random(rng)?),
             _ => return Err(Error::AlgorithmUnknown),
         };
         let public_key = public::KeyData::try_from(&key_data)?;
@@ -996,6 +1001,15 @@ impl From<Ed25519Keypair> for PrivateKey {
 #[cfg(feature = "alloc")]
 impl From<RsaKeypair> for PrivateKey {
     fn from(keypair: RsaKeypair) -> PrivateKey {
+        KeypairData::from(keypair)
+            .try_into()
+            .expect(CONVERSION_ERROR_MSG)
+    }
+}
+
+#[cfg(feature = "mldsa-eddsa")]
+impl From<MlDsa44Ed25519Keypair> for PrivateKey {
+    fn from(keypair: MlDsa44Ed25519Keypair) -> PrivateKey {
         KeypairData::from(keypair)
             .try_into()
             .expect(CONVERSION_ERROR_MSG)

@@ -137,8 +137,12 @@ mod kdf;
 
 #[cfg(feature = "alloc")]
 mod comment;
+#[cfg(feature = "mldsa-eddsa")]
+mod composite;
 #[cfg(feature = "std")]
 mod dot_ssh;
+#[cfg(feature = "mldsa-eddsa")]
+mod mldsa;
 #[cfg(feature = "ppk")]
 mod ppk;
 #[cfg(feature = "alloc")]

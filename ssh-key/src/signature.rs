@@ -9,6 +9,9 @@ use signature::{SignatureEncoding, Signer, Verifier};
 #[cfg(feature = "ed25519")]
 use crate::{private::Ed25519Keypair, public::Ed25519PublicKey};
 
+#[cfg(feature = "mldsa-eddsa")]
+use crate::public::MlDsa44Ed25519PublicKey;
+
 #[cfg(feature = "dsa")]
 use {
     crate::{private::DsaKeypair, public::DsaPublicKey},
@@ -112,6 +115,7 @@ impl Signature {
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEcdsaSha2NistP256 => ecdsa_sig_size(&data, EcdsaCurve::NistP256, true)?,
             Algorithm::Rsa { .. } => (),
+            Algorithm::MlDsa44Ed25519 if data.len() == MlDsa44Ed25519PublicKey::SIGNATURE_SIZE => {}
             Algorithm::Other(_) if !data.is_empty() => (),
             _ => return Err(encoding::Error::Length.into()),
         }
@@ -293,6 +297,8 @@ impl Signer<Signature> for private::KeypairData {
             Self::Ed25519(keypair) => keypair.try_sign(message),
             #[cfg(feature = "rsa")]
             Self::Rsa(keypair) => keypair.try_sign(message),
+            #[cfg(feature = "mldsa-eddsa")]
+            Self::MlDsa44Ed25519(keypair) => keypair.try_sign(message),
             _ => Err(self.algorithm()?.unsupported_error().into()),
         }
     }
@@ -320,6 +326,8 @@ impl Verifier<Signature> for public::KeyData {
             Self::SkEcdsaSha2NistP256(pk) => pk.verify(message, signature),
             #[cfg(feature = "rsa")]
             Self::Rsa(pk) => pk.verify(message, signature),
+            #[cfg(feature = "mldsa-eddsa")]
+            Self::MlDsa44Ed25519(pk) => pk.verify(message, signature),
             #[allow(unreachable_patterns)]
             _ => Err(self.algorithm().unsupported_error().into()),
         }
@@ -767,10 +775,19 @@ mod tests {
     use encoding::Encode;
     use hex_literal::hex;
 
-    #[cfg(any(feature = "ed25519", all(feature = "rsa", feature = "sha1")))]
-    use signature::Verifier;
     #[cfg(feature = "ed25519")]
-    use {super::Ed25519Keypair, signature::Signer};
+    use super::Ed25519Keypair;
+    #[cfg(any(feature = "ed25519", feature = "mldsa-eddsa"))]
+    use signature::Signer;
+    #[cfg(any(
+        feature = "ed25519",
+        feature = "mldsa-eddsa",
+        all(feature = "rsa", feature = "sha1")
+    ))]
+    use signature::Verifier;
+
+    #[cfg(feature = "mldsa-eddsa")]
+    use crate::{private::MlDsa44Ed25519Keypair, public::MlDsa44Ed25519PublicKey};
 
     #[cfg(feature = "p256")]
     use super::{Mpint, zero_pad_field_bytes};
@@ -922,7 +939,6 @@ mod tests {
     fn try_sign_and_verify_dsa() {
         use super::{DSA_COMPONENT_SIZE, DsaKeypair};
         use encoding::Decode as _;
-        use signature::{Signer as _, Verifier as _};
 
         fn check_signature_component_lengths(
             keypair: &DsaKeypair,
@@ -999,6 +1015,74 @@ mod tests {
         let keypair = Ed25519Keypair::from_seed(&[42; 32]);
         let signature = keypair.sign(EXAMPLE_MSG);
         assert!(keypair.public.verify(EXAMPLE_MSG, &signature).is_ok());
+    }
+
+    #[cfg(feature = "mldsa-eddsa")]
+    #[test]
+    fn sign_and_verify_mldsa44_ed25519() {
+        let msg = b"Hello, world!";
+        let keypair = MlDsa44Ed25519Keypair::from_seed(&[42; 64]).unwrap();
+        let signature = keypair.sign(msg);
+
+        assert_eq!(signature.algorithm(), Algorithm::MlDsa44Ed25519);
+        assert_eq!(
+            signature.as_bytes().len(),
+            MlDsa44Ed25519PublicKey::SIGNATURE_SIZE
+        );
+        assert!(keypair.public.verify(msg, &signature).is_ok());
+
+        // Signing is deterministic: ML-DSA uses the FIPS 204 deterministic
+        // variant and Ed25519 is deterministic by construction.
+        assert_eq!(keypair.sign(msg), signature);
+
+        // A tampered message must fail verification.
+        assert!(keypair.public.verify(b"tampered", &signature).is_err());
+
+        // Signature encode/decode round-trips.
+        let encoded = signature.encode_vec().unwrap();
+        let decoded = Signature::try_from(&encoded[..]).unwrap();
+        assert_eq!(decoded, signature);
+    }
+
+    #[cfg(feature = "mldsa-eddsa")]
+    #[test]
+    fn mldsa44_ed25519_key_roundtrip() {
+        use crate::{private::KeypairData, public::KeyData};
+        use encoding::Decode;
+
+        let keypair = MlDsa44Ed25519Keypair::from_seed(&[7; 64]).unwrap();
+
+        // Public key wire-format round-trips and reports the correct algorithm.
+        let public: KeyData = keypair.public.clone().into();
+        let encoded = public.encode_vec().unwrap();
+        let decoded = KeyData::decode(&mut &encoded[..]).unwrap();
+        assert_eq!(decoded, public);
+        assert_eq!(decoded.algorithm(), Algorithm::MlDsa44Ed25519);
+
+        // Keypair wire-format round-trips.
+        let keypair_data = KeypairData::from(keypair);
+        let encoded = keypair_data.encode_vec().unwrap();
+        let decoded = KeypairData::decode(&mut &encoded[..]).unwrap();
+        assert_eq!(decoded, keypair_data);
+    }
+
+    /// A keypair whose public half does not match its seeds must be rejected
+    /// at decode time rather than silently producing unverifiable signatures.
+    #[cfg(feature = "mldsa-eddsa")]
+    #[test]
+    fn mldsa44_ed25519_mismatched_public_key_is_rejected() {
+        use crate::private::KeypairData;
+        use encoding::Decode;
+
+        let keypair = MlDsa44Ed25519Keypair::from_seed(&[7; 64]).unwrap();
+        let mut encoded = KeypairData::from(keypair).encode_vec().unwrap();
+
+        // Corrupt the last byte of the encoded public key, which sits just
+        // before the 4-byte length prefix of the 64-byte seed pair.
+        let public_key_end = encoded.len() - 4 - 64;
+        encoded[public_key_end - 1] ^= 1;
+
+        assert!(KeypairData::decode(&mut &encoded[..]).is_err());
     }
 
     #[test]
