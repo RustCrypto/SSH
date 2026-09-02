@@ -45,6 +45,13 @@ const DSA_SIGNATURE_SIZE: usize = DSA_COMPONENT_SIZE * 2;
 const ED25519_SIGNATURE_SIZE: usize = 64;
 const SK_SIGNATURE_TRAILER_SIZE: usize = 5; // flags(u8), counter(u32)
 const SK_ED25519_SIGNATURE_SIZE: usize = ED25519_SIGNATURE_SIZE + SK_SIGNATURE_TRAILER_SIZE;
+const MLDSA44_SIGNATURE_SIZE: usize = 2420;
+const MLDSA44_ED25519_SIGNATURE_SIZE: usize = MLDSA44_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE;
+
+// Signature lengths are validated regardless of which backends are enabled, so the table above
+// cannot borrow the composite type's const. Pin them together when the feature is on.
+#[cfg(feature = "mldsa-eddsa")]
+const _: () = assert!(MLDSA44_ED25519_SIGNATURE_SIZE == MlDsa44Ed25519PublicKey::SIGNATURE_SIZE);
 
 /// Trait for signing keys which produce a [`Signature`].
 ///
@@ -115,7 +122,7 @@ impl Signature {
             Algorithm::SkEd25519 if data.len() == SK_ED25519_SIGNATURE_SIZE => (),
             Algorithm::SkEcdsaSha2NistP256 => ecdsa_sig_size(&data, EcdsaCurve::NistP256, true)?,
             Algorithm::Rsa { .. } => (),
-            Algorithm::MlDsa44Ed25519 if data.len() == MlDsa44Ed25519PublicKey::SIGNATURE_SIZE => {}
+            Algorithm::MlDsa44Ed25519 if data.len() == MLDSA44_ED25519_SIGNATURE_SIZE => (),
             Algorithm::Other(_) if !data.is_empty() => (),
             _ => return Err(encoding::Error::Length.into()),
         }
@@ -787,7 +794,7 @@ mod tests {
     use signature::Verifier;
 
     #[cfg(feature = "mldsa-eddsa")]
-    use crate::{private::MlDsa44Ed25519Keypair, public::MlDsa44Ed25519PublicKey};
+    use {super::MLDSA44_ED25519_SIGNATURE_SIZE, crate::private::MlDsa44Ed25519Keypair};
 
     #[cfg(feature = "p256")]
     use super::{Mpint, zero_pad_field_bytes};
@@ -1025,10 +1032,7 @@ mod tests {
         let signature = keypair.sign(msg);
 
         assert_eq!(signature.algorithm(), Algorithm::MlDsa44Ed25519);
-        assert_eq!(
-            signature.as_bytes().len(),
-            MlDsa44Ed25519PublicKey::SIGNATURE_SIZE
-        );
+        assert_eq!(signature.as_bytes().len(), MLDSA44_ED25519_SIGNATURE_SIZE);
         assert!(keypair.public.verify(msg, &signature).is_ok());
 
         // Signing is deterministic: ML-DSA uses the FIPS 204 deterministic
