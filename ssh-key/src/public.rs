@@ -27,6 +27,9 @@ pub use self::{
 #[cfg(feature = "ecdsa")]
 pub use self::{ecdsa::EcdsaPublicKey, sk::SkEcdsaSha2NistP256};
 
+#[cfg(feature = "mldsa-eddsa")]
+pub use crate::composite::MlDsa44Ed25519PublicKey;
+
 pub(crate) use self::ssh_format::SshFormat;
 
 use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
@@ -444,6 +447,13 @@ impl From<EcdsaPublicKey> for PublicKey {
 
 impl From<Ed25519PublicKey> for PublicKey {
     fn from(public_key: Ed25519PublicKey) -> PublicKey {
+        KeyData::from(public_key).into()
+    }
+}
+
+#[cfg(feature = "mldsa-eddsa")]
+impl From<MlDsa44Ed25519PublicKey> for PublicKey {
+    fn from(public_key: MlDsa44Ed25519PublicKey) -> PublicKey {
         KeyData::from(public_key).into()
     }
 }

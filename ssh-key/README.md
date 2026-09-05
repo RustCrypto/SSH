@@ -42,7 +42,7 @@ respective SSH key algorithm.
   - [x] OpenSSH certificate authority (CA) support i.e. cert builder/signer
 - [x] Private key encryption/decryption (`bcrypt-pbkdf` + `aes256-ctr` only)
 - [x] Private key generation support: DSA, Ed25519, ECDSA (P-256/P-384/P-521),
-      and RSA
+      RSA, and MLDSA44-Ed25519
 - [x] FIDO/U2F key support (`sk-*`) as specified in [PROTOCOL.u2f]
 - [x] Fingerprint support
   - [x] "randomart" fingerprint visualizations
@@ -73,6 +73,7 @@ respective SSH key algorithm.
 | `ssh‑rsa`                            | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅     | `rsa`     | `alloc`  |
 | `sk‑ecdsa‑sha2‑nistp256@openssh.com` | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️     | ⛔        | `alloc`  |
 | `sk‑ssh‑ed25519@openssh.com`         | ✅     | ✅     | ✅   | ⛔     | ⛔️   | ✅️️     | `ed25519` | `alloc`  |
+| `ssh‑mldsa44‑ed25519@openssh.com`    | ✅     | ✅     | ✅   | ✅️     | ✅️   | ✅️     | `mldsa-eddsa` | `alloc`  |
 
 By default *no SSH signature algorithms are enabled* and you will get an
 `Error::AlgorithmUnsupported` error if you try to use them.

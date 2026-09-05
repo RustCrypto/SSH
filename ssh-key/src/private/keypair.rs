@@ -11,6 +11,9 @@ use {
     alloc::vec::Vec,
 };
 
+#[cfg(feature = "mldsa-eddsa")]
+use super::MlDsa44Ed25519Keypair;
+
 #[cfg(feature = "ecdsa")]
 use super::EcdsaKeypair;
 
@@ -43,6 +46,10 @@ pub enum KeypairData {
     /// RSA keypair.
     #[cfg(feature = "alloc")]
     Rsa(RsaKeypair),
+
+    /// ML-DSA keypair
+    #[cfg(feature = "mldsa-eddsa")]
+    MlDsa44Ed25519(MlDsa44Ed25519Keypair),
 
     /// Security Key (FIDO/U2F) using ECDSA/NIST P-256 as specified in [PROTOCOL.u2f].
     ///
@@ -77,6 +84,8 @@ impl KeypairData {
             Self::Encrypted(_) => return Err(Error::Encrypted),
             #[cfg(feature = "alloc")]
             Self::Rsa(_) => Algorithm::Rsa { hash: None },
+            #[cfg(feature = "mldsa-eddsa")]
+            Self::MlDsa44Ed25519(key) => key.algorithm(),
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             Self::SkEcdsaSha2NistP256(_) => Algorithm::SkEcdsaSha2NistP256,
             #[cfg(feature = "alloc")]
@@ -132,6 +141,16 @@ impl KeypairData {
     pub fn rsa(&self) -> Option<&RsaKeypair> {
         match self {
             Self::Rsa(key) => Some(key),
+            _ => None,
+        }
+    }
+
+    /// Get MLDSA44-Ed25519 keypair if this key is the correct type.
+    #[cfg(feature = "mldsa-eddsa")]
+    #[must_use]
+    pub fn mldsa44_ed25519(&self) -> Option<&MlDsa44Ed25519Keypair> {
+        match self {
+            Self::MlDsa44Ed25519(key) => Some(key),
             _ => None,
         }
     }
@@ -207,6 +226,13 @@ impl KeypairData {
         matches!(self, Self::Rsa(_))
     }
 
+    /// Is this key an ML-DSA-44-Ed25519 composite key?
+    #[cfg(feature = "mldsa-eddsa")]
+    #[must_use]
+    pub fn is_mldsa44_ed25519(&self) -> bool {
+        matches!(self, Self::MlDsa44Ed25519(_))
+    }
+
     /// Is this key a FIDO/U2F ECDSA/NIST P-256 key?
     #[cfg(all(feature = "alloc", feature = "ecdsa"))]
     #[must_use]
@@ -243,6 +269,8 @@ impl KeypairData {
             Self::Encrypted(ciphertext) => ciphertext.as_ref(),
             #[cfg(feature = "alloc")]
             Self::Rsa(rsa) => rsa.private().d().as_bytes(),
+            #[cfg(feature = "mldsa-eddsa")]
+            Self::MlDsa44Ed25519(mldsa) => mldsa.private.checkint_bytes(),
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             Self::SkEcdsaSha2NistP256(sk) => sk.key_handle(),
             #[cfg(feature = "alloc")]
@@ -278,6 +306,10 @@ impl KeypairData {
             Algorithm::Ed25519 => Ed25519Keypair::decode(reader).map(Self::Ed25519),
             #[cfg(feature = "alloc")]
             Algorithm::Rsa { .. } => RsaKeypair::decode(reader).map(Self::Rsa),
+            #[cfg(feature = "mldsa-eddsa")]
+            Algorithm::MlDsa44Ed25519 => {
+                MlDsa44Ed25519Keypair::decode(reader).map(Self::MlDsa44Ed25519)
+            }
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             Algorithm::SkEcdsaSha2NistP256 => {
                 SkEcdsaSha2NistP256::decode(reader).map(Self::SkEcdsaSha2NistP256)
@@ -307,6 +339,8 @@ impl CtEq for KeypairData {
             (Self::Encrypted(a), Self::Encrypted(b)) => a.ct_eq(b),
             #[cfg(feature = "alloc")]
             (Self::Rsa(a), Self::Rsa(b)) => a.ct_eq(b),
+            #[cfg(feature = "mldsa-eddsa")]
+            (Self::MlDsa44Ed25519(a), Self::MlDsa44Ed25519(b)) => a.ct_eq(b),
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             (Self::SkEcdsaSha2NistP256(a), Self::SkEcdsaSha2NistP256(b)) => {
                 // Security Keys store the actual private key in hardware.
@@ -363,6 +397,8 @@ impl Encode for KeypairData {
             Self::Encrypted(ciphertext) => return Ok(ciphertext.len()),
             #[cfg(feature = "alloc")]
             Self::Rsa(key) => key.encoded_len()?,
+            #[cfg(feature = "mldsa-eddsa")]
+            Self::MlDsa44Ed25519(key) => key.encoded_len()?,
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             Self::SkEcdsaSha2NistP256(sk) => sk.encoded_len()?,
             #[cfg(feature = "alloc")]
@@ -389,6 +425,8 @@ impl Encode for KeypairData {
             Self::Encrypted(ciphertext) => writer.write(ciphertext)?,
             #[cfg(feature = "alloc")]
             Self::Rsa(key) => key.encode(writer)?,
+            #[cfg(feature = "mldsa-eddsa")]
+            Self::MlDsa44Ed25519(key) => key.encode(writer)?,
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             Self::SkEcdsaSha2NistP256(sk) => sk.encode(writer)?,
             #[cfg(feature = "alloc")]
@@ -415,6 +453,8 @@ impl TryFrom<&KeypairData> for public::KeyData {
             KeypairData::Encrypted(_) => return Err(Error::Encrypted),
             #[cfg(feature = "alloc")]
             KeypairData::Rsa(rsa) => public::KeyData::Rsa(rsa.into()),
+            #[cfg(feature = "mldsa-eddsa")]
+            KeypairData::MlDsa44Ed25519(mldsa) => public::KeyData::MlDsa44Ed25519(mldsa.into()),
             #[cfg(all(feature = "alloc", feature = "ecdsa"))]
             KeypairData::SkEcdsaSha2NistP256(sk) => {
                 public::KeyData::SkEcdsaSha2NistP256(sk.public().clone())
@@ -451,6 +491,13 @@ impl From<Ed25519Keypair> for KeypairData {
 impl From<RsaKeypair> for KeypairData {
     fn from(keypair: RsaKeypair) -> KeypairData {
         Self::Rsa(keypair)
+    }
+}
+
+#[cfg(feature = "mldsa-eddsa")]
+impl From<MlDsa44Ed25519Keypair> for KeypairData {
+    fn from(keypair: MlDsa44Ed25519Keypair) -> KeypairData {
+        Self::MlDsa44Ed25519(keypair)
     }
 }
 
