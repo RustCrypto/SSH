@@ -11,13 +11,24 @@ use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
     feature = "p256",
     feature = "rsa"
 ))]
-use {encoding::Decode, signature::Verifier, ssh_key::PrivateKey, ssh_key::Signature};
+use {encoding::Decode, signature::Verifier, ssh_key::Signature};
+
+#[cfg(all(
+    feature = "sha2",
+    any(
+        feature = "dsa",
+        feature = "ed25519",
+        feature = "p256",
+        feature = "rsa"
+    )
+))]
+use ssh_key::PrivateKey;
 
 #[cfg(feature = "ed25519")]
 use ssh_key::Error;
 
 /// DSA OpenSSH-formatted private key.
-#[cfg(feature = "dsa")]
+#[cfg(all(feature = "dsa", feature = "sha2"))]
 const DSA_PRIVATE_KEY: &str = include_str!("examples/id_dsa_1024");
 
 /// DSA OpenSSH-formatted public key.
@@ -172,7 +183,7 @@ fn encode_sk_ed25519() {
 }
 
 #[test]
-#[cfg(feature = "dsa")]
+#[cfg(all(feature = "dsa", feature = "sha2"))]
 fn sign_dsa() {
     let signing_key = PrivateKey::from_openssh(DSA_PRIVATE_KEY).unwrap();
     let verifying_key = DSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();

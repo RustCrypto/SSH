@@ -91,5 +91,6 @@ jobs:
       - run: cargo test --release
       #- run: cargo test --release --features getrandom # TODO(tarcieri): fix `getrandom` feature
       - run: cargo test --release --features std
+      - run: cargo test --no-default-features --features ecdsa,rand_core,std # debug build without `sha2`
       - run: cargo test --all-features # debug build
       - run: cargo test --release --all-features

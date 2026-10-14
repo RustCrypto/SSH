@@ -114,13 +114,13 @@ pub use self::{
 #[cfg(feature = "alloc")]
 pub use crate::{
     Comment, SshSig,
+    encoding::digest::Digest,
     private::{
         dsa::{DsaKeypair, DsaPrivateKey},
         opaque::{OpaqueKeypair, OpaqueKeypairBytes, OpaquePrivateKeyBytes},
         rsa::{RsaKeypair, RsaPrivateKey},
         sk::SkEd25519,
     },
-    sha2::Digest,
 };
 
 #[cfg(feature = "ecdsa")]
@@ -129,7 +129,7 @@ pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
 pub use self::sk::SkEcdsaSha2NistP256;
 
-use crate::{Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result, public};
+use crate::{Algorithm, Cipher, Error, Kdf, PublicKey, Result, public};
 use cipher::Tag;
 use core::str;
 use ctutils::{Choice, CtEq};
@@ -150,6 +150,12 @@ use rand_core::TryCryptoRng;
 
 #[cfg(feature = "rand_core")]
 use rand_core::CryptoRng;
+
+#[cfg(feature = "sha2")]
+use crate::Fingerprint;
+
+#[cfg(any(feature = "alloc", feature = "sha2"))]
+use crate::HashAlg;
 
 #[cfg(feature = "std")]
 use std::{fs::File, path::Path};
@@ -354,7 +360,7 @@ impl PrivateKey {
     ///
     /// # Errors
     /// Propagates errors from [`SshSig::sign`].
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "sha2"))]
     pub fn sign(&self, namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<SshSig> {
         SshSig::sign(self, namespace, hash_alg, msg)
     }
@@ -569,6 +575,7 @@ impl PrivateKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.public_key.fingerprint(hash_alg)

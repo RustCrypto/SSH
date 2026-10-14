@@ -1,12 +1,15 @@
 //! `~/.ssh` support.
 
-use crate::{Fingerprint, PrivateKey, PublicKey, Result};
+use crate::{PrivateKey, PublicKey, Result};
 use core::fmt::{self, Debug};
 use std::{
     env,
     fs::{self, ReadDir},
     path::{Path, PathBuf},
 };
+
+#[cfg(feature = "sha2")]
+use crate::Fingerprint;
 
 #[cfg(doc)]
 use crate::Error;
@@ -62,6 +65,7 @@ impl DotSsh {
     }
 
     /// Find a private key whose public key has the given key fingerprint.
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn private_key_with_fingerprint(&self, fingerprint: Fingerprint) -> Option<PrivateKey> {
         self.private_keys()
@@ -80,6 +84,7 @@ impl DotSsh {
     }
 
     /// Find a public key with the given key fingerprint.
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn public_key_with_fingerprint(&self, fingerprint: Fingerprint) -> Option<PublicKey> {
         self.public_keys()

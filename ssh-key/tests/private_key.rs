@@ -9,7 +9,7 @@ use ssh_key::{Algorithm, Cipher, KdfAlg, PrivateKey};
 use ssh_key::EcdsaCurve;
 #[cfg(feature = "alloc")]
 use ssh_key::LineEnding;
-#[cfg(feature = "std")]
+#[cfg(all(feature = "sha2", feature = "std"))]
 use {
     ssh_key::PublicKey,
     std::{io, path::PathBuf, process},
@@ -104,7 +104,7 @@ const OPENSSH_OVERPADDED_PUTTYGEN_EXAMPLE: &str = include_str!("examples/puttyge
 const OPENSSH_NON_UTF8_COMMENT_EXAMPLE: &str = include_str!("examples/non_utf8_comment");
 
 /// Get a path into the `tests/scratch` directory.
-#[cfg(feature = "std")]
+#[cfg(all(feature = "sha2", feature = "std"))]
 #[must_use]
 pub fn scratch_path(filename: &str) -> PathBuf {
     PathBuf::from(&format!("tests/scratch/{}", filename))
@@ -664,10 +664,10 @@ fn encode_custom_algorithm_openssh() {
 /// Common behavior of all encoding tests
 #[cfg(feature = "alloc")]
 fn encoding_test(private_key: &str) {
-    #[cfg_attr(not(feature = "std"), allow(unused_variables))]
+    #[cfg_attr(not(all(feature = "sha2", feature = "std")), allow(unused_variables))]
     let key = round_trip_test(private_key);
 
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "sha2", feature = "std"))]
     if !matches!(key.algorithm(), Algorithm::Other(_)) {
         encoding_integration_test(key);
     }
@@ -686,7 +686,7 @@ fn round_trip_test(private_key: &str) -> PrivateKey {
 }
 
 /// Parse PEM encoded using `PrivateKey::to_openssh` using the `ssh-keygen` utility.
-#[cfg(feature = "std")]
+#[cfg(all(feature = "sha2", feature = "std"))]
 fn encoding_integration_test(private_key: PrivateKey) {
     let fingerprint = private_key
         .fingerprint(Default::default())

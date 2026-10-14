@@ -3,23 +3,26 @@
 mod randomart;
 
 use self::randomart::Randomart;
-use crate::{Error, HashAlg, Result, public};
+use crate::{Error, HashAlg, Result};
 use core::{
     fmt::{self, Display},
     str::{self, FromStr},
 };
-use encoding::{
-    DigestWriter, Encode,
-    base64::{Base64Unpadded, Encoding},
-};
-use sha2::{Digest, Sha256, Sha512};
+use encoding::base64::{Base64Unpadded, Encoding};
 
 #[cfg(feature = "alloc")]
 use alloc::string::{String, ToString};
 #[cfg(all(feature = "alloc", feature = "serde"))]
 use serde::{Deserialize, Serialize, de, ser};
+#[cfg(feature = "sha2")]
+use {
+    crate::public,
+    encoding::{DigestWriter, Encode},
+    sha2::{Digest, Sha256, Sha512},
+};
 
 /// Fingerprint encoding error message.
+#[cfg(feature = "sha2")]
 const FINGERPRINT_ERR_MSG: &str = "fingerprint encoding error";
 
 /// SSH public key fingerprints.
@@ -58,6 +61,7 @@ impl Fingerprint {
 
     /// Create a fingerprint of the given public key data using the provided
     /// hash algorithm.
+    #[cfg(feature = "sha2")]
     #[must_use]
     #[allow(clippy::missing_panics_doc, reason = "should not panic")]
     pub fn new(algorithm: HashAlg, public_key: &public::KeyData) -> Self {
