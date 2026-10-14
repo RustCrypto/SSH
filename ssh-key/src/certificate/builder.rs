@@ -332,11 +332,14 @@ impl Builder {
         cert.encode_tbs(&mut tbs_cert)?;
         cert.signature = signing_key.try_sign(&tbs_cert)?;
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, feature = "sha2"))]
         cert.validate_at(
             cert.valid_after,
             &[cert.signature_key.fingerprint(Default::default())],
         )?;
+
+        #[cfg(all(debug_assertions, not(feature = "sha2")))]
+        cert.verify_signature()?;
 
         Ok(cert)
     }

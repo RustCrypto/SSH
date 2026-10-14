@@ -9,7 +9,7 @@ mod unix_time;
 pub use self::{builder::Builder, cert_type::CertType, field::Field, options_map::OptionsMap};
 
 use crate::{
-    Algorithm, Comment, Error, Fingerprint, HashAlg, Result, Signature,
+    Algorithm, Comment, Error, Result, Signature,
     public::{KeyData, SshFormat},
 };
 use alloc::{
@@ -22,6 +22,9 @@ use signature::Verifier;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize, de, ser};
+
+#[cfg(feature = "sha2")]
+use crate::{Fingerprint, HashAlg};
 
 #[cfg(feature = "std")]
 use {
@@ -396,7 +399,7 @@ impl Certificate {
     ///
     /// # Errors
     /// Returns [`Error::CertificateValidation`] if the certificate failed to validate
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "sha2", feature = "std"))]
     pub fn validate<'a, I>(&self, ca_fingerprints: I) -> Result<()>
     where
         I: IntoIterator<Item = &'a Fingerprint>,
@@ -431,6 +434,7 @@ impl Certificate {
     ///
     /// # Errors
     /// Returns [`Error::CertificateValidation`] if the certificate failed to validate
+    #[cfg(feature = "sha2")]
     pub fn validate_at<'a, I>(&self, unix_timestamp: u64, ca_fingerprints: I) -> Result<()>
     where
         I: IntoIterator<Item = &'a Fingerprint>,

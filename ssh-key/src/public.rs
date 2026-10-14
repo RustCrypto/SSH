@@ -29,7 +29,7 @@ pub use self::{ecdsa::EcdsaPublicKey, sk::SkEcdsaSha2NistP256};
 
 pub(crate) use self::ssh_format::SshFormat;
 
-use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
+use crate::{Algorithm, Error, Result};
 use core::str::{self, FromStr};
 use encoding::{Base64Reader, Decode, Reader};
 
@@ -41,12 +41,14 @@ use {
         string::{String, ToString},
         vec::Vec,
     },
-    encoding::Encode,
-    sha2::Digest,
+    encoding::{Encode, digest::Digest},
 };
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
 use serde::{Deserialize, Serialize, de, ser};
+
+#[cfg(feature = "sha2")]
+use crate::{Fingerprint, HashAlg};
 
 #[cfg(feature = "std")]
 use std::{fs::File, path::Path};
@@ -251,7 +253,7 @@ impl PublicKey {
     /// - Returns [`Error::PublicKey`] if this key does not match the one in the signature.
     /// - Returns [`Error::Namespace`] if the provided `namespace` does not match the signature.
     /// - Returns [`Error::Signature`] in the event signature verification failed.
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "sha2"))]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
         self.verify_prehash(
             namespace,
@@ -378,6 +380,7 @@ impl PublicKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.key_data.fingerprint(hash_alg)

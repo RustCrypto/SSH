@@ -157,7 +157,6 @@ pub use crate::{
 };
 pub use cipher::{self, Cipher};
 pub use encoding::{self, pem::LineEnding};
-pub use sha2;
 
 #[cfg(feature = "std")]
 pub use crate::dot_ssh::DotSsh;
@@ -167,6 +166,8 @@ pub use cipher::cipher::common::getrandom;
 pub use rand_core;
 #[cfg(feature = "ecdsa")]
 pub use sec1;
+#[cfg(feature = "sha2")]
+pub use sha2;
 #[cfg(feature = "alloc")]
 pub use {
     crate::{

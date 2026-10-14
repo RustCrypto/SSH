@@ -35,7 +35,7 @@ use sha1::Sha1;
 use sha2::Sha256;
 
 #[cfg(any(feature = "dsa", feature = "ed25519", feature = "p256"))]
-use sha2::Digest;
+use encoding::digest::Digest;
 
 const DSA_COMPONENT_SIZE: usize = 20;
 const DSA_SIGNATURE_SIZE: usize = DSA_COMPONENT_SIZE * 2;

@@ -5,11 +5,16 @@ mod name;
 
 use crate::{Error, Result};
 use core::{fmt, str};
-use encoding::{Label, LabelError};
-use sha2::{Digest, Sha256, Sha512};
+use encoding::{Label, LabelError, digest::Digest};
 
 #[cfg(feature = "alloc")]
-use alloc::{borrow::ToOwned, string::String, vec::Vec};
+use alloc::{borrow::ToOwned, string::String};
+
+#[cfg(all(feature = "alloc", feature = "sha2"))]
+use alloc::vec::Vec;
+
+#[cfg(feature = "sha2")]
+use sha2::{Sha256, Sha512};
 
 #[cfg(feature = "alloc")]
 pub use name::AlgorithmName;
@@ -457,7 +462,7 @@ impl HashAlg {
     }
 
     /// Compute a digest of the given message using this hash function.
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "sha2"))]
     #[must_use]
     pub fn digest(self, msg: &[u8]) -> Vec<u8> {
         match self {
@@ -499,10 +504,12 @@ pub trait AssociatedHashAlg: Digest {
     const HASH_ALG: HashAlg;
 }
 
+#[cfg(feature = "sha2")]
 impl AssociatedHashAlg for Sha256 {
     const HASH_ALG: HashAlg = HashAlg::Sha256;
 }
 
+#[cfg(feature = "sha2")]
 impl AssociatedHashAlg for Sha512 {
     const HASH_ALG: HashAlg = HashAlg::Sha512;
 }

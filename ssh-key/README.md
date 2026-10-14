@@ -29,6 +29,14 @@ When the `ed25519`, `p256`, and/or `rsa` features of this crate are enabled,
 provides key generation and certificate signing/verification support for that
 respective SSH key algorithm.
 
+Key fingerprints, certificate validation, and `sshsig` signing/verification of
+messages compute SHA-2 hashes using the `sha2` crate, and are only available
+when the `sha2` feature is enabled. It's on by default and implied by the
+`ed25519`, `p256`, `ppk`, and `rsa` features. With it disabled, `sshsig`
+signatures can still be created and verified from a digest computed by another
+SHA-2 implementation, using the `*_prehash` methods, or the `*_digest` methods
+with a type that implements `AssociatedHashAlg`.
+
 ## Features
 
 - [x] Constant-time Base64 decoder/encoder using `base64ct`/`pem-rfc7468` crates
