@@ -44,11 +44,9 @@ pub enum KeyData {
     /// [PROTOCOL.u2f]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD
     SkEd25519(SkEd25519),
 
-    /// Certificate key as specified in [draft-miller-ssh-cert]
-    /// (and [PROTOCOL.certkeys], now deprecated in favor of the IETF draft).
+    /// Certificate key as specified in [draft-ietf-sshm-cert].
     ///
-    /// [draft-miller-ssh-cert]: https://datatracker.ietf.org/doc/draft-miller-ssh-cert
-    /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
+    /// [draft-ietf-sshm-cert]: https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html
     #[cfg(feature = "alloc")]
     Certificate(Box<Certificate>),
 

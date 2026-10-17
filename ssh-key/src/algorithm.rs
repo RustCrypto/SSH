@@ -150,7 +150,7 @@ impl Algorithm {
     /// Decode algorithm from the given string identifier as used by the OpenSSH certificate format.
     ///
     /// OpenSSH certificate algorithms end in `*-cert-v01@openssh.com`.
-    /// See [PROTOCOL.certkeys] for more information.
+    /// See [draft-ietf-sshm-cert] for more information.
     ///
     /// # Supported algorithms
     /// - `ssh-rsa-cert-v01@openssh.com`
@@ -164,7 +164,7 @@ impl Algorithm {
     ///
     /// Any other algorithms are mapped to the [`Algorithm::Other`] variant.
     ///
-    /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
+    /// [draft-ietf-sshm-cert]: https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html
     ///
     /// # Errors
     /// Returns [`Error::AlgorithmUnknown`] in the event the algorithm is not known.
@@ -224,9 +224,9 @@ impl Algorithm {
     /// format.
     ///
     /// OpenSSH certificate algorithms end in `*-cert-v01@openssh.com`.
-    /// See [PROTOCOL.certkeys] for more information.
+    /// See [draft-ietf-sshm-cert] for more information.
     ///
-    /// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
+    /// [draft-ietf-sshm-cert]: https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html
     #[cfg(feature = "alloc")]
     #[must_use]
     pub fn to_certificate_type(&self) -> String {
