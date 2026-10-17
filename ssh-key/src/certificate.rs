@@ -512,7 +512,18 @@ impl Certificate {
             critical_options: OptionsMap::decode(reader)?,
             extensions: OptionsMap::decode(reader)?,
             reserved: Vec::decode(reader)?,
-            signature_key: reader.read_prefixed(KeyData::decode)?,
+            signature_key: reader.read_prefixed(|reader| {
+                let algorithm = Algorithm::decode(reader)?;
+
+                // From draft-ietf-sshm-cert-01 §2.1.1:
+                // > Implementations MUST NOT accept certificate keys as CA keys
+                // (See https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html#section-2.1.1)
+                if Algorithm::new_certificate(algorithm.as_str()).is_ok() {
+                    return Err(Field::SignatureKey.invalid_error());
+                }
+
+                KeyData::decode_as(reader, algorithm)
+            })?,
             signature: reader.read_prefixed(Signature::decode)?,
             comment: Comment::default(),
         })
