@@ -15,7 +15,7 @@ use {
 #[allow(clippy::as_conversions, reason = "constant")]
 pub(super) const MAX_SECS: u64 = i64::MAX as u64;
 
-/// Sentinel value meaning "no expiry" per OpenSSH PROTOCOL.certkeys.
+/// Sentinel value meaning "no expiry" per OpenSSH draft-ietf-sshm-cert.
 /// When `valid_before` is set to this value, the certificate never expires.
 pub(super) const FOREVER_SECS: u64 = u64::MAX;
 
@@ -37,7 +37,7 @@ impl UnixTime {
     ///
     /// `secs` is the number of seconds since the Unix epoch and must be less
     /// than or equal to `i64::MAX`, or `u64::MAX` (the OpenSSH "no expiry"
-    /// sentinel defined in PROTOCOL.certkeys).
+    /// sentinel defined in draft-ietf-sshm-cert).
     #[cfg(not(feature = "std"))]
     pub(super) fn new(secs: u64) -> Result<Self> {
         if secs == FOREVER_SECS || secs <= MAX_SECS {
@@ -53,7 +53,7 @@ impl UnixTime {
     /// representation with an infallible conversion (which also improves the
     /// `Debug` output).
     ///
-    /// `u64::MAX` is the OpenSSH "no expiry" sentinel (PROTOCOL.certkeys) and
+    /// `u64::MAX` is the OpenSSH "no expiry" sentinel (draft-ietf-sshm-cert) and
     /// is accepted; its `SystemTime` representation is capped at `MAX_SECS`.
     #[cfg(feature = "std")]
     pub(super) fn new(secs: u64) -> Result<Self> {
