@@ -2,8 +2,13 @@
 
 #![cfg(feature = "std")]
 
-use hex_literal::hex;
-use ssh_key::{Algorithm, DotSsh, Fingerprint};
+use ssh_key::DotSsh;
+
+#[cfg(feature = "sha2")]
+use {
+    hex_literal::hex,
+    ssh_key::{Algorithm, Fingerprint},
+};
 
 /// Open `.ssh` using the `test/examples`.
 fn dot_ssh() -> DotSsh {
@@ -23,6 +28,7 @@ fn private_keys() {
     assert_eq!(dot_ssh.private_keys().unwrap().count(), 22);
 }
 
+#[cfg(feature = "sha2")]
 #[test]
 fn private_key_with_fingerprint() {
     let fingerprint = Fingerprint::Sha256(hex!(
@@ -40,6 +46,7 @@ fn public_keys() {
     assert_eq!(dot_ssh.public_keys().unwrap().count(), 12);
 }
 
+#[cfg(feature = "sha2")]
 #[test]
 fn public_key_with_fingerprint() {
     let fingerprint = Fingerprint::Sha256(hex!(

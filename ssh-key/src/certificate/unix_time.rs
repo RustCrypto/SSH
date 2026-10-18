@@ -73,7 +73,7 @@ impl UnixTime {
     }
 
     /// Get the current time as a Unix timestamp.
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "sha2", feature = "std"))]
     pub(super) fn now() -> Result<Self> {
         SystemTime::now().try_into()
     }

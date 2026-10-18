@@ -11,7 +11,7 @@ use {sec1::consts::U32, ssh_key::public::SkEcdsaSha2NistP256};
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "sha2", feature = "std"))]
 use std::{fs, path::PathBuf};
 
 /// DSA OpenSSH-formatted public key
@@ -53,7 +53,7 @@ const OPENSSH_SK_ED25519_EXAMPLE: &str = include_str!("examples/id_sk_ed25519.pu
 const OPENSSH_OPAQUE_EXAMPLE: &str = include_str!("examples/id_opaque.pub");
 
 /// Get a path into the `tests/scratch` directory.
-#[cfg(feature = "std")]
+#[cfg(all(feature = "sha2", feature = "std"))]
 #[must_use]
 pub fn scratch_path(filename: &str) -> PathBuf {
     PathBuf::from(&format!("tests/scratch/{}.pub", filename))
@@ -96,6 +96,7 @@ fn decode_dsa_openssh() {
     );
 
     assert_eq!(b"user@example.com", key.comment().as_bytes());
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:Nh0Me49Zh9fDw/VYUfq43IJmI1T+XrjiYONPND8GzaM",
         &key.fingerprint(Default::default()).to_string(),
@@ -126,6 +127,7 @@ fn decode_ecdsa_p256_openssh() {
     #[cfg(feature = "alloc")]
     assert_eq!(b"user@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:JQ6FV0rf7qqJHZqIj4zNH8eV0oB8KLKh9Pph3FTD98g",
         &key.fingerprint(Default::default()).to_string(),
@@ -157,6 +159,7 @@ fn decode_ecdsa_p384_openssh() {
     #[cfg(feature = "alloc")]
     assert_eq!(b"user@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:nkGE8oV7pHvOiPKHtQRs67WUPiVLRxbNu//gV/k4Vjw",
         &key.fingerprint(Default::default()).to_string(),
@@ -189,6 +192,7 @@ fn decode_ecdsa_p521_openssh() {
     #[cfg(feature = "alloc")]
     assert_eq!(b"user@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:l3AUUMK6Q2BbuiqvMx2fs97f8LUYq7sWCAx7q5m3S6M",
         &key.fingerprint(Default::default()).to_string(),
@@ -208,6 +212,7 @@ fn decode_ed25519_openssh() {
     #[cfg(feature = "alloc")]
     assert_eq!(b"user@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:UCUiLr7Pjs9wFFJMDByLgc3NrtdU344OgUM45wZPcIQ",
         &key.fingerprint(Default::default()).to_string(),
@@ -238,6 +243,7 @@ fn decode_rsa_3072_openssh() {
         rsa_key.n().as_bytes(),
     );
     assert_eq!(b"user@example.com", key.comment().as_bytes());
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:Fmxts/GcV77PakFnf1Ueki5mpU4ZjUQWGRjZGAo3n/I",
         &key.fingerprint(Default::default()).to_string(),
@@ -271,6 +277,7 @@ fn decode_rsa_4096_openssh() {
         rsa_key.n().as_bytes(),
     );
     assert_eq!(b"user@example.com", key.comment().as_bytes());
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:FKAyeywtQNZLl1YTzIzCV/ThadBlnWMaD7jHQYDseEY",
         &key.fingerprint(Default::default()).to_string(),
@@ -297,6 +304,7 @@ fn decode_sk_ecdsa_p256_openssh() {
     #[cfg(feature = "alloc")]
     assert_eq!(b"user@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:UINe2WXFh3SiqwLxsBv34fBO2ei+g7uOeJJXVEK95iE",
         &key.fingerprint(Default::default()).to_string(),
@@ -338,6 +346,7 @@ fn decode_sk_ed25519_openssh() {
     #[cfg(feature = "alloc")]
     assert_eq!(b"user@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:6WZVJ44bqhAWLVP4Ns0TDkoSQSsZo/h2K+mEvOaNFbw",
         &key.fingerprint(Default::default()).to_string(),
@@ -376,6 +385,7 @@ fn decode_custom_algorithm_openssh() {
 
     assert_eq!(b"comment@example.com", key.comment().as_bytes());
 
+    #[cfg(feature = "sha2")]
     assert_eq!(
         "SHA256:8GV7v5qOHG9invseKCx0NVwFocNL0MwdyRC9bfjTFGs",
         &key.fingerprint(Default::default()).to_string(),
@@ -438,7 +448,7 @@ fn public_keys_are_hashable() {
     assert!(set.contains(&key));
 }
 
-#[cfg(feature = "std")]
+#[cfg(all(feature = "sha2", feature = "std"))]
 #[test]
 fn write_openssh_file() {
     let example_key = OPENSSH_ED25519_EXAMPLE;

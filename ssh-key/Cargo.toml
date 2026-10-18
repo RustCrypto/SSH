@@ -21,7 +21,6 @@ rust-version = "1.85"
 cipher = { package = "ssh-cipher", version = "0.3", features = ["encoding", "zeroize"] }
 ctutils = { version = "0.4", default-features = false }
 encoding = { package = "ssh-encoding", version = "0.3", features = ["base64", "digest", "pem", "ctutils", "zeroize"] }
-sha2 = { version = "0.11", default-features = false }
 signature = { version = "3", default-features = false }
 zeroize = { version = "1.9", default-features = false }
 
@@ -40,6 +39,7 @@ rsa = { version = "0.10.0-rc.18", optional = true, default-features = false, fea
 sec1 = { version = "0.8", optional = true, default-features = false, features = ["point"] }
 serde = { version = "1.0.16", optional = true }
 sha1 = { version = "0.11", optional = true, default-features = false, features = ["oid"] }
+sha2 = { version = "0.11", optional = true, default-features = false }
 
 [dev-dependencies]
 hex-literal = "1"
@@ -47,14 +47,14 @@ chacha20 = { version = "0.10", features = ["rng"] }
 getrandom = { version = "0.4", features = ["sys_rng"] }
 
 [features]
-default = ["ecdsa", "rand_core", "std"]
+default = ["ecdsa", "rand_core", "sha2", "std"]
 alloc = ["encoding/alloc", "signature/alloc", "zeroize/alloc", ]
 std = ["alloc"]
 
 crypto = ["ed25519", "p256", "p384", "p521", "rsa"] # NOTE: `dsa` is obsolete/weak
 dsa = ["dep:dsa", "dep:sha1", "alloc", "encoding/bigint", "signature/rand_core"]
 ecdsa = ["dep:sec1"]
-ed25519 = ["dep:ed25519-dalek", "rand_core"]
+ed25519 = ["dep:ed25519-dalek", "rand_core", "sha2"]
 encryption = [
     "dep:bcrypt-pbkdf",
     "alloc",
@@ -63,13 +63,14 @@ encryption = [
     "rand_core"
 ]
 getrandom = ["cipher/getrandom", "rand_core"]
-p256 = ["dep:p256", "ecdsa"]
+p256 = ["dep:p256", "ecdsa", "sha2"]
 p384 = ["dep:p384", "ecdsa"]
 p521 = ["dep:p521", "ecdsa"]
-ppk = ["dep:hex", "alloc", "cipher/aes", "dep:hmac", "dep:argon2", "dep:sha1"]
+ppk = ["dep:hex", "alloc", "cipher/aes", "dep:hmac", "dep:argon2", "dep:sha1", "sha2"]
 rand_core = ["dep:rand_core", "cipher/rand_core"]
-rsa = ["dep:rsa", "alloc", "encoding/bigint", "rand_core"]
+rsa = ["dep:rsa", "alloc", "encoding/bigint", "rand_core", "sha2"]
 sha1 = ["dep:sha1"]
+sha2 = ["dep:sha2"]
 tdes = ["cipher/tdes", "encryption"]
 
 [lints]
