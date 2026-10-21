@@ -55,6 +55,10 @@ impl Mpint {
     ///
     /// # Errors
     /// Returns [`Error::MpintEncoding`] in the event of an unnecessary leading `0`.
+    ///
+    /// This matches the encoding rules of RFC 4251 § 5. [`Decode::decode`] is
+    /// deliberately more lenient, as it must be able to read non-canonical
+    /// encodings which other SSH implementations produce.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         bytes.try_into()
     }
@@ -116,6 +120,46 @@ impl Mpint {
     pub fn is_positive(&self) -> bool {
         self.as_positive_bytes().is_some()
     }
+
+    /// Normalize a big endian-encoded integer as read from the wire.
+    ///
+    /// RFC 4251 § 5 requires redundant leading `0x00` bytes to be omitted, but
+    /// several SSH implementations send them anyway (e.g. in `ssh-rsa` host
+    /// keys, as observed with older Huawei network devices). OpenSSH tolerates
+    /// this when reading a peer's message: `sshbuf_get_bignum2_bytes_direct`
+    /// trims leading zeros instead of failing, so do the same here.
+    ///
+    /// Redundant leading zero bytes are stripped, and a single `0x00` is
+    /// re-added if the remaining value is positive with its MSB set, i.e. the
+    /// result is always canonically encoded. Values which are already canonical
+    /// (including negative values) are returned unchanged.
+    fn normalize_decode(bytes: Box<[u8]>) -> Self {
+        let Some(first_nonzero) = bytes.iter().position(|byte| *byte != 0) else {
+            // The value is zero, which RFC 4251 § 5 encodes as an empty string.
+            return Self {
+                inner: Box::default(),
+            };
+        };
+
+        if first_nonzero == 0 {
+            return Self { inner: bytes };
+        }
+
+        let rest = &bytes[first_nonzero..];
+
+        let inner = match rest.first() {
+            // Positive, but the MSB is set: exactly one `0x00` prefix is needed.
+            Some(byte) if *byte >= 0x80 => {
+                let mut inner = Vec::with_capacity(rest.len().saturating_add(1));
+                inner.push(0);
+                inner.extend_from_slice(rest);
+                inner.into_boxed_slice()
+            }
+            _ => Vec::from(rest).into_boxed_slice(),
+        };
+
+        Self { inner }
+    }
 }
 
 impl AsRef<[u8]> for Mpint {
@@ -145,7 +189,9 @@ impl Decode for Mpint {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        Vec::decode(reader)?.into_boxed_slice().try_into()
+        Ok(Self::normalize_decode(
+            Vec::decode(reader)?.into_boxed_slice(),
+        ))
     }
 }
 
@@ -257,7 +303,19 @@ impl TryFrom<&Mpint> for Uint {
 #[cfg(test)]
 mod tests {
     use super::Mpint;
+    use crate::Decode;
+    use alloc::vec::Vec;
     use hex_literal::hex;
+
+    /// Decode a raw `mpint` payload as it would be read off the wire, i.e. with a
+    /// 4-byte length prefix, so the [`Decode`] implementation itself is exercised.
+    fn decode(bytes: &[u8]) -> Mpint {
+        let len = u32::try_from(bytes.len()).unwrap().to_be_bytes();
+        let mut prefixed = Vec::with_capacity(bytes.len().saturating_add(4));
+        prefixed.extend_from_slice(&len);
+        prefixed.extend_from_slice(bytes);
+        Mpint::decode(&mut &prefixed[..]).unwrap()
+    }
 
     #[test]
     fn decode_0() {
@@ -270,6 +328,56 @@ mod tests {
         assert!(Mpint::from_bytes(&hex!("00")).is_err());
         assert!(Mpint::from_bytes(&hex!("00 00")).is_err());
         assert!(Mpint::from_bytes(&hex!("00 01")).is_err());
+    }
+
+    /// Decoding from the wire tolerates and normalizes non-canonical encodings.
+    ///
+    /// Mirrors OpenSSH's `sshbuf_get_bignum2_bytes_direct()`, which trims leading
+    /// zero bytes instead of rejecting the message.
+    #[test]
+    fn decode_tolerates_extra_leading_zeroes() {
+        assert_eq!(decode(&hex!("00 01")).as_bytes(), &hex!("01"));
+        assert_eq!(decode(&hex!("00 00 01")).as_bytes(), &hex!("01"));
+        // A leading zero must be re-added: the MSB of the remaining value is set.
+        assert_eq!(decode(&hex!("00 00 80 01")).as_bytes(), &hex!("00 80 01"));
+        assert_eq!(decode(&hex!("00 00 00 80")).as_bytes(), &hex!("00 80"));
+    }
+
+    /// The value zero is normalized to its canonical empty encoding.
+    #[test]
+    fn decode_normalizes_zero() {
+        assert_eq!(decode(b"").as_bytes(), b"");
+        assert_eq!(decode(&hex!("00")).as_bytes(), b"");
+        assert_eq!(decode(&hex!("00 00")).as_bytes(), b"");
+    }
+
+    /// Canonical encodings and negative values are preserved verbatim.
+    #[test]
+    fn decode_preserves_canonical_encodings() {
+        assert_eq!(decode(&hex!("00 80")).as_bytes(), &hex!("00 80"));
+        assert_eq!(
+            decode(&hex!("09 a3 78 f9 b2 e3 32 a7")).as_bytes(),
+            &hex!("09 a3 78 f9 b2 e3 32 a7")
+        );
+        // NOTE: negative values must not be re-signed by normalization.
+        assert_eq!(decode(&hex!("ed cc")).as_bytes(), &hex!("ed cc"));
+        assert_eq!(
+            decode(&hex!("ff 21 52 41 11")).as_bytes(),
+            &hex!("ff 21 52 41 11")
+        );
+        assert!(decode(&hex!("ed cc")).as_positive_bytes().is_none());
+    }
+
+    /// A normalized integer is indistinguishable from its canonical encoding.
+    #[test]
+    fn decode_normalizes_to_canonical_value() {
+        let normalized = decode(&hex!("00 00 80 01"));
+        let canonical = Mpint::from_bytes(&hex!("00 80 01")).unwrap();
+        assert_eq!(normalized.as_bytes(), canonical.as_bytes());
+        assert_eq!(
+            normalized.as_positive_bytes().unwrap(),
+            canonical.as_positive_bytes().unwrap()
+        );
     }
 
     #[test]
