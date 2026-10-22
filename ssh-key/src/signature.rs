@@ -80,7 +80,7 @@ where
 /// as the higher-level [`SshSig`][`crate::SshSig`] format, which provides
 /// general-purpose signing functionality using SSH keys.
 ///
-/// From OpenSSH's [PROTOCOL.certkeys] specification:
+/// From OpenSSH's [draft-ietf-sshm-cert] specification:
 ///
 /// > Signatures are computed and encoded according to the rules defined for
 /// > the CA's public key algorithm ([RFC4253 section 6.6] for ssh-rsa and
@@ -89,7 +89,7 @@ where
 /// RSA signature support is implemented using the SHA2 family extensions as
 /// described in [RFC8332].
 ///
-/// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
+/// [draft-ietf-sshm-cert]: https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html
 /// [RFC4253 section 6.6]: https://datatracker.ietf.org/doc/html/rfc4253#section-6.6
 /// [RFC5656]: https://datatracker.ietf.org/doc/html/rfc5656
 /// [RFC8032]: https://datatracker.ietf.org/doc/html/rfc8032

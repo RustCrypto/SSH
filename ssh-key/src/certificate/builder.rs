@@ -1,7 +1,7 @@
 //! OpenSSH certificate builder.
 
 use super::{CertType, Certificate, Field, OptionsMap};
-use crate::{Comment, Result, Signature, SigningKey, public};
+use crate::{Algorithm, Comment, Result, Signature, SigningKey, public};
 use alloc::{string::String, vec::Vec};
 use core::fmt::{self, Debug, Formatter};
 
@@ -310,6 +310,14 @@ impl Builder {
             Some(principals) => principals,
             None => return Err(Field::ValidPrincipals.invalid_error()),
         };
+
+        let signature_key = signing_key.public_key();
+
+        if signature_key.is_certificate()
+            || Algorithm::new_certificate(signature_key.algorithm().as_str()).is_ok()
+        {
+            return Err(Field::SignatureKey.invalid_error());
+        }
 
         let mut cert = Certificate {
             nonce: self.nonce,

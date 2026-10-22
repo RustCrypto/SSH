@@ -29,44 +29,41 @@ use {
     std::{fs, path::Path, time::SystemTime},
 };
 
-/// OpenSSH certificate as specified in [PROTOCOL.certkeys].
+/// OpenSSH certificate as specified in [draft-ietf-sshm-cert].
 ///
-/// OpenSSH supports X.509-like certificate authorities, but using a custom
-/// encoding format.
+/// OpenSSH supports X.509-like certificate authorities, but using a custom encoding format.
 ///
 /// <div class="warning">
 /// <b>Security Warning</b>
 ///
 /// Certificates must be validated before they can be trusted!
 ///
-/// The [`Certificate`] type does not automatically perform validation checks
-/// and supports parsing certificates which may potentially be invalid.
-/// Just because a [`Certificate`] parses successfully does not mean that it
-/// can be trusted.
+/// The [`Certificate`] type does not automatically perform validation checks and supports parsing
+/// certificates which may potentially be invalid.
 ///
-/// See "Certificate Validation" documentation below for more information on
-/// how to properly validate certificates.
+/// Just because a [`Certificate`] parses successfully does not mean that it can be trusted.
+///
+/// See "Certificate Validation" documentation below for more information on  how to properly
+/// validate certificates.
 /// </div>
 ///
 /// # Certificate Validation
 ///
-/// For a certificate to be trusted, the following properties MUST be
-/// validated:
+/// For a certificate to be trusted, the following properties MUST be validated:
 ///
 /// - Certificate is signed by a trusted certificate authority (CA)
 /// - Signature over the certificate verifies successfully
 /// - Current time is within the certificate's validity window
 /// - Certificate authorizes the expected principal
-/// - All critical extensions to the certificate are recognized and validate
-///   successfully.
+/// - All critical extensions to the certificate are recognized and validate successfully.
 ///
-/// The [`Certificate::validate`] and [`Certificate::validate_at`] methods can
-/// be used to validate a certificate.
+/// The [`Certificate::validate`] and [`Certificate::validate_at`] methods can be used to validate a
+/// certificate.
 ///
 /// ## Example
 ///
-/// The following example walks through how to implement the steps outlined
-/// above for validating a certificate:
+/// The following example walks through how to implement the steps outlined above for validating a
+/// certificate:
 ///
 #[cfg_attr(all(feature = "p256", feature = "std"), doc = " ```")]
 #[cfg_attr(not(all(feature = "p256", feature = "std")), doc = " ```ignore")]
@@ -103,21 +100,20 @@ use {
 ///
 /// # Certificate Builder (SSH CA support)
 ///
-/// This crate implements all of the functionality needed for a pure Rust
-/// SSH certificate authority which can build and sign OpenSSH certificates.
+/// This crate implements all of the functionality needed for a pure Rust SSH certificate authority
+/// which can build and sign OpenSSH certificates.
 ///
 /// See the [`Builder`] type's documentation for more information.
 ///
 /// # `serde` support
 ///
-/// When the `serde` feature of this crate is enabled, this type receives impls
-/// of [`Deserialize`][`serde::Deserialize`] and [`Serialize`][`serde::Serialize`].
+/// When the `serde` feature of this crate is enabled, this type receives impls of
+/// [`Deserialize`][`serde::Deserialize`] and [`Serialize`][`serde::Serialize`].
 ///
-/// The serialization uses a binary encoding with binary formats like bincode
-/// and CBOR, and the OpenSSH string serialization when used with
-/// human-readable formats like JSON and TOML.
+/// The serialization uses a binary encoding with binary formats like bincode and CBOR, and the
+/// OpenSSH string serialization when used with human-readable formats like JSON and TOML.
 ///
-/// [PROTOCOL.certkeys]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?annotate=HEAD
+/// [draft-ietf-sshm-cert]: https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Certificate {
     /// CA-provided random bitstring of arbitrary length
@@ -444,7 +440,7 @@ impl Certificate {
             return Err(Error::CertificateValidation);
         }
 
-        // From PROTOCOL.certkeys:
+        // From draft-ietf-sshm-cert:
         //
         //  "valid after" and "valid before" specify a validity period for the
         //  certificate. Each represents a time in seconds since 1970-01-01
@@ -516,7 +512,18 @@ impl Certificate {
             critical_options: OptionsMap::decode(reader)?,
             extensions: OptionsMap::decode(reader)?,
             reserved: Vec::decode(reader)?,
-            signature_key: reader.read_prefixed(KeyData::decode)?,
+            signature_key: reader.read_prefixed(|reader| {
+                let algorithm = Algorithm::decode(reader)?;
+
+                // From draft-ietf-sshm-cert-01 §2.1.1:
+                // > Implementations MUST NOT accept certificate keys as CA keys
+                // (See https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html#section-2.1.1)
+                if Algorithm::new_certificate(algorithm.as_str()).is_ok() {
+                    return Err(Field::SignatureKey.invalid_error());
+                }
+
+                KeyData::decode_as(reader, algorithm)
+            })?,
             signature: reader.read_prefixed(Signature::decode)?,
             comment: Comment::default(),
         })
