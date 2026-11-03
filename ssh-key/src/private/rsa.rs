@@ -300,8 +300,8 @@ impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
         let private = RsaPrivateKey {
             d: key.d().into(),
             iqmp: iqmp.into(),
-            p: p.into(),
-            q: q.into(),
+            p: p.as_ref().into(),
+            q: q.as_ref().into(),
         };
 
         Ok(RsaKeypair { public, private })
