@@ -13,7 +13,7 @@ categories = ["authentication", "cryptography", "encoding", "no-std"]
 keywords = ["crypto", "certificate", "openssh", "ssh", "sshsig"]
 readme = "README.md"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.87"
 
 [dependencies]
 cipher = { package = "ssh-cipher", version = "0.3.0-rc.10", default-features = false }
