@@ -454,3 +454,49 @@ fn write_openssh_file() {
     key.write_openssh_file(&path).unwrap();
     assert_eq!(example_key, fs::read_to_string(&path).unwrap());
 }
+
+/// Non-canonical `mpint` encodings inside a host key are normalized, not rejected.
+///
+/// Some SSH servers (e.g. older Huawei devices) send redundant leading zero bytes in
+/// the RSA modulus/exponent of their `ssh-rsa` host keys. OpenSSH trims leading zeros
+/// when reading a peer's message, so such keys must remain parseable.
+#[cfg(feature = "alloc")]
+#[test]
+fn rsa_non_canonical_mpint_is_normalized() {
+    use ssh_key::encoding::Encode;
+    use ssh_key::public::KeyData;
+
+    /// Encode an `ssh-rsa` public key blob from raw `mpint` payloads.
+    fn rsa_blob(e: &[u8], n: &[u8]) -> Vec<u8> {
+        let mut blob = Vec::new();
+        "ssh-rsa".encode(&mut blob).unwrap();
+        Vec::from(e).encode(&mut blob).unwrap();
+        Vec::from(n).encode(&mut blob).unwrap();
+        blob
+    }
+
+    // e = 0x010001, n = 0x8001, canonically encoded.
+    let canonical = rsa_blob(&hex!("01 00 01"), &hex!("00 80 01"));
+
+    // The same values, with redundant leading zero bytes prepended.
+    let non_canonical = rsa_blob(&hex!("00 01 00 01"), &hex!("00 00 80 01"));
+
+    let key =
+        PublicKey::from_bytes(&non_canonical).expect("non-canonical mpint should be accepted");
+    assert_eq!(key.algorithm(), Algorithm::Rsa { hash: None });
+
+    let KeyData::Rsa(rsa) = key.key_data() else {
+        panic!("expected an RSA public key");
+    };
+
+    // The redundant leading zeroes are stripped, the value is preserved.
+    assert_eq!(rsa.e().as_positive_bytes().unwrap(), &hex!("01 00 01"));
+    assert_eq!(rsa.n().as_positive_bytes().unwrap(), &hex!("80 01"));
+
+    // A normalized key is indistinguishable from its canonical encoding.
+    let canonical_key = PublicKey::from_bytes(&canonical).unwrap();
+    assert_eq!(
+        key.to_openssh().unwrap(),
+        canonical_key.to_openssh().unwrap()
+    );
+}
