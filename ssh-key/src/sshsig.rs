@@ -5,9 +5,9 @@ use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
     CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
+    digest::Digest,
     pem::{LineEnding, PemLabel},
 };
-use sha2::Digest;
 use signature::Verifier;
 
 #[cfg(doc)]
@@ -117,6 +117,7 @@ impl SshSig {
     /// - Returns [`Error::Crypto`] in the event of an error occurring in the cryptographic
     ///   implementation.
     /// - Returns [`Error::Namespace`] if the namespace is empty.
+    #[cfg(feature = "sha2")]
     pub fn sign<S: SigningKey>(
         signing_key: &S,
         namespace: &str,
@@ -195,6 +196,7 @@ impl SshSig {
     ///
     /// # Errors
     /// Returns [`Error::Namespace`] if the namespace is empty.
+    #[cfg(feature = "sha2")]
     pub fn signed_data(namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<Vec<u8>> {
         Self::signed_data_for_prehash(namespace, hash_alg, hash_alg.digest(msg).as_slice())
     }
