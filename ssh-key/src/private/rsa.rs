@@ -151,7 +151,7 @@ impl RsaKeypair {
     #[cfg(feature = "rsa")]
     #[expect(clippy::missing_errors_doc, reason = "TODO")]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, bit_size: usize) -> Result<Self> {
-        rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
+        rsa::PrivateKey::new(rng, bit_size)?.try_into()
     }
 
     /// Create a new keypair from the given `public` and `private` key components.
@@ -245,20 +245,20 @@ impl From<&RsaKeypair> for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<RsaKeypair> for rsa::RsaPrivateKey {
+impl TryFrom<RsaKeypair> for rsa::PrivateKey {
     type Error = Error;
 
-    fn try_from(key: RsaKeypair) -> Result<rsa::RsaPrivateKey> {
-        rsa::RsaPrivateKey::try_from(&key)
+    fn try_from(key: RsaKeypair) -> Result<rsa::PrivateKey> {
+        rsa::PrivateKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
+impl TryFrom<&RsaKeypair> for rsa::PrivateKey {
     type Error = Error;
 
-    fn try_from(key: &RsaKeypair) -> Result<rsa::RsaPrivateKey> {
-        let ret = rsa::RsaPrivateKey::from_components(
+    fn try_from(key: &RsaKeypair) -> Result<rsa::PrivateKey> {
+        let ret = rsa::PrivateKey::from_components(
             Uint::try_from(key.public.n())?,
             Uint::try_from(key.public.e())?,
             Uint::try_from(&key.private.d)?,
@@ -273,19 +273,19 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<rsa::RsaPrivateKey> for RsaKeypair {
+impl TryFrom<rsa::PrivateKey> for RsaKeypair {
     type Error = Error;
 
-    fn try_from(key: rsa::RsaPrivateKey) -> Result<RsaKeypair> {
+    fn try_from(key: rsa::PrivateKey) -> Result<RsaKeypair> {
         RsaKeypair::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
+impl TryFrom<&rsa::PrivateKey> for RsaKeypair {
     type Error = Error;
 
-    fn try_from(key: &rsa::RsaPrivateKey) -> Result<RsaKeypair> {
+    fn try_from(key: &rsa::PrivateKey) -> Result<RsaKeypair> {
         // Multi-prime keys are not supported
         if key.primes().len() > 2 {
             return Err(Error::Crypto);
