@@ -568,7 +568,7 @@ fn round_trip_rsa_3072() {
         _ => unreachable!(),
     };
 
-    let rsa_private_key = rsa::RsaPrivateKey::try_from(rsa_keypair).unwrap();
+    let rsa_private_key = rsa::PrivateKey::try_from(rsa_keypair).unwrap();
     let rsa_keypair2 = ssh_key::private::RsaKeypair::try_from(&rsa_private_key).unwrap();
     assert_eq!(rsa_keypair, &rsa_keypair2);
 }

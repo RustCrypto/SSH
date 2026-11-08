@@ -100,41 +100,41 @@ impl Hash for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<RsaPublicKey> for rsa::RsaPublicKey {
+impl TryFrom<RsaPublicKey> for rsa::PublicKey {
     type Error = Error;
 
-    fn try_from(key: RsaPublicKey) -> Result<rsa::RsaPublicKey> {
-        rsa::RsaPublicKey::try_from(&key)
+    fn try_from(key: RsaPublicKey) -> Result<rsa::PublicKey> {
+        rsa::PublicKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&RsaPublicKey> for rsa::RsaPublicKey {
+impl TryFrom<&RsaPublicKey> for rsa::PublicKey {
     type Error = Error;
 
-    fn try_from(key: &RsaPublicKey) -> Result<rsa::RsaPublicKey> {
+    fn try_from(key: &RsaPublicKey) -> Result<rsa::PublicKey> {
         let n = Uint::try_from(&key.n)?;
         let e = Uint::try_from(&key.e)?;
-        let ret = rsa::RsaPublicKey::new(n, e).map_err(|_| Error::Crypto)?;
+        let ret = rsa::PublicKey::new(n, e).map_err(|_| Error::Crypto)?;
 
         Ok(ret)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<rsa::RsaPublicKey> for RsaPublicKey {
+impl TryFrom<rsa::PublicKey> for RsaPublicKey {
     type Error = Error;
 
-    fn try_from(key: rsa::RsaPublicKey) -> Result<RsaPublicKey> {
+    fn try_from(key: rsa::PublicKey) -> Result<RsaPublicKey> {
         RsaPublicKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
+impl TryFrom<&rsa::PublicKey> for RsaPublicKey {
     type Error = Error;
 
-    fn try_from(key: &rsa::RsaPublicKey) -> Result<RsaPublicKey> {
+    fn try_from(key: &rsa::PublicKey) -> Result<RsaPublicKey> {
         RsaPublicKey::new(key.e().into(), key.n().as_ref().into())
     }
 }
