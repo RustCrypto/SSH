@@ -167,6 +167,7 @@ impl Reader for &[u8] {
 
         let (mut prefix, remaining) = self.split_at(prefix_len);
         let ret = f(&mut prefix)?;
+        prefix.ensure_finished()?;
         *self = remaining;
         Ok(ret)
     }

@@ -1,7 +1,7 @@
 //! Tests for the `Decode` trait.
 
 use hex_literal::hex;
-use ssh_encoding::{Decode, Error};
+use ssh_encoding::{Decode, Error, Reader};
 
 #[test]
 fn decode_u8() {
@@ -83,4 +83,11 @@ fn decode_string_vec() {
     assert_eq!(ret[0], "foo");
     assert_eq!(ret[1], "bar");
     assert_eq!(ret[2], "baz");
+}
+
+#[test]
+fn read_prefixed_rejects_unread_bytes_in_slice() {
+    let mut reader: &[u8] = &[0, 0, 0, 2, 0xAA, 0xBB];
+    let result: Result<u8, Error> = reader.read_prefixed(u8::decode);
+    assert_eq!(result, Err(Error::TrailingData { remaining: 1 }));
 }
