@@ -48,6 +48,10 @@ pub struct Mpint {
 }
 
 impl Mpint {
+    /// Maximum size in bytes accepted by fallible constructors and bigint conversions,
+    /// excluding an optional leading sign byte. Matches OpenSSH's 16384-bit limit.
+    pub const MAX_SIZE: usize = 2048;
+
     /// Create a new multiple precision integer from the given big endian-encoded byte slice.
     ///
     /// Note that this method expects a leading zero on positive integers whose MSB is set, but does
@@ -55,6 +59,7 @@ impl Mpint {
     ///
     /// # Errors
     /// Returns [`Error::MpintEncoding`] in the event of an unnecessary leading `0`.
+    /// Returns [`Error::Length`] if the integer exceeds [`Self::MAX_SIZE`].
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         bytes.try_into()
     }
@@ -64,6 +69,10 @@ impl Mpint {
     ///
     /// The input may begin with leading zeros, which will be stripped when converted to [`Mpint`]
     /// encoding.
+    ///
+    /// This infallible constructor does not enforce [`Self::MAX_SIZE`]. Conversion to a bigint
+    /// still rejects oversized values.
+    // TODO(tarcieri): make this fallible and enforce `MAX_SIZE` in the next breaking release.
     #[must_use]
     pub fn from_positive_bytes(mut bytes: &[u8]) -> Self {
         // Strip leading zeros
@@ -116,6 +125,25 @@ impl Mpint {
     pub fn is_positive(&self) -> bool {
         self.as_positive_bytes().is_some()
     }
+
+    /// Validate the size and encoding before allocating or accepting an owned buffer.
+    fn validate(bytes: &[u8]) -> Result<()> {
+        let value = match bytes {
+            [0x00 | 0xff, rest @ ..] => rest,
+            _ => bytes,
+        };
+
+        if value.len() > Self::MAX_SIZE {
+            return Err(Error::Length);
+        }
+
+        match bytes {
+            // Unnecessary leading 0
+            [0x00] => Err(Error::MpintEncoding),
+            [0x00, n, ..] if *n < 0x80 => Err(Error::MpintEncoding),
+            _ => Ok(()),
+        }
+    }
 }
 
 impl AsRef<[u8]> for Mpint {
@@ -145,7 +173,16 @@ impl Decode for Mpint {
     type Error = Error;
 
     fn decode(reader: &mut impl Reader) -> Result<Self> {
-        Vec::decode(reader)?.into_boxed_slice().try_into()
+        reader.read_prefixed(|reader| {
+            let len = reader.remaining_len();
+            if len > Self::MAX_SIZE + 1 {
+                return Err(Error::Length);
+            }
+
+            let mut bytes = vec![0; len];
+            reader.read(&mut bytes)?;
+            bytes.into_boxed_slice().try_into()
+        })
     }
 }
 
@@ -164,7 +201,10 @@ impl TryFrom<&[u8]> for Mpint {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        Vec::from(bytes).into_boxed_slice().try_into()
+        Self::validate(bytes)?;
+        Ok(Self {
+            inner: bytes.into(),
+        })
     }
 }
 
@@ -172,13 +212,8 @@ impl TryFrom<Box<[u8]>> for Mpint {
     type Error = Error;
 
     fn try_from(bytes: Box<[u8]>) -> Result<Self> {
-        match &*bytes {
-            // Unnecessary leading 0
-            [0x00] => Err(Error::MpintEncoding),
-            // Unnecessary leading 0
-            [0x00, n, ..] if *n < 0x80 => Err(Error::MpintEncoding),
-            _ => Ok(Self { inner: bytes }),
-        }
+        Self::validate(&bytes)?;
+        Ok(Self { inner: bytes })
     }
 }
 
@@ -219,6 +254,7 @@ impl fmt::UpperHex for Mpint {
     }
 }
 
+// TODO(tarcieri): replace with TryFrom and enforce `MAX_SIZE` in the next breaking release.
 #[cfg(feature = "bigint")]
 impl From<&Uint> for Mpint {
     fn from(uint: &Uint) -> Mpint {
@@ -227,6 +263,7 @@ impl From<&Uint> for Mpint {
     }
 }
 
+// TODO(tarcieri): replace with TryFrom and enforce `MAX_SIZE` in the next breaking release.
 #[cfg(feature = "bigint")]
 impl From<Uint> for Mpint {
     fn from(uint: Uint) -> Mpint {
@@ -248,8 +285,11 @@ impl TryFrom<&Mpint> for Uint {
     type Error = Error;
 
     fn try_from(mpint: &Mpint) -> Result<Uint> {
-        // TODO(tarcieri): enforce a maximum size?
         let bytes = mpint.as_positive_bytes().ok_or(Error::MpintEncoding)?;
+        if bytes.len() > Mpint::MAX_SIZE {
+            return Err(Error::Length);
+        }
+
         Ok(Uint::from_be_slice_vartime(bytes))
     }
 }
@@ -257,7 +297,93 @@ impl TryFrom<&Mpint> for Uint {
 #[cfg(test)]
 mod tests {
     use super::Mpint;
+    use crate::{Decode, Encode, Error, Reader};
+    use alloc::vec::Vec;
     use hex_literal::hex;
+
+    #[test]
+    fn size_limits() {
+        // Include positive and negative values, with and without a leading sign byte.
+        for (first, size, valid) in [
+            (0x7f, Mpint::MAX_SIZE, true),
+            (0x80, Mpint::MAX_SIZE, true),
+            (0x00, Mpint::MAX_SIZE + 1, true),
+            (0xff, Mpint::MAX_SIZE + 1, true),
+            (0x01, Mpint::MAX_SIZE + 1, false),
+            (0x80, Mpint::MAX_SIZE + 1, false),
+            (0x00, Mpint::MAX_SIZE + 2, false),
+            (0xff, Mpint::MAX_SIZE + 2, false),
+        ] {
+            let mut bytes = vec![if first == 0xff { 0x7f } else { 0x80 }; size];
+            bytes[0] = first;
+            let borrowed = Mpint::from_bytes(&bytes);
+            let owned = Mpint::try_from(bytes.clone().into_boxed_slice());
+            let mut encoded = Vec::new();
+            bytes.encode(&mut encoded).unwrap();
+            let decoded = Mpint::decode(&mut encoded.as_slice());
+
+            for result in [borrowed, owned, decoded] {
+                if valid {
+                    assert_eq!(result.unwrap().as_bytes(), bytes);
+                } else {
+                    assert!(matches!(result, Err(Error::Length)));
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn reject_oversized_before_reading_body() {
+        // A reader whose body cannot be read demonstrates rejection at the length check.
+        struct Unreadable;
+
+        impl Reader for Unreadable {
+            fn read<'o>(&mut self, _: &'o mut [u8]) -> crate::Result<&'o [u8]> {
+                panic!("oversized mpint body must not be read");
+            }
+
+            fn remaining_len(&self) -> usize {
+                Mpint::MAX_SIZE + 2
+            }
+
+            fn read_prefixed<T, E, F>(&mut self, f: F) -> Result<T, E>
+            where
+                E: From<Error>,
+                F: FnOnce(&mut Self) -> Result<T, E>,
+            {
+                f(self)
+            }
+        }
+
+        assert!(matches!(Mpint::decode(&mut Unreadable), Err(Error::Length)));
+    }
+
+    #[cfg(feature = "bigint")]
+    #[test]
+    fn bigint_size_limits() {
+        use crate::Uint;
+
+        for size in [Mpint::MAX_SIZE, Mpint::MAX_SIZE + 1] {
+            let bytes = vec![0x80; size];
+            let uint = Uint::from_be_slice_vartime(&bytes);
+            // All infallible constructors remain available, but cannot bypass the bigint limit.
+            for mpint in [
+                Mpint::from_positive_bytes(&bytes),
+                Mpint::from(&uint),
+                Mpint::from(uint.clone()),
+            ] {
+                let borrowed = Uint::try_from(&mpint);
+                let owned = Uint::try_from(mpint);
+                for result in [borrowed, owned] {
+                    if size == Mpint::MAX_SIZE {
+                        assert_eq!(result.unwrap(), uint);
+                    } else {
+                        assert!(matches!(result, Err(Error::Length)));
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn decode_0() {
