@@ -20,7 +20,7 @@ fn path_round_trip() {
 #[test]
 fn private_keys() {
     let dot_ssh = dot_ssh();
-    assert_eq!(dot_ssh.private_keys().unwrap().count(), 22);
+    assert_eq!(dot_ssh.private_keys().unwrap().count(), 24);
 }
 
 #[test]
