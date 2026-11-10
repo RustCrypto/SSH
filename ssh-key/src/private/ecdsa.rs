@@ -24,6 +24,10 @@ pub struct EcdsaPrivateKey<const SIZE: usize> {
 }
 
 impl<const SIZE: usize> EcdsaPrivateKey<SIZE> {
+    /// Minimum allowed size of a private scalar for ECDSA: 192-bits.
+    // NOTE: this matches `elliptic_curve::SecretKey::MIN_SIZE` while avoiding a hard dependency
+    pub const MIN_SIZE: usize = 24;
+
     /// Borrow the inner byte array as a slice.
     #[must_use]
     pub fn as_slice(&self) -> &[u8] {
@@ -47,22 +51,31 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
 
     fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
-            let mut len = reader.remaining_len();
-
-            // Strip leading zero if necessary:
-            // `mpint` is signed and may need a leading zero for unsigned integers
-            if len == SIZE.checked_add(1).ok_or(encoding::Error::Length)? {
-                // TODO(tarcieri): make sure leading zero was necessary
-                if u8::decode(reader)? != 0 {
-                    return Err(Error::FormatEncoding);
-                }
-
-                len = SIZE;
+            // Bound the wire length before stripping any leading zeros.
+            match reader.remaining_len().checked_sub(1) {
+                Some(len) if len <= SIZE => (),
+                _ => return Err(encoding::Error::Length.into()),
             }
 
-            // Minimum allowed key size: may be smaller than modulus size
-            const MIN_SIZE: usize = 32;
-            if len < MIN_SIZE || len > SIZE {
+            let mut first = u8::decode(reader)?;
+            if first >= 0x80 {
+                return Err(Error::FormatEncoding);
+            }
+
+            // Accept redundant leading zeros
+            while first == 0 {
+                if reader.is_finished() {
+                    return Err(encoding::Error::Length.into());
+                }
+                first = u8::decode(reader)?;
+            }
+
+            let len = reader
+                .remaining_len()
+                .checked_add(1)
+                .ok_or(encoding::Error::Length)?;
+
+            if len < Self::MIN_SIZE || len > SIZE {
                 return Err(encoding::Error::Length.into());
             }
 
@@ -71,7 +84,12 @@ impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
             let leading_zeros = SIZE.checked_sub(len).ok_or(encoding::Error::Length)?;
 
             let mut bytes = [0u8; SIZE];
-            reader.read(&mut bytes[leading_zeros..])?;
+            let (first_byte, remaining) = bytes[leading_zeros..]
+                .split_first_mut()
+                .ok_or(encoding::Error::Length)?;
+
+            *first_byte = first;
+            reader.read(remaining)?;
             Ok(Self { bytes })
         })
     }
