@@ -154,7 +154,10 @@ fn ecdsa_sig_size(data: &[u8], curve: EcdsaCurve, sk_trailer: bool) -> Result<()
 
     for _ in 0..2 {
         let component = Mpint::decode(&mut reader)?;
-        let bytes = component.as_positive_bytes().ok_or(Error::FormatEncoding)?;
+        if component.is_zero() {
+            return Err(Error::FormatEncoding);
+        }
+        let bytes = component.as_bytes();
         if bytes.len() > curve.field_size() {
             return Err(encoding::Error::Length.into());
         }
@@ -522,8 +525,8 @@ macro_rules! impl_signature_for_curve {
                 #[allow(clippy::arithmetic_side_effects)]
                 let mut data = Vec::with_capacity($size * 2 + 4 * 2 + 2);
 
-                Mpint::from_positive_bytes(&r).encode(&mut data)?;
-                Mpint::from_positive_bytes(&s).encode(&mut data)?;
+                Mpint::from_bytes(&r)?.encode(&mut data)?;
+                Mpint::from_bytes(&s)?.encode(&mut data)?;
 
                 Ok(Signature {
                     algorithm: Algorithm::Ecdsa {
@@ -563,7 +566,7 @@ impl_signature_for_curve!(p521, "p521", NistP521, 66);
 fn zero_pad_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
     use core::mem::size_of;
 
-    let bytes = m.as_positive_bytes()?;
+    let bytes = m.as_bytes();
     size_of::<B>().checked_sub(bytes.len()).map(|i| {
         core::iter::repeat_n(0u8, i)
             .chain(bytes.iter().cloned())

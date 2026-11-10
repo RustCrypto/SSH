@@ -36,13 +36,12 @@ impl DsaPublicKey {
     /// - `y`: the public key, where `y = gˣ mod p`.
     ///
     /// # Errors
-    /// Returns [`Error::FormatEncoding`] in the event any of the components are negative.
+    /// Returns [`Error::FormatEncoding`] if any component is zero.
     pub fn new(p: Mpint, q: Mpint, g: Mpint, y: Mpint) -> Result<Self> {
-        if p.is_positive() && q.is_positive() && g.is_positive() && y.is_positive() {
-            Ok(Self { p, q, g, y })
-        } else {
-            Err(Error::FormatEncoding)
+        if p.is_zero() || q.is_zero() || g.is_zero() || y.is_zero() {
+            return Err(Error::FormatEncoding);
         }
+        Ok(Self { p, q, g, y })
     }
 
     /// Prime modulus.
@@ -126,10 +125,10 @@ impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
     type Error = Error;
 
     fn try_from(key: &DsaPublicKey) -> Result<dsa::VerifyingKey> {
-        let p = Uint::try_from(&key.p)?;
-        let q = Uint::try_from(&key.q)?;
-        let g = Uint::try_from(&key.g)?;
-        let y = Uint::try_from(&key.y)?;
+        let p = Uint::from(&key.p);
+        let q = Uint::from(&key.q);
+        let g = Uint::from(&key.g);
+        let y = Uint::from(&key.y);
 
         let components = dsa::Components::from_components(p, q, g)?;
         dsa::VerifyingKey::from_components(components, y).map_err(|_| Error::Crypto)
@@ -137,20 +136,24 @@ impl TryFrom<&DsaPublicKey> for dsa::VerifyingKey {
 }
 
 #[cfg(feature = "dsa")]
-impl From<dsa::VerifyingKey> for DsaPublicKey {
-    fn from(key: dsa::VerifyingKey) -> DsaPublicKey {
-        DsaPublicKey::from(&key)
+impl TryFrom<dsa::VerifyingKey> for DsaPublicKey {
+    type Error = Error;
+
+    fn try_from(key: dsa::VerifyingKey) -> Result<DsaPublicKey> {
+        DsaPublicKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "dsa")]
-impl From<&dsa::VerifyingKey> for DsaPublicKey {
-    fn from(key: &dsa::VerifyingKey) -> DsaPublicKey {
-        DsaPublicKey {
-            p: key.components().p().as_ref().into(),
-            q: key.components().q().as_ref().into(),
-            g: key.components().g().as_ref().into(),
-            y: key.y().as_ref().into(),
-        }
+impl TryFrom<&dsa::VerifyingKey> for DsaPublicKey {
+    type Error = Error;
+
+    fn try_from(key: &dsa::VerifyingKey) -> Result<DsaPublicKey> {
+        Self::new(
+            key.components().p().as_ref().try_into()?,
+            key.components().q().as_ref().try_into()?,
+            key.components().g().as_ref().try_into()?,
+            key.y().as_ref().try_into()?,
+        )
     }
 }

@@ -138,14 +138,14 @@ fn validate_dsa(key: PrivateKey) {
     let dsa_keypair = key.key_data().dsa().unwrap();
     assert_eq!(
         &hex!(
-            "00dc3d89250ed9462114cb2c8d4816e3a511aaff1b06b0e01de17c1cb04e581bcab97176471d89fd7ca1817
+            "dc3d89250ed9462114cb2c8d4816e3a511aaff1b06b0e01de17c1cb04e581bcab97176471d89fd7ca1817
              e3c48e2ccbafd2170f69e8e5c8b6ab69b9c5f45d95e1d9293e965227eee5b879b1123371c21b1db60f14b5e
              5c05a4782ceb43a32f449647703063621e7a286bec95b16726c18b5e52383d00b297a6b03489b06068a5"
         ),
         dsa_keypair.public().p().as_bytes(),
     );
     assert_eq!(
-        &hex!("00891815378597fe42d3fd261fe76df365845bbb87"),
+        &hex!("891815378597fe42d3fd261fe76df365845bbb87"),
         dsa_keypair.public().q().as_bytes(),
     );
     assert_eq!(
@@ -418,7 +418,7 @@ fn validate_rsa_3072(key: PrivateKey) {
     assert_eq!(&hex!("010001"), rsa_keypair.public().e().as_bytes());
     assert_eq!(
         &hex!(
-            "00a68e478c9bc93726436b7f5e9e6f9a46e1b73bec1e8cb7754de2c6a5b6c455f2f012a7259afcf94181d69
+            "a68e478c9bc93726436b7f5e9e6f9a46e1b73bec1e8cb7754de2c6a5b6c455f2f012a7259afcf94181d69
              e95d39a349e4d2b482a5372b28943731db75c73ce7bd9eec85010c94bfae56960118922f86a8b3655b357d2
              4e7a679cd8a7d9bf6eae66f7f9a56fe3d090d0632218a682960d8aad93c01898780ead2dbefd70fb4703471
              7e412e4fdae685292ec891e2423f7fe43df2f54329ab0a5d7561e582e42e86ebaee0c1e9eaf603d7ce70850
@@ -456,7 +456,7 @@ fn validate_rsa_3072(key: PrivateKey) {
     );
     assert_eq!(
         &hex!(
-            "00d11e7ae248640d3b20293691886544cdfe0779a9aab56c8f9626bf1e6648bfd988bdb0ac7d11a73e34056
+            "d11e7ae248640d3b20293691886544cdfe0779a9aab56c8f9626bf1e6648bfd988bdb0ac7d11a73e34056
              336d4ad3900ff7184ee404b84baeb11a2a302f982d94eefb757030ec6d77d9115eaef80ab5749a0f5b590b2
              99ffde94f9930dedbab2af333095b08a504b9b30f1112dce51f37ed00d043343d420d2e2fb88bd7f881b7c8
              990e48b93fd1d284fcc8c1c07fbefc04d02925b2f159a9a9f567073e1c94fdc6e472f48963be16c5c545385
@@ -466,7 +466,7 @@ fn validate_rsa_3072(key: PrivateKey) {
     );
     assert_eq!(
         &hex!(
-            "00cbe50e7ecdf5e2c86e76ca94be8b0c05b09041d2bcddeeb4672e7120eacc8380e5d6b77c85583c508f8ee
+            "cbe50e7ecdf5e2c86e76ca94be8b0c05b09041d2bcddeeb4672e7120eacc8380e5d6b77c85583c508f8ee
              8d557cabcb6dfae8c72385f0f69345ebc15a5dfec949c0770d02d7945dd3592562da7388662e053c5454d26
              90de2a63cc555e1a010e2da0ae307d1c11f852a9c7568e02f93d49b2a8f927b79943b2920cad321aa208410
              9d136d085c1d05c39f4c36cf89fdc3c66a755e63f446e16302b13599400f0a83321a2e6b9153df02f03de31
@@ -491,7 +491,7 @@ fn decode_rsa_4096_openssh() {
     assert_eq!(&hex!("010001"), rsa_keypair.public().e().as_bytes());
     assert_eq!(
         &hex!(
-            "00b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
+            "b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
              e547dcebff6d0c19c0bc9153975199f47f4964ed20f5aceed4e82556b228a0c1fbfaa85e6339ba2ff4094d9
              4e2b09d43a3dd68225d0bbc858293cbf167b18d6374ebe79220a633d400176f1f6b46fd626acb252bf294aa
              db2acd59626a023a8e5ec53ced8685164c72ca3a2ec646812c6e61ffcba740ff15c054f0691e3a8d52c79c4
@@ -536,7 +536,7 @@ fn decode_rsa_4096_openssh() {
     );
     assert_eq!(
         &hex!(
-            "00e2b7aa95621ec065acd1b9edd46090c715e1d212f11ac24f61c3016a4b411a25c635007654dc19a145531
+            "e2b7aa95621ec065acd1b9edd46090c715e1d212f11ac24f61c3016a4b411a25c635007654dc19a145531
              f9d49f796965a28f67575a5a9bf852b53474c4345cf604d40b614e31d50f0ca56414f152b49d6b92d8767d4
              70a5a10afb6e546189d6e99739aeff7a081d96fd5c1646c5abbb8481df936c65aad51a553596e16f49b09f8
              8175d2c938f92ecaccc61313523fd678533007f05cab51dfd16cfaf3439033bd3a4d845c08e34097b6f7ecd
@@ -547,7 +547,7 @@ fn decode_rsa_4096_openssh() {
     );
     assert_eq!(
         &hex!(
-            "00cba436332637becfdbdec249dbc121e5309c9964f2053c221b58b601846afd7cc8b788d6bf9b71345b1bd
+            "cba436332637becfdbdec249dbc121e5309c9964f2053c221b58b601846afd7cc8b788d6bf9b71345b1bd
              de7b367204e010ee60c2126352476ce98899b72035eb5f2ae8dd9754dd500354c418cbbf75dfd4bf2029a9a
              3c8e097efdb334e8228a738b1c3fac43b4822364a54b4c348042369b59cf086b25db23226f71edeae58e77f
              c6f10493641c4254c28999be5628cd74e259d5fe5d39c98a9c0b8543bd58c89bb34ea19e18af714f1446e29

@@ -485,22 +485,11 @@ fn decode_private_key_as(
 
         #[cfg(feature = "ed25519")]
         (Algorithm::Ed25519, KeyData::Ed25519(pk)) => {
-            // PPK encodes Ed25519 private exponent as an mpint
-            use crate::Mpint;
             use crate::private::{Ed25519Keypair, Ed25519PrivateKey};
             use zeroize::Zeroizing;
 
-            // Copy and pad exponent
             let mut buf = Zeroizing::new([0u8; Ed25519PrivateKey::BYTE_SIZE]);
-            let e = Mpint::decode(reader)?;
-            let e_bytes = e.as_bytes();
-
-            if e_bytes.len() > buf.len() {
-                return Err(Error::Crypto);
-            }
-
-            #[allow(clippy::arithmetic_side_effects)] // length checked
-            buf[Ed25519PrivateKey::BYTE_SIZE - e_bytes.len()..].copy_from_slice(e_bytes);
+            reader.read_prefixed(|reader| reader.read(buf.as_mut()))?;
 
             let private = Ed25519PrivateKey::from_bytes(&buf);
             Ok(KeypairData::Ed25519(Ed25519Keypair {
@@ -518,7 +507,7 @@ fn decode_private_key_as(
 
             // Copy and pad exponent
             let e = Mpint::decode(reader)?;
-            let e_bytes = e.as_positive_bytes().ok_or(Error::Crypto)?;
+            let e_bytes = e.as_bytes();
             if e_bytes.len() > curve.field_size() {
                 return Err(Error::Crypto);
             }
@@ -554,5 +543,31 @@ fn decode_private_key_as(
             Ok(keypair.into())
         }
         _ => Err(algorithm.unsupported_error()),
+    }
+}
+
+#[cfg(all(test, feature = "ed25519"))]
+mod tests {
+    use super::*;
+    use crate::private::Ed25519PrivateKey;
+
+    #[test]
+    fn ed25519_seed_is_not_an_mpint() {
+        // Cover both a set sign bit and leading zeros that mpint decoding would strip.
+        for first in [0, 0x7f, 0x80, 0xff] {
+            let mut bytes = [0x42; Ed25519PrivateKey::BYTE_SIZE];
+            bytes[0] = first;
+            let private = Ed25519PrivateKey::from_bytes(&bytes);
+            let public = crate::public::Ed25519PublicKey::from(&private);
+            let mut encoded = Vec::new();
+            bytes.as_slice().encode(&mut encoded).unwrap();
+            let key = decode_private_key_as(
+                &mut encoded.as_slice().into(),
+                PublicKey::new(public.into(), ""),
+                Algorithm::Ed25519,
+            )
+            .unwrap();
+            assert_eq!(key.ed25519().unwrap().private.as_ref(), &bytes);
+        }
     }
 }

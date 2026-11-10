@@ -72,12 +72,13 @@
 //!
 //! Stored as a byte string, 8 bits per byte, MSB first (a.k.a. big endian).
 //!
-//! Negative numbers have the value 1 as the most significant bit of the first byte of
-//! the data partition.  If the most significant bit would be set for
-//! a positive number, the number MUST be preceded by a zero byte.
-//! Unnecessary leading bytes with the value 0 or 255 MUST NOT be
-//! included.  The value zero MUST be stored as a string with zero
-//! bytes of data.
+//! This crate supports only non-negative values, matching OpenSSH, and enforces a 16384-bit
+//! magnitude limit. Negative wire encodings are rejected. A leading zero byte is added when
+//! the most significant bit is set. Zero is encoded as an empty string.
+//!
+//! Decoding accepts redundant leading zeros like OpenSSH, subject to a 2049-byte wire limit
+//! (the extra byte must be zero). Encoding always produces the canonical representation.
+//! The byte APIs use unsigned magnitudes without sign padding or the length prefix.
 //!
 //! By convention, a number that is used in modular computations in
 //! `Z_n` SHOULD be represented in the range `0 <= x < n`.
@@ -89,8 +90,6 @@
 //! `0`                | `00 00 00 00`
 //! `9a378f9b2e332a7`  | `00 00 00 08 09 a3 78 f9 b2 e3 32 a7`
 //! `80`               | `00 00 00 02 00 80`
-//! `-1234`            | `00 00 00 02 ed cc`
-//! `-deadbeef`        | `00 00 00 05 ff 21 52 41 11`
 //!
 //! ### `name-list`: string containing a comma-separated list of names
 //! #### [`Decode`]/[`Encode`] trait impls: `Vec<String>`
