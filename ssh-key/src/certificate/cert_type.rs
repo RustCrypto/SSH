@@ -1,7 +1,7 @@
 //! OpenSSH certificate types.
 
 use crate::{Error, Result};
-use encoding::{Decode, Encode, Reader, Writer};
+use encoding::{Decode, Decoder, Encode, Reader, Writer};
 
 /// Types of OpenSSH certificates: user or host.
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -33,7 +33,7 @@ impl CertType {
 impl Decode for CertType {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         u32::decode(reader)?.try_into()
     }
 }

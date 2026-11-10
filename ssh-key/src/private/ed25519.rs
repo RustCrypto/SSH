@@ -5,7 +5,7 @@
 use crate::{Error, Result, public::Ed25519PublicKey};
 use core::fmt;
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use zeroize::{Zeroize, Zeroizing};
 
 #[cfg(feature = "rand_core")]
@@ -216,7 +216,7 @@ impl PartialEq for Ed25519Keypair {
 impl Decode for Ed25519Keypair {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         // Decode private key
         let public = Ed25519PublicKey::decode(reader)?;
 

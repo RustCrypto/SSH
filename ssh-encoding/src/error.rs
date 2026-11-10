@@ -17,6 +17,9 @@ pub enum Error {
     /// Character encoding-related errors.
     CharacterEncoding,
 
+    /// A previous read or nested decoding operation failed.
+    Failed,
+
     /// Invalid label.
     Label(LabelError),
 
@@ -62,6 +65,7 @@ impl fmt::Display for Error {
             #[cfg(feature = "base64")]
             Error::Base64(err) => write!(f, "Base64 encoding error: {err}"),
             Error::CharacterEncoding => write!(f, "character encoding invalid"),
+            Error::Failed => write!(f, "decoder previously failed"),
             Error::Label(err) => write!(f, "{}", err),
             Error::Length => write!(f, "length invalid"),
             #[cfg(feature = "alloc")]

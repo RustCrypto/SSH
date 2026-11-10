@@ -3,7 +3,7 @@
 //! These are used for deriving an encryption key from a password.
 
 use crate::{Error, KdfAlg, Result};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use alloc::vec::Vec;
@@ -144,7 +144,7 @@ impl Kdf {
 impl Decode for Kdf {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         match KdfAlg::decode(reader)? {
             KdfAlg::None => {
                 if usize::decode(reader)? == 0 {

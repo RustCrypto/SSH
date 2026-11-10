@@ -187,7 +187,7 @@
 //!
 //! let encoded = message.encode_vec().unwrap();
 //! assert_eq!(&encoded[..13], &[31, 0, 0, 0, 42, 0, 0, 0, 19, 101, 99, 100, 115]);
-//! let decoded = Message::decode(&mut &encoded[..]).unwrap();
+//! let decoded = Message::decode(&mut encoded.as_slice().into()).unwrap();
 //! assert_eq!(message, decoded);
 //! ```
 
@@ -197,12 +197,12 @@ extern crate alloc;
 
 mod checked;
 mod decode;
+mod decoder;
 mod encode;
 mod error;
 mod label;
 #[cfg(feature = "alloc")]
 mod mpint;
-#[macro_use]
 mod reader;
 mod writer;
 
@@ -214,6 +214,7 @@ pub mod pem;
 pub use crate::{
     checked::CheckedSum,
     decode::Decode,
+    decoder::Decoder,
     encode::Encode,
     error::{Error, Result},
     label::{Label, LabelError},

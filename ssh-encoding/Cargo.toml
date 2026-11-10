@@ -1,6 +1,6 @@
 [package]
 name = "ssh-encoding"
-version = "0.3.0"
+version = "0.4.0-pre"
 description = "Pure Rust implementation of SSH data type decoders/encoders as described in RFC4251"
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
@@ -19,7 +19,7 @@ bytes = { version = "1.11", optional = true, default-features = false }
 ctutils = { version = "0.4.8", optional = true, default-features = false }
 digest = { version = "0.11", optional = true, default-features = false }
 pem-rfc7468 = { version = "1", optional = true }
-ssh-derive = { version = "0.3", optional = true }
+ssh-derive = { version = "0.4.0-pre", optional = true }
 zeroize = { version = "1.8", optional = true, default-features = false }
 
 [dev-dependencies]

@@ -3,7 +3,7 @@
 use crate::{Error, Mpint, Result, public::DsaPublicKey};
 use core::fmt;
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use zeroize::Zeroize;
 
 #[cfg(feature = "dsa")]
@@ -80,7 +80,7 @@ impl TryFrom<Mpint> for DsaPrivateKey {
 impl Decode for DsaPrivateKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Self::new(Mpint::decode(reader)?)
     }
 }
@@ -206,7 +206,7 @@ impl Eq for DsaKeypair {}
 impl Decode for DsaKeypair {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let public = DsaPublicKey::decode(reader)?;
         let private = DsaPrivateKey::decode(reader)?;
         DsaKeypair::new(public, private)

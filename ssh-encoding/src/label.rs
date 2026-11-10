@@ -1,6 +1,6 @@
 //! Convenience trait for decoding/encoding string labels.
 
-use crate::{Decode, Encode, Error, Reader, Writer};
+use crate::{Decode, Decoder, Encode, Error, Reader, Writer};
 use core::{fmt, str::FromStr};
 
 #[cfg(feature = "alloc")]
@@ -17,7 +17,7 @@ pub trait Label: AsRef<str> + FromStr<Err = LabelError> {}
 impl<T: Label> Decode for T {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self, Error> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self, Error> {
         let mut buf = [0u8; MAX_LABEL_SIZE];
         Ok(reader.read_string(buf.as_mut())?.parse()?)
     }

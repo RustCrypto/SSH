@@ -1,6 +1,6 @@
 //! Multiple precision integer.
 
-use crate::{CheckedSum, Decode, Encode, Error, Reader, Result, Writer};
+use crate::{CheckedSum, Decode, Decoder, Encode, Error, Reader, Result, Writer};
 use alloc::{boxed::Box, vec::Vec};
 use core::fmt;
 
@@ -172,7 +172,7 @@ impl PartialEq for Mpint {
 impl Decode for Mpint {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
             let len = reader.remaining_len();
             if len > Self::MAX_SIZE + 1 {
@@ -320,7 +320,7 @@ mod tests {
             let owned = Mpint::try_from(bytes.clone().into_boxed_slice());
             let mut encoded = Vec::new();
             bytes.encode(&mut encoded).unwrap();
-            let decoded = Mpint::decode(&mut encoded.as_slice());
+            let decoded = Mpint::decode(&mut encoded.as_slice().into());
 
             for result in [borrowed, owned, decoded] {
                 if valid {
@@ -335,27 +335,32 @@ mod tests {
     #[test]
     fn reject_oversized_before_reading_body() {
         // A reader whose body cannot be read demonstrates rejection at the length check.
-        struct Unreadable;
+        struct Unreadable {
+            prefix: Option<[u8; 4]>,
+        }
 
         impl Reader for Unreadable {
-            fn read<'o>(&mut self, _: &'o mut [u8]) -> crate::Result<&'o [u8]> {
-                panic!("oversized mpint body must not be read");
+            fn read<'o>(&mut self, out: &'o mut [u8]) -> crate::Result<&'o [u8]> {
+                let prefix = self
+                    .prefix
+                    .take()
+                    .expect("oversized mpint body must not be read");
+                out.copy_from_slice(&prefix);
+                Ok(out)
             }
 
             fn remaining_len(&self) -> usize {
-                Mpint::MAX_SIZE + 2
-            }
-
-            fn read_prefixed<T, E, F>(&mut self, f: F) -> Result<T, E>
-            where
-                E: From<Error>,
-                F: FnOnce(&mut Self) -> Result<T, E>,
-            {
-                f(self)
+                Mpint::MAX_SIZE + 2 + if self.prefix.is_some() { 4 } else { 0 }
             }
         }
 
-        assert!(matches!(Mpint::decode(&mut Unreadable), Err(Error::Length)));
+        let reader = Unreadable {
+            prefix: Some(u32::try_from(Mpint::MAX_SIZE + 2).unwrap().to_be_bytes()),
+        };
+        assert!(matches!(
+            Mpint::decode(&mut reader.into()),
+            Err(Error::Length)
+        ));
     }
 
     #[cfg(feature = "bigint")]

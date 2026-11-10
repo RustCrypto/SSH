@@ -4,7 +4,7 @@ use crate::{Algorithm, AssociatedHashAlg, Error, HashAlg, Result, Signature, Sig
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
-    CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
+    CheckedSum, Decode, DecodePem, Decoder, Encode, EncodePem, Reader, Writer,
     pem::{LineEnding, PemLabel},
 };
 use sha2::Digest;
@@ -320,7 +320,7 @@ impl SshSig {
 impl Decode for SshSig {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut magic_preamble = [0u8; Self::MAGIC_PREAMBLE.len()];
         reader.read(&mut magic_preamble)?;
 
@@ -452,7 +452,7 @@ impl<'de> Deserialize<'de> for SshSig {
             string.parse::<SshSig>().map_err(de::Error::custom)
         } else {
             let bytes = Vec::<u8>::deserialize(deserializer)?;
-            Self::decode(&mut bytes.as_slice()).map_err(de::Error::custom)
+            Self::decode(&mut bytes.as_slice().into()).map_err(de::Error::custom)
         }
     }
 }

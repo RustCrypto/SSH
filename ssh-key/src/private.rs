@@ -134,7 +134,7 @@ use cipher::Tag;
 use core::str;
 use ctutils::{Choice, CtEq};
 use encoding::{
-    CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
+    CheckedSum, Decode, DecodePem, Decoder, Encode, EncodePem, Reader, Writer,
     pem::{LineEnding, PemLabel},
 };
 
@@ -266,9 +266,9 @@ impl PrivateKey {
     ///
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
-        let reader = &mut bytes;
-        let private_key = Self::decode(reader)?;
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let mut reader = Decoder::from(bytes);
+        let private_key = Self::decode(&mut reader)?;
         Ok(reader.finish(private_key)?)
     }
 
@@ -465,7 +465,7 @@ impl PrivateKey {
 
         #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
         Self::decode_privatekey_comment_pair(
-            &mut &**buffer,
+            &mut (&**buffer).into(),
             self.public_key.key_data.clone(),
             self.cipher.block_size(),
             self.cipher.block_size() - 1,
@@ -669,7 +669,7 @@ impl PrivateKey {
     ///
     /// [PROTOCOL.key]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
     fn decode_privatekey_comment_pair(
-        reader: &mut impl Reader,
+        reader: &mut Decoder<impl Reader>,
         public_key: public::KeyData,
         block_size: usize,
         max_padding_size: usize,
@@ -807,7 +807,7 @@ impl PartialEq for PrivateKey {
 impl Decode for PrivateKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut auth_magic = [0u8; Self::AUTH_MAGIC.len()];
         reader.read(&mut auth_magic)?;
 

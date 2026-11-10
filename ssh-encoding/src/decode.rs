@@ -3,7 +3,7 @@
 //!
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 
-use crate::{Error, Result, reader::Reader};
+use crate::{Decoder, Error, Reader, Result};
 
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
@@ -21,18 +21,18 @@ pub trait Decode: Sized {
     /// Type returned in the event of a decoding error.
     type Error: From<Error>;
 
-    /// Attempt to decode a value of this type using the provided [`Reader`].
+    /// Attempt to decode a value of this type using the provided [`Decoder`].
     ///
     /// # Errors
     /// Returns errors specific to the concrete implementation of this trait.
-    fn decode(reader: &mut impl Reader) -> core::result::Result<Self, Self::Error>;
+    fn decode(reader: &mut Decoder<impl Reader>) -> core::result::Result<Self, Self::Error>;
 }
 
 /// Decode a single `byte` from the input data.
 impl Decode for u8 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut buf = [0];
         reader.read(&mut buf)?;
         Ok(buf[0])
@@ -50,7 +50,7 @@ impl Decode for u8 {
 impl Decode for bool {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let byte = u8::decode(reader)?;
         match byte {
             0 => Ok(false),
@@ -69,7 +69,7 @@ impl Decode for bool {
 impl Decode for u32 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut bytes = [0u8; 4];
         reader.read(&mut bytes)?;
         Ok(u32::from_be_bytes(bytes))
@@ -85,7 +85,7 @@ impl Decode for u32 {
 impl Decode for u64 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut bytes = [0u8; 8];
         reader.read(&mut bytes)?;
         Ok(u64::from_be_bytes(bytes))
@@ -102,7 +102,7 @@ impl Decode for u64 {
 impl Decode for usize {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let n = usize::try_from(u32::decode(reader)?)?;
 
         if n <= MAX_USIZE {
@@ -126,7 +126,7 @@ impl Decode for usize {
 impl<const N: usize> Decode for [u8; N] {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut result = [0u8; N];
         reader.read(&mut result)?;
         Ok(result)
@@ -147,7 +147,7 @@ impl<const N: usize> Decode for [u8; N] {
 impl Decode for Vec<u8> {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
             let mut result = vec![0u8; reader.remaining_len()];
             reader.read(&mut result)?;
@@ -160,7 +160,7 @@ impl Decode for Vec<u8> {
 impl Decode for String {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         String::from_utf8(Vec::decode(reader)?).map_err(|_| Error::CharacterEncoding)
     }
 }
@@ -187,7 +187,7 @@ impl Decode for String {
 impl Decode for Vec<String> {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
             let mut entries = Self::new();
 
@@ -214,7 +214,7 @@ impl Decode for Vec<String> {
 impl Decode for Bytes {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Vec::<u8>::decode(reader).map(Into::into)
     }
 }

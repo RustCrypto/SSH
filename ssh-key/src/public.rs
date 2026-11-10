@@ -31,7 +31,7 @@ pub(crate) use self::ssh_format::SshFormat;
 
 use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
 use core::str::{self, FromStr};
-use encoding::{Base64Reader, Decode, Reader};
+use encoding::{Base64Reader, Decode, Decoder, Reader};
 
 #[cfg(feature = "alloc")]
 use {
@@ -130,7 +130,7 @@ impl PublicKey {
     /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_openssh(public_key: &str) -> Result<Self> {
         let encapsulation = SshFormat::decode(public_key.trim_end().as_bytes())?;
-        let mut reader = Base64Reader::new(encapsulation.base64_data)?;
+        let mut reader = Decoder::from(Base64Reader::new(encapsulation.base64_data)?);
         let key_data = KeyData::decode(&mut reader)?;
 
         // Verify that the algorithm in the Base64-encoded data matches the text
@@ -151,9 +151,9 @@ impl PublicKey {
     ///
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
-        let reader = &mut bytes;
-        let key_data = KeyData::decode(reader)?;
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let mut reader = Decoder::from(bytes);
+        let key_data = KeyData::decode(&mut reader)?;
         Ok(reader.finish(key_data.into())?)
     }
 
@@ -393,14 +393,14 @@ impl PublicKey {
     ///
     /// This is a stub implementation that ignores the comment.
     #[cfg(not(feature = "alloc"))]
-    pub(crate) fn decode_comment(&mut self, reader: &mut impl Reader) -> Result<()> {
+    pub(crate) fn decode_comment(&mut self, reader: &mut Decoder<impl Reader>) -> Result<()> {
         reader.drain_prefixed()?;
         Ok(())
     }
 
     /// Decode comment (e.g. email address)
     #[cfg(feature = "alloc")]
-    pub(crate) fn decode_comment(&mut self, reader: &mut impl Reader) -> Result<()> {
+    pub(crate) fn decode_comment(&mut self, reader: &mut Decoder<impl Reader>) -> Result<()> {
         self.comment = Comment::decode(reader)?;
         Ok(())
     }

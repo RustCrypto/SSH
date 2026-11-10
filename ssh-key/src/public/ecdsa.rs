@@ -2,7 +2,7 @@
 
 use crate::{Algorithm, EcdsaCurve, Error, Result};
 use core::fmt;
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use sec1::consts::{U32, U48, U66};
 
 /// ECDSA/NIST P-256 public key.
@@ -107,7 +107,7 @@ impl AsRef<[u8]> for EcdsaPublicKey {
 impl Decode for EcdsaPublicKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let curve = EcdsaCurve::decode(reader)?;
 
         let mut buf = [0u8; Self::MAX_SIZE];

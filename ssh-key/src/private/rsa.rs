@@ -3,7 +3,7 @@
 use crate::{Error, Mpint, Result, public::RsaPublicKey};
 use core::fmt::{self, Debug};
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
@@ -100,7 +100,7 @@ impl Drop for RsaPrivateKey {
 impl Decode for RsaPrivateKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let d = Mpint::decode(reader)?;
         let iqmp = Mpint::decode(reader)?;
         let p = Mpint::decode(reader)?;
@@ -199,7 +199,7 @@ impl Debug for RsaKeypair {
 impl Decode for RsaKeypair {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let n = Mpint::decode(reader)?;
         let e = Mpint::decode(reader)?;
         let public = RsaPublicKey::new(e, n)?;

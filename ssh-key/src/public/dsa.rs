@@ -2,7 +2,7 @@
 
 use crate::{Error, Mpint, Result};
 use core::hash::{Hash, Hasher};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "dsa")]
 use encoding::Uint;
@@ -74,7 +74,7 @@ impl DsaPublicKey {
 impl Decode for DsaPublicKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let p = Mpint::decode(reader)?;
         let q = Mpint::decode(reader)?;
         let g = Mpint::decode(reader)?;
