@@ -15,9 +15,9 @@ use core::{fmt, str};
 ///
 /// # Example
 /// ```
-/// use ssh_encoding::{Decode, Decoder};
+/// use ssh_encoding::{Decode, Reader};
 ///
-/// let mut decoder: Decoder<_> = [0, 0, 0, 42].as_slice().into();
+/// let mut decoder = [0, 0, 0, 42].as_slice().into_decoder();
 /// let value = u32::decode(&mut decoder)?;
 /// assert_eq!(decoder.finish(value)?, 42);
 /// # Ok::<(), ssh_encoding::Error>(())

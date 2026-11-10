@@ -39,13 +39,12 @@ impl RsaPrivateKey {
     /// - `q`: Second prime factor of `n`.
     ///
     /// # Errors
-    /// Returns [`Error::FormatEncoding`] if any of the provided values are negative.
+    /// Returns [`Error::FormatEncoding`] if any of the provided values are zero.
     pub fn new(d: Mpint, iqmp: Mpint, p: Mpint, q: Mpint) -> Result<Self> {
-        if d.is_positive() && iqmp.is_positive() && p.is_positive() && q.is_positive() {
-            Ok(Self { d, iqmp, p, q })
-        } else {
-            Err(Error::FormatEncoding)
+        if d.is_zero() || iqmp.is_zero() || p.is_zero() || q.is_zero() {
+            return Err(Error::FormatEncoding);
         }
+        Ok(Self { d, iqmp, p, q })
     }
 
     /// RSA private exponent.
@@ -259,13 +258,10 @@ impl TryFrom<&RsaKeypair> for rsa::PrivateKey {
 
     fn try_from(key: &RsaKeypair) -> Result<rsa::PrivateKey> {
         let ret = rsa::PrivateKey::from_components(
-            Uint::try_from(key.public.n())?,
-            Uint::try_from(key.public.e())?,
-            Uint::try_from(&key.private.d)?,
-            vec![
-                Uint::try_from(&key.private.p)?,
-                Uint::try_from(&key.private.q)?,
-            ],
+            Uint::from(key.public.n()),
+            Uint::from(key.public.e()),
+            Uint::from(&key.private.d),
+            vec![Uint::from(&key.private.p), Uint::from(&key.private.q)],
         )?;
 
         Ok(ret)
@@ -298,10 +294,10 @@ impl TryFrom<&rsa::PrivateKey> for RsaKeypair {
         let iqmp = key.crt_coefficient().ok_or(Error::Crypto)?;
 
         let private = RsaPrivateKey {
-            d: key.d().into(),
-            iqmp: iqmp.into(),
-            p: p.as_ref().into(),
-            q: q.as_ref().into(),
+            d: key.d().try_into()?,
+            iqmp: iqmp.try_into()?,
+            p: p.as_ref().try_into()?,
+            q: q.as_ref().try_into()?,
         };
 
         Ok(RsaKeypair { public, private })

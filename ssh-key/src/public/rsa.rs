@@ -33,20 +33,13 @@ impl RsaPublicKey {
     /// - `n`: RSA modulus.
     ///
     /// # Errors
-    /// Returns [`Error::FormatEncoding`] in the event one of the components is odd.
+    /// Returns [`Error::FormatEncoding`] if either component is zero.
     pub fn new(e: Mpint, n: Mpint) -> Result<Self> {
-        if !e.is_positive() {
+        if e.is_zero() || n.is_zero() {
             return Err(Error::FormatEncoding);
         }
 
-        let bits = match n.as_positive_bytes() {
-            Some(bytes) => bytes
-                .len()
-                .checked_mul(8)
-                .and_then(|bits| u32::try_from(bits).ok())
-                .ok_or(Error::FormatEncoding)?,
-            None => return Err(Error::FormatEncoding),
-        };
+        let bits = u32::try_from(n.as_bytes().len() * 8).map_err(|_| Error::FormatEncoding)?;
 
         Ok(Self { e, n, bits })
     }
@@ -113,8 +106,8 @@ impl TryFrom<&RsaPublicKey> for rsa::PublicKey {
     type Error = Error;
 
     fn try_from(key: &RsaPublicKey) -> Result<rsa::PublicKey> {
-        let n = Uint::try_from(&key.n)?;
-        let e = Uint::try_from(&key.e)?;
+        let n = Uint::from(&key.n);
+        let e = Uint::from(&key.e);
         let ret = rsa::PublicKey::new(n, e).map_err(|_| Error::Crypto)?;
 
         Ok(ret)
@@ -135,7 +128,7 @@ impl TryFrom<&rsa::PublicKey> for RsaPublicKey {
     type Error = Error;
 
     fn try_from(key: &rsa::PublicKey) -> Result<RsaPublicKey> {
-        RsaPublicKey::new(key.e().into(), key.n().as_ref().into())
+        RsaPublicKey::new(key.e().try_into()?, key.n().as_ref().try_into()?)
     }
 }
 
