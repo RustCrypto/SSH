@@ -3,7 +3,7 @@
 use crate::{Algorithm, EcdsaCurve, Error, Result, public::EcdsaPublicKey};
 use core::fmt;
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use sec1::consts::{U32, U48, U66};
 use zeroize::Zeroize;
 
@@ -45,7 +45,7 @@ impl<const SIZE: usize> EcdsaPrivateKey<SIZE> {
 impl<const SIZE: usize> Decode for EcdsaPrivateKey<SIZE> {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
             let mut len = reader.remaining_len();
 
@@ -327,7 +327,7 @@ impl PartialEq for EcdsaKeypair {
 impl Decode for EcdsaKeypair {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         match EcdsaPublicKey::decode(reader)? {
             EcdsaPublicKey::NistP256(public) => {
                 let private = EcdsaPrivateKey::<32>::decode(reader)?;

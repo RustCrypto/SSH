@@ -6,7 +6,7 @@ use core::{
     fmt,
     str::{self, FromStr},
 };
-use encoding::{Decode, Encode, Error, Reader, Writer};
+use encoding::{Decode, Decoder, Encode, Error, Reader, Writer};
 
 /// SSH key comment (e.g. email address of owner)
 ///
@@ -40,7 +40,7 @@ impl AsRef<str> for Comment {
 impl Decode for Comment {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> encoding::Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> encoding::Result<Self> {
         Vec::<u8>::decode(reader).map(Into::into)
     }
 }

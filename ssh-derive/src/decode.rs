@@ -29,7 +29,7 @@ fn try_derive_decode_for_struct(
         impl #impl_generics ::ssh_encoding::Decode for #struct_name #type_generics #where_clause {
             type Error = ::ssh_encoding::Error;
 
-            fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+            fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                 #body
             }
         }
@@ -85,7 +85,7 @@ fn try_derive_decode_for_enum(
         impl #impl_generics ::ssh_encoding::Decode for #enum_name #type_generics #where_clause {
             type Error = ::ssh_encoding::Error;
 
-            fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+            fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                 #body
             }
         }
@@ -245,7 +245,7 @@ mod tests {
             impl ::ssh_encoding::Decode for Foo {
                 type Error = ::ssh_encoding::Error;
 
-                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+                fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                     Ok({
                         Self {
                             a: reader.read_prefixed(|reader| <u32 as ::ssh_encoding::Decode>::decode(reader))?,
@@ -274,7 +274,7 @@ mod tests {
             impl ::ssh_encoding::Decode for Foo {
                 type Error = ::ssh_encoding::Error;
 
-                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+                fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                     reader.read_prefixed(|reader| {
                         Ok::<_, ::ssh_encoding::Error>({
                             let discriminant = <u8 as ::ssh_encoding::Decode>::decode(reader)?;

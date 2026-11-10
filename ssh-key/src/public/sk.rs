@@ -4,7 +4,7 @@
 
 use super::Ed25519PublicKey;
 use crate::{Error, Result};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use alloc::{borrow::ToOwned, string::String};
@@ -64,7 +64,7 @@ impl SkEcdsaSha2NistP256 {
 impl Decode for SkEcdsaSha2NistP256 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         if EcdsaCurve::decode(reader)? != EcdsaCurve::NistP256 {
             return Err(Error::Crypto);
         }
@@ -169,7 +169,7 @@ impl SkEd25519 {
 impl Decode for SkEd25519 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let public_key = Ed25519PublicKey::decode(reader)?;
 
         // application string (e.g. `ssh:`)

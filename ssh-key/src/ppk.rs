@@ -19,7 +19,7 @@ use crate::public::KeyData;
 use crate::{Algorithm, Error, PublicKey};
 use ctutils::CtEq;
 use encoding::base64::{self, Base64, Encoding};
-use encoding::{Decode, Encode, LabelError, Reader};
+use encoding::{Decode, Decoder, Encode, LabelError, Reader};
 
 #[derive(Debug)]
 pub(crate) enum Kdf {
@@ -442,7 +442,7 @@ impl PpkContainer {
         }
 
         let mut public_key = PublicKey::from_bytes(&public_key)?;
-        let mut private_key_cursor = &private_key[..];
+        let mut private_key_cursor = Decoder::from(private_key.as_slice());
         let keypair_data =
             decode_private_key_as(&mut private_key_cursor, public_key.clone(), ppk.algorithm)?;
 
@@ -456,7 +456,7 @@ impl PpkContainer {
 }
 
 fn decode_private_key_as(
-    reader: &mut impl Reader,
+    reader: &mut Decoder<impl Reader>,
     public: PublicKey,
     algorithm: Algorithm,
 ) -> Result<KeypairData, Error> {

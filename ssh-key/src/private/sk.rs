@@ -4,7 +4,7 @@
 
 use crate::{Error, Result, public};
 use alloc::vec::Vec;
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 /// Security Key (FIDO/U2F) ECDSA/NIST P-256 private key as specified in
 /// [PROTOCOL.u2f](https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.u2f?annotate=HEAD).
@@ -73,7 +73,7 @@ impl SkEcdsaSha2NistP256 {
 impl Decode for SkEcdsaSha2NistP256 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Ok(Self {
             public: public::SkEcdsaSha2NistP256::decode(reader)?,
             flags: u8::decode(reader)?,
@@ -169,7 +169,7 @@ impl SkEd25519 {
 impl Decode for SkEd25519 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Ok(Self {
             public: public::SkEd25519::decode(reader)?,
             flags: u8::decode(reader)?,

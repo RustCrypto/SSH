@@ -89,7 +89,7 @@ fn derive_encode_decode_roundtrip_most_types() {
         i: 0x20u8,
     };
     assert_eq!(&data, expected.encode_vec().unwrap().as_slice());
-    let most_types = MostTypes::<u8>::decode(&mut &data[..]).unwrap();
+    let most_types = MostTypes::<u8>::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(most_types, expected);
 }
 
@@ -113,7 +113,7 @@ fn derive_encode_decode_roundtrip_length_prefixed() {
         b: "hello".to_string(),
     };
     assert_eq!(&data, expected.encode_vec().unwrap().as_slice());
-    let length_prefixed = LengthPrefixed::decode(&mut &data[..]).unwrap();
+    let length_prefixed = LengthPrefixed::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(length_prefixed, expected);
 }
 
@@ -122,7 +122,7 @@ fn derive_encode_decode_empty() {
     let data = [0u8; 0];
     let expected = Empty;
     assert_eq!(data, expected.encode_vec().unwrap().as_slice());
-    let actual = Empty::decode(&mut &data[..]).unwrap();
+    let actual = Empty::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(actual, expected);
 }
 
@@ -135,7 +135,7 @@ fn derive_encode_decode_enum_unit() {
     ];
     let expected = ComplexEnum::Bar;
     assert_eq!(data, expected.encode_vec().unwrap().as_slice());
-    let actual = ComplexEnum::decode(&mut &data[..]).unwrap();
+    let actual = ComplexEnum::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(actual, expected);
 }
 
@@ -151,7 +151,7 @@ fn derive_encode_decode_enum_struct() {
     ];
     let expected = ComplexEnum::Baz { a: 1, b: 2 };
     assert_eq!(data, expected.encode_vec().unwrap().as_slice());
-    let actual = ComplexEnum::decode(&mut &data[..]).unwrap();
+    let actual = ComplexEnum::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(actual, expected);
 }
 
@@ -167,7 +167,7 @@ fn derive_encode_decode_enum_tuple() {
     ];
     let expected = ComplexEnum::Fiz(1, 2);
     assert_eq!(data, expected.encode_vec().unwrap().as_slice());
-    let actual = ComplexEnum::decode(&mut &data[..]).unwrap();
+    let actual = ComplexEnum::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(actual, expected);
 }
 
@@ -179,6 +179,6 @@ fn derive_encode_decode_enum_no_prefix_u32_repr() {
     ];
     let expected = SimpleEnum::A;
     assert_eq!(data, expected.encode_vec().unwrap().as_slice());
-    let actual = SimpleEnum::decode(&mut &data[..]).unwrap();
+    let actual = SimpleEnum::decode(&mut data.as_slice().into()).unwrap();
     assert_eq!(actual, expected);
 }

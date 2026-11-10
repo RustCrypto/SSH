@@ -2,7 +2,7 @@
 
 use super::{Ed25519PublicKey, SkEd25519};
 use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use {
@@ -234,7 +234,7 @@ impl KeyData {
     /// - Returns [`Error::AlgorithmUnknown`] if the provided `algorithm` is unknown or unsupported
     ///   by this library.
     /// - Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as(reader: &mut Decoder<impl Reader>, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
             #[cfg(feature = "alloc")]
             Algorithm::Dsa => DsaPublicKey::decode(reader).map(Self::Dsa),
@@ -263,7 +263,10 @@ impl KeyData {
     /// # Errors
     /// Propagates errors from [`Certificate::decode_as`].
     #[cfg(feature = "alloc")]
-    pub fn decode_as_certificate(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as_certificate(
+        reader: &mut Decoder<impl Reader>,
+        algorithm: Algorithm,
+    ) -> Result<Self> {
         Certificate::decode_as(reader, algorithm).map(|cert| Self::Certificate(Box::new(cert)))
     }
 
@@ -312,7 +315,7 @@ impl KeyData {
 impl Decode for KeyData {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
         #[cfg(feature = "alloc")]
         if let Algorithm::Other(name) = &algorithm {

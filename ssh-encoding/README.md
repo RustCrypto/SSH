@@ -14,6 +14,31 @@
 Pure Rust implementation of SSH data type decoders/encoders as described
 in [RFC4251].
 
+## Decoding
+
+Convert a reader into a `Decoder` to start decoding SSH data types:
+
+```rust
+use ssh_encoding::{Decode, Reader};
+
+let mut decoder = [0, 0, 0, 4, 0, 0, 0, 42].as_slice().into_decoder();
+let value = decoder.read_prefixed(u32::decode).expect("invalid u32");
+assert_eq!(decoder.finish(value).expect("remaining data"), 42);
+```
+
+`Reader` supplies bytes and their remaining length. `Decoder<R>` owns the reader and
+handles nested bounds, complete consumption, and failure state. Nested callbacks use
+the same decoder type and store enclosing bounds on the call stack without allocation.
+`Decode` implementations accept `&mut Decoder<impl Reader>`.
+
+The blanket `From<R>` implementation supports `.into()` wherever a decoder is
+expected, for example `Message::decode(&mut bytes.into())`. For any `R: Reader`,
+`Reader::into_decoder` also constructs a decoder without naming its type.
+
+Raw byte slices implement `Reader`. With the corresponding features enabled,
+`Base64Reader` decodes Base64 incrementally, and `DecodePem` wraps a PEM reader in
+the same decoder internally.
+
 ## License
 
 Licensed under either of:

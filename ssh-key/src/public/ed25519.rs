@@ -4,7 +4,7 @@
 
 use crate::{Error, Result};
 use core::fmt;
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 /// Ed25519 public key.
 ///
@@ -36,7 +36,7 @@ impl AsRef<[u8; Self::BYTE_SIZE]> for Ed25519PublicKey {
 impl Decode for Ed25519PublicKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut bytes = [0u8; Self::BYTE_SIZE];
         reader.read_prefixed(|reader| reader.read(&mut bytes))?;
         Ok(Self(bytes))

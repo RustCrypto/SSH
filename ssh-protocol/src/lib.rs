@@ -7,7 +7,7 @@
 )]
 
 pub use cipher::{self, Cipher};
-pub use encoding::{self, Decode, Encode, Reader, Writer};
+pub use encoding::{self, Decode, Decoder, Encode, Reader, Writer};
 pub use key::{
     self, Algorithm, Fingerprint, HashAlg, Kdf, KdfAlg, private::PrivateKey, public::PublicKey,
 };

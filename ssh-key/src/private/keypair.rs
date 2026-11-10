@@ -3,7 +3,7 @@
 use super::ed25519::Ed25519Keypair;
 use crate::{Algorithm, Error, Result, public};
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use {
@@ -266,7 +266,7 @@ impl KeypairData {
     /// - Returns [`Error::AlgorithmUnknown`] if the provided `algorithm` is unknown or unsupported
     ///   by this library.
     /// - Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as(reader: &mut Decoder<impl Reader>, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
             #[cfg(feature = "alloc")]
             Algorithm::Dsa => DsaKeypair::decode(reader).map(Self::Dsa),
@@ -338,7 +338,7 @@ impl PartialEq for KeypairData {
 impl Decode for KeypairData {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
         Self::decode_as(reader, algorithm)
     }

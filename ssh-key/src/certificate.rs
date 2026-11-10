@@ -17,7 +17,7 @@ use alloc::{
     vec::Vec,
 };
 use core::str::FromStr;
-use encoding::{Base64Reader, CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{Base64Reader, CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use signature::Verifier;
 
 #[cfg(feature = "serde")]
@@ -175,7 +175,7 @@ impl Certificate {
     /// - Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_openssh(certificate_str: &str) -> Result<Self> {
         let encapsulation = SshFormat::decode(certificate_str.trim_end().as_bytes())?;
-        let mut reader = Base64Reader::new(encapsulation.base64_data)?;
+        let mut reader = Decoder::from(Base64Reader::new(encapsulation.base64_data)?);
         let mut cert = Certificate::decode(&mut reader)?;
 
         // Verify that the algorithm in the Base64-encoded data matches the text
@@ -191,9 +191,9 @@ impl Certificate {
     ///
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
-        let reader = &mut bytes;
-        let cert = Certificate::decode(reader)?;
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let mut reader = Decoder::from(bytes);
+        let cert = Certificate::decode(&mut reader)?;
         Ok(reader.finish(cert)?)
     }
 
@@ -499,7 +499,7 @@ impl Certificate {
     ///
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as(reader: &mut Decoder<impl Reader>, algorithm: Algorithm) -> Result<Self> {
         Ok(Self {
             nonce: Vec::decode(reader)?,
             public_key: KeyData::decode_as(reader, algorithm)?,
@@ -533,7 +533,7 @@ impl Certificate {
 impl Decode for Certificate {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let algorithm = Algorithm::new_certificate(&String::decode(reader)?)?;
         Self::decode_as(reader, algorithm)
     }

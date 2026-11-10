@@ -4,7 +4,7 @@
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 use core::str::FromStr;
-use encoding::{Base64Reader, Decode, Encode, Reader};
+use encoding::{Base64Reader, Decode, Decoder, Encode, Reader};
 use hex_literal::hex;
 use ssh_key::{Algorithm, Certificate, public::KeyData};
 
@@ -270,7 +270,7 @@ fn decode_keydata(certificate_str: &str) {
     let cert_encoded = cert.to_bytes().unwrap();
 
     // Decode bytes-on-wire to KeyData
-    let mut reader = &cert_encoded[..];
+    let mut reader = Decoder::from(cert_encoded.as_slice());
     let key_data = KeyData::decode(&mut reader).unwrap();
 
     // Convert KeyData to Certificate and override comment from

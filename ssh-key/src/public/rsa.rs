@@ -2,7 +2,7 @@
 
 use crate::{Error, Mpint, Result};
 use core::hash::{Hash, Hasher};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
 use {
@@ -73,7 +73,7 @@ impl RsaPublicKey {
 impl Decode for RsaPublicKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let e = Mpint::decode(reader)?;
         let n = Mpint::decode(reader)?;
         Self::new(e, n)
