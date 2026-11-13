@@ -11,9 +11,15 @@ use alloc::vec::Vec;
 #[cfg(feature = "encryption")]
 use {crate::Cipher, bcrypt_pbkdf::bcrypt_pbkdf, rand_core::TryCryptoRng, zeroize::Zeroizing};
 
-/// Default number of rounds to use for bcrypt-pbkdf.
+/// Default number of rounds to use for bcrypt-pbkdf. Matches OpenSSH's `DEFAULT_ROUNDS`.
+// https://github.com/openssh/openssh-portable/commit/f938c78d490cb7556aa8ca1625e9b9bd1f963ed3
 #[cfg(feature = "encryption")]
-const DEFAULT_BCRYPT_ROUNDS: u32 = 16;
+const DEFAULT_BCRYPT_ROUNDS: u32 = 32;
+
+/// Maximum number of rounds for bcrypt-pbkdf. Matches OpenSSH's `MAX_KDF_ROUNDS`.
+// https://github.com/openssh/openssh-portable/commit/f938c78d490cb7556aa8ca1625e9b9bd1f963ed3
+#[cfg(feature = "alloc")]
+const MAX_BCRYPT_ROUNDS: u32 = 1 << 20;
 
 /// Default salt size. Matches OpenSSH.
 #[cfg(feature = "encryption")]
@@ -34,7 +40,10 @@ pub enum Kdf {
         /// Salt
         salt: Vec<u8>,
 
-        /// Rounds
+        /// Rounds.
+        ///
+        /// Decoding and key derivation require a value in `1..=1_048_576`.
+        /// Applications accepting untrusted keys may need a substantially lower limit.
         rounds: u32,
     },
 }
@@ -75,13 +84,14 @@ impl Kdf {
     /// Derive an encryption key from the given password.
     ///
     /// # Errors
-    /// Returns [`Error::Crypto`] in the event the underlying password hashing primitive returns an
-    /// error.
+    /// Returns [`Error::Crypto`] if the bcrypt round count is zero or exceeds 1,048,576, or if the
+    /// underlying password hashing primitive returns an error.
     #[cfg(feature = "encryption")]
     pub fn derive(&self, password: impl AsRef<[u8]>, output: &mut [u8]) -> Result<()> {
         match self {
             Kdf::None => Err(Error::Decrypted),
             Kdf::Bcrypt { salt, rounds } => {
+                validate_bcrypt_rounds(*rounds)?;
                 bcrypt_pbkdf(password, salt, *rounds, output).map_err(|_| Error::Crypto)?;
                 Ok(())
             }
@@ -95,6 +105,7 @@ impl Kdf {
     /// # Errors
     /// - Returns [`Error::Decrypted`] if `cipher` is [`Cipher::None`].
     /// - Returns [`Error::Encoding`] in the event of a length error.
+    /// - Propagates errors returned from [`Self::derive`].
     #[cfg(feature = "encryption")]
     pub fn derive_key_and_iv(
         &self,
@@ -159,10 +170,10 @@ impl Decode for Kdf {
 
                 #[cfg(feature = "alloc")]
                 reader.read_prefixed(|reader| {
-                    Ok(Self::Bcrypt {
-                        salt: Vec::decode(reader)?,
-                        rounds: u32::decode(reader)?,
-                    })
+                    let salt = Vec::decode(reader)?;
+                    let rounds = u32::decode(reader)?;
+                    validate_bcrypt_rounds(rounds)?;
+                    Ok(Self::Bcrypt { salt, rounds })
                 })
             }
         }
@@ -194,5 +205,67 @@ impl Encode for Kdf {
         }
 
         Ok(())
+    }
+}
+
+/// Check the bcrypt round count before accepting it or performing key derivation.
+#[cfg(feature = "alloc")]
+fn validate_bcrypt_rounds(rounds: u32) -> Result<()> {
+    if !(1..=MAX_BCRYPT_ROUNDS).contains(&rounds) {
+        return Err(Error::Crypto);
+    }
+    Ok(())
+}
+
+#[cfg(all(test, feature = "alloc"))]
+mod tests {
+    use super::{Kdf, MAX_BCRYPT_ROUNDS};
+    use crate::Error;
+    use encoding::{Decode, Encode};
+
+    #[test]
+    fn decode_bcrypt_rounds_boundaries() {
+        for (rounds, valid) in [
+            (0, false),
+            (1, true),
+            (MAX_BCRYPT_ROUNDS, true),
+            (MAX_BCRYPT_ROUNDS + 1, false),
+            (u32::MAX, false),
+        ] {
+            let kdf = Kdf::Bcrypt {
+                salt: b"salt".to_vec(),
+                rounds,
+            };
+            let encoded = kdf.encode_vec().unwrap();
+            let mut decoder = encoded.as_slice().into();
+            let expected = if valid { Ok(kdf) } else { Err(Error::Crypto) };
+            assert_eq!(Kdf::decode(&mut decoder), expected, "rounds: {rounds}");
+            if valid {
+                decoder.finish(()).unwrap();
+            }
+        }
+    }
+
+    #[cfg(feature = "encryption")]
+    #[test]
+    fn derive_bcrypt_invalid_rounds() {
+        // Fail immediately if invalid rounds reach bcrypt instead of running an expensive KDF.
+        struct UnreadPassword;
+
+        impl AsRef<[u8]> for UnreadPassword {
+            fn as_ref(&self) -> &[u8] {
+                panic!("invalid rounds must be rejected before accessing the password");
+            }
+        }
+
+        for rounds in [0, MAX_BCRYPT_ROUNDS + 1, u32::MAX] {
+            let kdf = Kdf::Bcrypt {
+                salt: b"salt".to_vec(),
+                rounds,
+            };
+            let mut output = [0xa5; 32];
+            assert_eq!(kdf.derive(UnreadPassword, &mut output), Err(Error::Crypto));
+            assert_eq!(output, [0xa5; 32]);
+        }
     }
 }
