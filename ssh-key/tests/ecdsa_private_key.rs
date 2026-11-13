@@ -3,7 +3,7 @@
 #![cfg(feature = "ecdsa")]
 #![allow(clippy::unwrap_used, reason = "tests")]
 
-use encoding::{Base64Reader, Base64Writer, Decode, Encode};
+use encoding::{Base64Reader, Base64Writer, Decode, Encode, Reader};
 use hex_literal::hex;
 use ssh_key::{PrivateKey, private::EcdsaPrivateKey};
 
@@ -59,7 +59,7 @@ fn sign_with_short_p256() {
 fn decode_scalar<const SIZE: usize>(bytes: &[u8]) -> ssh_key::Result<EcdsaPrivateKey<SIZE>> {
     let mut encoded = u32::try_from(bytes.len()).unwrap().to_be_bytes().to_vec();
     encoded.extend_from_slice(bytes);
-    EcdsaPrivateKey::decode(&mut encoded.as_slice().into())
+    EcdsaPrivateKey::decode(&mut encoded.as_slice().into_decoder()?)
 }
 
 fn encode_positive(bytes: &[u8]) -> Vec<u8> {
@@ -89,7 +89,8 @@ fn check_scalar_encodings<const SIZE: usize>() {
         let mut writer = Base64Writer::new(&mut encoded).unwrap();
         private.encode(&mut writer).unwrap();
         let encoded = writer.finish().unwrap();
-        let mut reader = encoding::Decoder::from(Base64Reader::new(encoded.as_bytes()).unwrap());
+        let mut reader =
+            encoding::Decoder::new(Base64Reader::new(encoded.as_bytes()).unwrap()).unwrap();
         assert_eq!(private.encoded_len().unwrap(), reader.remaining_len());
         let decoded = EcdsaPrivateKey::<SIZE>::decode(&mut reader).unwrap();
         assert_eq!(private, reader.finish(decoded).unwrap());

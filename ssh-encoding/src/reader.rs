@@ -21,9 +21,11 @@ pub trait Reader: Sized {
     fn remaining_len(&self) -> usize;
 
     /// Consume this reader, wrapping it in a decoder for SSH protocol data types.
-    #[must_use]
-    fn into_decoder(self) -> Decoder<Self> {
-        self.into()
+    ///
+    /// # Errors
+    /// Returns [`Error::Length`] if the remaining decoded input exceeds `MAX_MSG_SIZE`.
+    fn into_decoder(self) -> Result<Decoder<Self>> {
+        Decoder::new(self)
     }
 }
 

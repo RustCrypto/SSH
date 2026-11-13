@@ -224,7 +224,7 @@ mod tests {
     use super::{Kdf, MAX_BCRYPT_ROUNDS};
     use crate::Error;
     use alloc::vec::Vec;
-    use encoding::{Decode, Encode};
+    use encoding::{Decode, Encode, Reader};
 
     #[test]
     fn bcrypt_rounds_boundaries() {
@@ -262,7 +262,7 @@ mod tests {
                 assert!(output.is_empty());
                 Err(Error::Crypto)
             };
-            let mut decoder = encoded.as_slice().into();
+            let mut decoder = encoded.as_slice().into_decoder().unwrap();
             assert_eq!(Kdf::decode(&mut decoder), expected, "rounds: {rounds}");
             if valid {
                 decoder.finish(()).unwrap();

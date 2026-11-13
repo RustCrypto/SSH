@@ -132,7 +132,7 @@ impl PublicKey {
     /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_openssh(public_key: &str) -> Result<Self> {
         let encapsulation = SshFormat::decode(public_key.trim_end().as_bytes())?;
-        let mut reader = Decoder::from(Base64Reader::new(encapsulation.base64_data)?);
+        let mut reader = Decoder::new(Base64Reader::new(encapsulation.base64_data)?)?;
         let key_data = KeyData::decode(&mut reader)?;
 
         // Verify that the algorithm in the Base64-encoded data matches the text
@@ -154,7 +154,7 @@ impl PublicKey {
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut reader = Decoder::from(bytes);
+        let mut reader = Decoder::new(bytes)?;
         let key_data = KeyData::decode(&mut reader)?;
         Ok(reader.finish(key_data.into())?)
     }

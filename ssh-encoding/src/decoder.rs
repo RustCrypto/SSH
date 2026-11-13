@@ -1,11 +1,11 @@
 //! Shared decoder for SSH protocol data types.
 
-use crate::{Decode, Error, Reader, Result};
+use crate::{Decode, Error, MAX_MSG_SIZE, Reader, Result};
 use core::{fmt, str};
 
 /// Decoder for SSH protocol data types over a byte [`Reader`].
 ///
-/// Construct a decoder with [`Reader::into_decoder`] or the [`From`] conversion.
+/// Construct a decoder with [`Decoder::new`] or [`Reader::into_decoder`].
 ///
 /// All nested decoding uses the same decoder type, with enclosing bounds stored on the call
 /// stack. Neither nesting nor decoding from Base64 or PEM requires a heap allocation.
@@ -17,7 +17,7 @@ use core::{fmt, str};
 /// ```
 /// use ssh_encoding::{Decode, Reader};
 ///
-/// let mut decoder = [0, 0, 0, 42].as_slice().into_decoder();
+/// let mut decoder = [0, 0, 0, 42].as_slice().into_decoder()?;
 /// let value = u32::decode(&mut decoder)?;
 /// assert_eq!(decoder.finish(value)?, 42);
 /// # Ok::<(), ssh_encoding::Error>(())
@@ -38,15 +38,21 @@ pub struct Decoder<R> {
 
 impl<R: Reader> Decoder<R> {
     /// Create a decoder which owns the given reader.
-    #[must_use]
-    pub fn new(reader: R) -> Self {
+    ///
+    /// # Errors
+    /// Returns [`Error::Length`] if the remaining decoded input exceeds `MAX_MSG_SIZE`.
+    pub fn new(reader: R) -> Result<Self> {
         let end = reader.remaining_len();
-        Self {
+        if end > MAX_MSG_SIZE {
+            return Err(Error::Length);
+        }
+
+        Ok(Self {
             reader,
             position: 0,
             end,
             failed: false,
-        }
+        })
     }
 
     /// Read enough bytes to exactly fill `out`, without crossing the active scope's boundary.
@@ -261,12 +267,6 @@ impl<R: Reader> Decoder<R> {
     }
 }
 
-impl<R: Reader> From<R> for Decoder<R> {
-    fn from(reader: R) -> Self {
-        Self::new(reader)
-    }
-}
-
 impl<R: Reader> fmt::Debug for Decoder<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Decoder")
@@ -289,6 +289,36 @@ impl<R> Drop for NestedScope<'_, R> {
         self.decoder.end = self.outer_end;
         if !self.completed {
             self.decoder.failed = true;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{Error, MAX_MSG_SIZE, Reader};
+
+    #[test]
+    fn input_size_limit_before_reading() {
+        // Exercise the actual limit without allocating a large input buffer.
+        struct Unreadable(usize);
+
+        impl Reader for Unreadable {
+            fn read<'o>(&mut self, _: &'o mut [u8]) -> Result<&'o [u8], Error> {
+                panic!("construction must not read input");
+            }
+
+            fn remaining_len(&self) -> usize {
+                self.0
+            }
+        }
+
+        for len in [0, MAX_MSG_SIZE - 1, MAX_MSG_SIZE] {
+            let decoder = Unreadable(len).into_decoder().unwrap();
+            assert_eq!(decoder.remaining_len(), len);
+        }
+
+        for len in [MAX_MSG_SIZE + 1, usize::MAX] {
+            assert_eq!(Unreadable(len).into_decoder().err(), Some(Error::Length));
         }
     }
 }

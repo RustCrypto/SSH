@@ -136,7 +136,7 @@
 //!
 #![cfg_attr(all(feature = "alloc", feature = "derive"), doc = "```")]
 #![cfg_attr(not(all(feature = "alloc", feature = "derive")), doc = "```ignore")]
-//! use ssh_encoding::{Decode, Encode};
+//! use ssh_encoding::{Decode, Encode, Reader};
 //!
 //! #[derive(Debug, PartialEq, Encode, Decode)]
 //! #[repr(u8)]
@@ -184,10 +184,11 @@
 //!     },
 //! };
 //!
-//! let encoded = message.encode_vec().unwrap();
+//! let encoded = message.encode_vec()?;
 //! assert_eq!(&encoded[..13], &[31, 0, 0, 0, 42, 0, 0, 0, 19, 101, 99, 100, 115]);
-//! let decoded = Message::decode(&mut encoded.as_slice().into()).unwrap();
+//! let decoded = Message::decode(&mut encoded.as_slice().into_decoder()?)?;
 //! assert_eq!(message, decoded);
+//! # Ok::<(), ssh_encoding::Error>(())
 //! ```
 
 #[cfg(feature = "alloc")]
@@ -248,6 +249,14 @@ use alloc::vec::Vec;
 
 #[cfg(feature = "bigint")]
 pub use bigint::BoxedUint as Uint;
+
+/// Maximum binary input size accepted by [`Decoder`]: 128 MiB.
+///
+/// Matches OpenSSH's [`SSHBUF_SIZE_MAX`]. For Base64 and PEM readers, this bounds the decoded
+/// binary length, excluding textual encapsulation. Nested scopes are bounded by their parent.
+///
+/// [`SSHBUF_SIZE_MAX`]: https://github.com/openssh/openssh-portable/blob/1bf5871aead6d73177d727add15ab0f14c258fdf/sshbuf.h#L39
+const MAX_MSG_SIZE: usize = 0x800_0000;
 
 /// Fallibly allocate an empty byte buffer with the requested capacity.
 #[cfg(feature = "alloc")]

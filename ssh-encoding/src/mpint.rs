@@ -393,7 +393,10 @@ mod tests {
             n.encode(&mut output).unwrap();
             assert_eq!(output, encoded);
             assert_eq!(n.encoded_len().unwrap(), output.len());
-            assert_eq!(Mpint::decode(&mut encoded.into()).unwrap(), n);
+            assert_eq!(
+                Mpint::decode(&mut encoded.into_decoder().unwrap()).unwrap(),
+                n
+            );
         }
     }
 
@@ -407,7 +410,7 @@ mod tests {
         ] {
             let mut encoded = Vec::new();
             bytes.encode(&mut encoded).unwrap();
-            let n = Mpint::decode(&mut encoded.as_slice().into()).unwrap();
+            let n = Mpint::decode(&mut encoded.as_slice().into_decoder().unwrap()).unwrap();
             assert_eq!(n, Mpint::from_bytes(bytes).unwrap());
             let mut canonical = Vec::new();
             n.encode(&mut canonical).unwrap();
@@ -425,7 +428,7 @@ mod tests {
         ] {
             let mut encoded = Vec::new();
             bytes.encode(&mut encoded).unwrap();
-            let mut reader = encoded.as_slice().into_decoder();
+            let mut reader = encoded.as_slice().into_decoder().unwrap();
             assert_eq!(Mpint::decode(&mut reader), Err(Error::MpintEncoding));
             assert_eq!(reader.finish(()), Err(Error::Failed));
         }
@@ -451,7 +454,11 @@ mod tests {
                             let mut encoded = Vec::new();
                             n.encode(&mut encoded).unwrap();
                             assert_eq!(n.encoded_len().unwrap(), encoded.len());
-                            assert_eq!(Mpint::decode(&mut encoded.as_slice().into()).unwrap(), n);
+                            assert_eq!(
+                                Mpint::decode(&mut encoded.as_slice().into_decoder().unwrap())
+                                    .unwrap(),
+                                n
+                            );
                         } else {
                             assert_eq!(result, Err(Error::Length));
                         }
@@ -475,7 +482,7 @@ mod tests {
                 bytes[0] = first;
                 let mut encoded = Vec::new();
                 bytes.encode(&mut encoded).unwrap();
-                let result = Mpint::decode(&mut encoded.as_slice().into());
+                let result = Mpint::decode(&mut encoded.as_slice().into_decoder().unwrap());
                 if valid {
                     assert_eq!(result.unwrap(), Mpint::from_bytes(&bytes).unwrap());
                 } else {
@@ -509,7 +516,10 @@ mod tests {
         let reader = Unreadable {
             prefix: Some(u32::try_from(Mpint::MAX_SIZE + 2).unwrap().to_be_bytes()),
         };
-        assert_eq!(Mpint::decode(&mut reader.into()), Err(Error::Length));
+        assert_eq!(
+            Mpint::decode(&mut reader.into_decoder().unwrap()),
+            Err(Error::Length)
+        );
     }
 
     #[test]

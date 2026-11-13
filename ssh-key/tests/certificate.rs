@@ -265,7 +265,7 @@ fn decode_keydata(certificate_str: &str) {
     let cert_encoded = cert.to_bytes().unwrap();
 
     // Decode bytes-on-wire to KeyData
-    let mut reader = Decoder::from(cert_encoded.as_slice());
+    let mut reader = Decoder::new(cert_encoded.as_slice()).unwrap();
     let key_data = KeyData::decode(&mut reader).unwrap();
 
     // Convert KeyData to Certificate and override comment from

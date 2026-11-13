@@ -474,7 +474,7 @@ impl PpkContainer {
         }
 
         let mut public_key = PublicKey::from_bytes(&public_key)?;
-        let mut private_key_cursor = Decoder::from(private_key.as_slice());
+        let mut private_key_cursor = Decoder::new(private_key.as_slice())?;
         let keypair_data =
             decode_private_key_as(&mut private_key_cursor, public_key.clone(), ppk.algorithm)?;
 
@@ -672,7 +672,7 @@ mod tests {
             let mut encoded = Vec::new();
             bytes.as_slice().encode(&mut encoded).unwrap();
             let key = decode_private_key_as(
-                &mut encoded.as_slice().into(),
+                &mut encoded.as_slice().into_decoder().unwrap(),
                 PublicKey::new(public.into(), ""),
                 Algorithm::Ed25519,
             )
