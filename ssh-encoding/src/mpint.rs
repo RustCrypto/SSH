@@ -8,8 +8,6 @@ use core::fmt;
 use crate::Uint;
 #[cfg(feature = "zeroize")]
 use zeroize::Zeroize;
-#[cfg(feature = "bigint")]
-use zeroize::Zeroizing;
 #[cfg(feature = "ctutils")]
 use {
     core::cmp::Ordering,
@@ -64,13 +62,18 @@ impl Mpint {
     ///
     /// # Errors
     /// Returns [`Error::Length`] if the magnitude exceeds [`Self::MAX_SIZE`].
+    /// Returns [`Error::Alloc`] if reserving capacity fails.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let bytes = strip_leading_zeros(bytes);
         if bytes.len() > Self::MAX_SIZE {
             return Err(Error::Length);
         }
+
+        let mut inner = crate::vec_with_reserve(bytes.len())?;
+        inner.extend_from_slice(bytes);
+
         Ok(Self {
-            inner: bytes.into(),
+            inner: inner.into_boxed_slice(),
         })
     }
 
@@ -172,7 +175,7 @@ impl Decode for Mpint {
                 first = u8::decode(reader)?;
             }
 
-            let mut bytes = vec![0; reader.remaining_len() + 1];
+            let mut bytes = crate::vec_zeroed(reader.remaining_len() + 1)?;
             bytes[0] = first;
             reader.read(&mut bytes[1..])?;
 
@@ -290,8 +293,25 @@ impl TryFrom<&Uint> for Mpint {
         if bits > u32::try_from(Self::MAX_SIZE * 8)? {
             return Err(Error::Length);
         }
-        let bytes = Zeroizing::new(uint.to_be_bytes());
-        Self::from_bytes(&bytes)
+
+        // Serialize directly into the fallibly allocated magnitude buffer.
+        let mut inner = crate::vec_with_reserve(usize::try_from(bits.div_ceil(8))?)?;
+
+        for limb in uint.as_limbs().iter().rev() {
+            let bytes = limb.0.to_be_bytes();
+
+            let bytes = if inner.is_empty() {
+                strip_leading_zeros(&bytes)
+            } else {
+                &bytes
+            };
+
+            inner.extend_from_slice(bytes);
+        }
+
+        Ok(Self {
+            inner: inner.into_boxed_slice(),
+        })
     }
 }
 
@@ -330,7 +350,7 @@ fn strip_leading_zeros(mut bytes: &[u8]) -> &[u8] {
 mod tests {
     use super::Mpint;
     use crate::{Decode, Encode, Error, Reader};
-    use alloc::{format, vec::Vec};
+    use alloc::{format, vec, vec::Vec};
     use hex_literal::hex;
 
     #[test]
@@ -544,6 +564,7 @@ mod tests {
             vec![],
             vec![0],
             vec![0x80],
+            hex!("12 34 56 78 9a bc de f0 00 01").to_vec(),
             vec![0xff; Mpint::MAX_SIZE],
             vec![0xff; Mpint::MAX_SIZE + 1],
         ] {

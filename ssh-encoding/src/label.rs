@@ -44,12 +44,20 @@ pub struct LabelError {
 
 impl LabelError {
     /// Create a new [`LabelError`] for the given invalid label.
+    ///
+    /// If allocating space for the label fails, the error omits the label.
     #[cfg_attr(not(feature = "alloc"), allow(unused_variables))]
     #[must_use]
     pub fn new(label: &str) -> Self {
         Self {
             #[cfg(feature = "alloc")]
-            label: label.into(),
+            label: {
+                let mut stored = String::new();
+                if stored.try_reserve_exact(label.len()).is_ok() {
+                    stored.push_str(label);
+                }
+                stored
+            },
         }
     }
 
