@@ -11,7 +11,11 @@ use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
     feature = "p256",
     feature = "rsa"
 ))]
-use {encoding::Decode, signature::Verifier, ssh_key::Signature};
+use {
+    encoding::{Decode, Reader},
+    signature::Verifier,
+    ssh_key::Signature,
+};
 
 #[cfg(all(
     feature = "sha2",
@@ -201,8 +205,13 @@ fn sign_dsa() {
 #[test]
 #[cfg(feature = "p256")]
 fn verify_sk_ecdsa_openssh_wire_format() {
-    let signature =
-        Signature::decode(&mut SK_ECDSA_SIGNATURE_OPENSSH_WIRE.as_slice().into()).unwrap();
+    let signature = Signature::decode(
+        &mut SK_ECDSA_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = SK_ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -218,7 +227,13 @@ fn verify_sk_ecdsa_openssh_wire_format() {
 #[test]
 #[cfg(feature = "dsa")]
 fn verify_dsa_openssh_wire_format() {
-    let signature = Signature::decode(&mut DSA_SIGNATURE_OPENSSH_WIRE.as_slice().into()).unwrap();
+    let signature = Signature::decode(
+        &mut DSA_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = DSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -245,8 +260,13 @@ fn sign_ecdsa_p256() {
 #[test]
 #[cfg(feature = "p256")]
 fn verify_ecdsa_p256_openssh_wire_format() {
-    let signature =
-        Signature::decode(&mut ECDSA_P256_SIGNATURE_OPENSSH_WIRE.as_slice().into()).unwrap();
+    let signature = Signature::decode(
+        &mut ECDSA_P256_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -268,8 +288,13 @@ fn sign_ed25519() {
 #[test]
 #[cfg(feature = "ed25519")]
 fn verify_ed25519_openssh_wire_format() {
-    let signature =
-        Signature::decode(&mut ED25519_SIGNATURE_OPENSSH_WIRE.as_slice().into()).unwrap();
+    let signature = Signature::decode(
+        &mut ED25519_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = ED25519_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -296,7 +321,13 @@ fn sign_rsa() {
 #[test]
 #[cfg(feature = "rsa")]
 fn verify_rsa_openssh_wire_format() {
-    let signature = Signature::decode(&mut RSA_SIGNATURE_OPENSSH_WIRE.as_slice().into()).unwrap();
+    let signature = Signature::decode(
+        &mut RSA_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = RSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()

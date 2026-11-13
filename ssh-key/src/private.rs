@@ -273,7 +273,7 @@ impl PrivateKey {
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
-        let mut reader = Decoder::from(bytes);
+        let mut reader = Decoder::new(bytes)?;
         let private_key = Self::decode(&mut reader)?;
         Ok(reader.finish(private_key)?)
     }
@@ -471,7 +471,7 @@ impl PrivateKey {
 
         #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
         Self::decode_privatekey_comment_pair(
-            &mut (&**buffer).into(),
+            &mut (&**buffer).into_decoder()?,
             self.public_key.key_data.clone(),
             self.cipher.block_size(),
             self.cipher.block_size() - 1,

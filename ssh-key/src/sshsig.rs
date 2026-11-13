@@ -454,7 +454,8 @@ impl<'de> Deserialize<'de> for SshSig {
             string.parse::<SshSig>().map_err(de::Error::custom)
         } else {
             let bytes = Vec::<u8>::deserialize(deserializer)?;
-            Self::decode(&mut bytes.as_slice().into()).map_err(de::Error::custom)
+            let mut decoder = bytes.as_slice().into_decoder().map_err(de::Error::custom)?;
+            Self::decode(&mut decoder).map_err(de::Error::custom)
         }
     }
 }

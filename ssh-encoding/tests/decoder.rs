@@ -1,5 +1,7 @@
 //! Shared decoder behavior across byte, Base64, and PEM readers.
 
+#![allow(clippy::unwrap_used, reason = "tests")]
+
 use hex_literal::hex;
 use ssh_encoding::{Decode, Decoder, Error, Reader};
 
@@ -8,7 +10,7 @@ fn check_backends<T>(bytes: &[u8], expected: Result<T, Error>)
 where
     T: Decode<Error = Error> + core::fmt::Debug + Eq,
 {
-    let mut decoder = Decoder::from(bytes);
+    let mut decoder = Decoder::new(bytes).unwrap();
     let result = T::decode(&mut decoder).and_then(|value| decoder.finish(value));
     assert_eq!(result, expected);
 
@@ -20,7 +22,7 @@ where
         let mut buffer = [0; 256];
         let base64 = Base64::encode(bytes, &mut buffer).expect("test input fits in buffer");
         let reader = Base64Reader::new(base64.as_bytes()).expect("valid Base64 test input");
-        let mut decoder: Decoder<_> = reader.into();
+        let mut decoder: Decoder<_> = reader.into_decoder().unwrap();
         let result = T::decode(&mut decoder).and_then(|value| decoder.finish(value));
         assert_eq!(result, expected);
     }
@@ -203,7 +205,7 @@ fn callback_error_restores_scope_and_invalidates_decoder() {
 
 #[test]
 fn ignored_read_error_cannot_make_scope_succeed() {
-    let mut decoder = Decoder::from([0xaa, 0xbb].as_slice());
+    let mut decoder = Decoder::new([0xaa, 0xbb].as_slice()).unwrap();
     let result = decoder.read_nested(1, |decoder| {
         assert_eq!(u8::decode(decoder)?, 0xaa);
         assert_eq!(u8::decode(decoder), Err(Error::Length));
@@ -218,7 +220,7 @@ fn unwinding_restores_scope_and_invalidates_decoder() {
     use core::panic::AssertUnwindSafe;
     use std::panic::catch_unwind;
 
-    let mut decoder = Decoder::from([0xaa, 0xbb, 0xcc].as_slice());
+    let mut decoder = Decoder::new([0xaa, 0xbb, 0xcc].as_slice()).unwrap();
     let result = catch_unwind(AssertUnwindSafe(|| {
         decoder.read_nested::<(), Error, _>(2, |decoder| {
             assert_eq!(u8::decode(decoder)?, 0xaa);
@@ -246,7 +248,7 @@ fn partially_advanced_reader_cannot_be_reused_after_error() {
     }
 
     let mut reader = PartialReader(&[0xaa, 0xbb]);
-    let mut decoder = Decoder::from(&mut reader);
+    let mut decoder = Decoder::new(&mut reader).unwrap();
     assert_eq!(u8::decode(&mut decoder), Err(Error::CharacterEncoding));
     assert_eq!(u8::decode(&mut decoder), Err(Error::Failed));
     assert_eq!(decoder.finish(()), Err(Error::Failed));
