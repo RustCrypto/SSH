@@ -37,13 +37,10 @@ pub enum Kdf {
     /// bcrypt-pbkdf options.
     #[cfg(feature = "alloc")]
     Bcrypt {
-        /// Salt
+        /// Salt: recommended 16-bytes and random.
         salt: Vec<u8>,
 
-        /// Rounds.
-        ///
-        /// Decoding and key derivation require a value in `1..=1_048_576`.
-        /// Applications accepting untrusted keys may need a substantially lower limit.
+        /// Rounds: must be within `1..=1_048_576`.
         rounds: u32,
     },
 }
@@ -185,13 +182,18 @@ impl Encode for Kdf {
         let kdfopts_prefixed_len = match self {
             Self::None => 4,
             #[cfg(feature = "alloc")]
-            Self::Bcrypt { salt, .. } => [12, salt.len()].checked_sum()?,
+            Self::Bcrypt { salt, rounds } => {
+                validate_bcrypt_rounds(*rounds).map_err(|_| encoding::Error::Overflow)?;
+                [12, salt.len()].checked_sum()?
+            }
         };
 
         [self.algorithm().encoded_len()?, kdfopts_prefixed_len].checked_sum()
     }
 
     fn encode(&self, writer: &mut impl Writer) -> encoding::Result<()> {
+        // Validate before writing any part of the KDF.
+        self.encoded_len()?;
         self.algorithm().encode(writer)?;
 
         match self {
@@ -208,7 +210,7 @@ impl Encode for Kdf {
     }
 }
 
-/// Check the bcrypt round count before accepting it or performing key derivation.
+/// Check the bcrypt round count before encoding, decoding, or key derivation.
 #[cfg(feature = "alloc")]
 fn validate_bcrypt_rounds(rounds: u32) -> Result<()> {
     if !(1..=MAX_BCRYPT_ROUNDS).contains(&rounds) {
@@ -221,10 +223,18 @@ fn validate_bcrypt_rounds(rounds: u32) -> Result<()> {
 mod tests {
     use super::{Kdf, MAX_BCRYPT_ROUNDS};
     use crate::Error;
+    use alloc::vec::Vec;
     use encoding::{Decode, Encode};
 
     #[test]
-    fn decode_bcrypt_rounds_boundaries() {
+    fn bcrypt_rounds_boundaries() {
+        let mut encoded = Kdf::Bcrypt {
+            salt: b"salt".to_vec(),
+            rounds: 1,
+        }
+        .encode_vec()
+        .unwrap();
+
         for (rounds, valid) in [
             (0, false),
             (1, true),
@@ -236,9 +246,23 @@ mod tests {
                 salt: b"salt".to_vec(),
                 rounds,
             };
-            let encoded = kdf.encode_vec().unwrap();
+            // Modify the wire encoding so invalid rounds can still be tested on decode.
+            let offset = encoded.len() - 4;
+            encoded[offset..].copy_from_slice(&rounds.to_be_bytes());
+
+            let mut output = Vec::new();
+            let expected = if valid {
+                assert_eq!(kdf.encoded_len(), Ok(encoded.len()));
+                kdf.encode(&mut output).unwrap();
+                assert_eq!(output, encoded);
+                Ok(kdf)
+            } else {
+                assert_eq!(kdf.encoded_len(), Err(encoding::Error::Overflow));
+                assert_eq!(kdf.encode(&mut output), Err(encoding::Error::Overflow));
+                assert!(output.is_empty());
+                Err(Error::Crypto)
+            };
             let mut decoder = encoded.as_slice().into();
-            let expected = if valid { Ok(kdf) } else { Err(Error::Crypto) };
             assert_eq!(Kdf::decode(&mut decoder), expected, "rounds: {rounds}");
             if valid {
                 decoder.finish(()).unwrap();
