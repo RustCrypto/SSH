@@ -21,6 +21,16 @@ use ctutils::CtEq;
 use encoding::base64::{self, Base64, Encoding};
 use encoding::{Decode, Decoder, Encode, LabelError, Reader};
 
+/// Maximum Argon2 memory cost in KiB (1 GiB).
+// These are resource limits imposed by this crate, not limits of the PPK format.
+const MAX_ARGON2_MEMORY: u32 = 1 << 20;
+
+/// Maximum number of Argon2 passes.
+const MAX_ARGON2_PASSES: u32 = 1 << 10;
+
+/// Maximum Argon2 parallelism.
+const MAX_ARGON2_PARALLELISM: u32 = 64;
+
 #[derive(Debug)]
 pub(crate) enum Kdf {
     Argon2 { kdf: Argon2<'static>, salt: Vec<u8> },
@@ -47,17 +57,15 @@ impl Kdf {
                 .and_then(|v| v.parse().map_err(PpkParseError::InvalidInteger))
         };
 
-        let argon = Argon2::new(
-            argon_algorithm,
-            argon2::Version::V0x13,
-            argon2::Params::new(
-                parse_int(PpkKey::Argon2Memory)?,
-                parse_int(PpkKey::Argon2Passes)?,
-                parse_int(PpkKey::Argon2Parallelism)?,
-                None,
-            )
-            .map_err(PpkParseError::Argon2)?,
-        );
+        let params = argon2::Params::new(
+            parse_int(PpkKey::Argon2Memory)?,
+            parse_int(PpkKey::Argon2Passes)?,
+            parse_int(PpkKey::Argon2Parallelism)?,
+            None,
+        )
+        .map_err(PpkParseError::Argon2)?;
+        validate_argon2_params(&params)?;
+        let argon = Argon2::new(argon_algorithm, argon2::Version::V0x13, params);
 
         let salt = Vec::from_hex(
             ppk.values
@@ -69,12 +77,37 @@ impl Kdf {
         Ok(Self::Argon2 { kdf: argon, salt })
     }
 
-    pub(crate) fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), argon2::Error> {
+    pub(crate) fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), PpkParseError> {
         match self {
-            Kdf::Argon2 { kdf, salt } => kdf.hash_password_into(password, salt, output),
+            Kdf::Argon2 { kdf, salt } => {
+                validate_argon2_params(kdf.params())?;
+                kdf.hash_password_into(password, salt, output)
+                    .map_err(PpkParseError::Argon2)
+            }
             Kdf::PpkV2 => Ok(()),
         }
     }
+}
+
+/// Check resource limits before accepting Argon2 parameters or deriving a key.
+fn validate_argon2_params(params: &argon2::Params) -> Result<(), PpkParseError> {
+    for (key, value, max) in [
+        (PpkKey::Argon2Memory, params.m_cost(), MAX_ARGON2_MEMORY),
+        (PpkKey::Argon2Passes, params.t_cost(), MAX_ARGON2_PASSES),
+        (
+            PpkKey::Argon2Parallelism,
+            params.p_cost(),
+            MAX_ARGON2_PARALLELISM,
+        ),
+    ] {
+        if value > max {
+            return Err(PpkParseError::ValueFormat {
+                key,
+                value: value.to_string(),
+            });
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -96,8 +129,7 @@ impl Cipher {
         match &kdf {
             Kdf::Argon2 { .. } => {
                 let mut key_iv_mac = vec![0; 80];
-                kdf.derive(password.as_bytes(), &mut key_iv_mac)
-                    .map_err(PpkParseError::Argon2)?;
+                kdf.derive(password.as_bytes(), &mut key_iv_mac)?;
                 let key = &key_iv_mac[..32];
                 let iv = &key_iv_mac[32..48];
                 let mac_key = &key_iv_mac[48..80];
@@ -546,12 +578,90 @@ fn decode_private_key_as(
     }
 }
 
-#[cfg(all(test, feature = "ed25519"))]
+#[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "ed25519")]
     use crate::private::Ed25519PrivateKey;
 
     #[test]
+    fn argon2_params_boundaries() {
+        let mut ppk =
+            PpkWrapper::try_from(include_str!("../tests/examples/id_ed25519_enc.ppk")).unwrap();
+
+        for (key, min, max) in [
+            (PpkKey::Argon2Memory, 8, MAX_ARGON2_MEMORY),
+            (PpkKey::Argon2Passes, 1, MAX_ARGON2_PASSES),
+            (PpkKey::Argon2Parallelism, 1, MAX_ARGON2_PARALLELISM),
+        ] {
+            let original = ppk.values[&key].clone();
+            for (value, valid) in [
+                (min - 1, false),
+                (min, true),
+                (max, true),
+                (max + 1, false),
+                (u32::MAX, false),
+            ] {
+                ppk.values.insert(key, value.to_string());
+                for algorithm in ["Argon2d", "Argon2i", "Argon2id"] {
+                    // Constructing a KDF checks the boundaries without allocating its memory
+                    // or performing expensive key derivation at the accepted upper limits.
+                    assert_eq!(
+                        Kdf::new_v3(algorithm, &ppk).is_ok(),
+                        valid,
+                        "{algorithm}, {key:?}: {value}"
+                    );
+                }
+            }
+            ppk.values.insert(key, original);
+        }
+    }
+
+    #[test]
+    fn derive_rejects_excessive_argon2_params() {
+        for (key, memory, passes, parallelism, value) in [
+            (
+                PpkKey::Argon2Memory,
+                MAX_ARGON2_MEMORY + 1,
+                1,
+                1,
+                MAX_ARGON2_MEMORY + 1,
+            ),
+            (
+                PpkKey::Argon2Passes,
+                8,
+                MAX_ARGON2_PASSES + 1,
+                1,
+                MAX_ARGON2_PASSES + 1,
+            ),
+            (
+                PpkKey::Argon2Parallelism,
+                8 * (MAX_ARGON2_PARALLELISM + 1),
+                1,
+                MAX_ARGON2_PARALLELISM + 1,
+                MAX_ARGON2_PARALLELISM + 1,
+            ),
+        ] {
+            let params = argon2::Params::new(memory, passes, parallelism, None).unwrap();
+            let kdf = Kdf::Argon2 {
+                kdf: Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params),
+                // Invalid salt distinguishes the resource check from Argon2's own validation.
+                salt: Vec::new(),
+            };
+            let mut output = [0xa5; 80];
+            assert_eq!(
+                kdf.derive(b"password", &mut output),
+                Err(PpkParseError::ValueFormat {
+                    key,
+                    value: value.to_string(),
+                })
+            );
+            assert_eq!(output, [0xa5; 80]);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "ed25519")]
     fn ed25519_seed_is_not_an_mpint() {
         // Cover both a set sign bit and leading zeros that mpint decoding would strip.
         for first in [0, 0x7f, 0x80, 0xff] {
