@@ -48,10 +48,11 @@ pub trait Encode {
     /// Encode this value, returning a `Vec<u8>` containing the encoded message.
     ///
     /// # Errors
+    /// Returns [`Error::Alloc`] if reserving capacity fails.
     /// Returns errors specific to the concrete implementation of this trait.
     #[cfg(feature = "alloc")]
     fn encode_vec(&self) -> Result<Vec<u8>, Error> {
-        let mut ret = Vec::with_capacity(self.encoded_len()?);
+        let mut ret = crate::vec_with_reserve(self.encoded_len()?)?;
         self.encode(&mut ret)?;
         Ok(ret)
     }

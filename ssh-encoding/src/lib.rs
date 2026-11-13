@@ -191,7 +191,6 @@
 //! ```
 
 #[cfg(feature = "alloc")]
-#[macro_use]
 extern crate alloc;
 
 mod checked;
@@ -244,8 +243,24 @@ pub use crate::pem::{DecodePem, EncodePem};
 #[cfg(feature = "derive")]
 pub use ssh_derive::{Decode, Encode};
 
-#[cfg(all(doc, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
 #[cfg(feature = "bigint")]
 pub use bigint::BoxedUint as Uint;
+
+/// Fallibly allocate an empty byte buffer with the requested capacity.
+#[cfg(feature = "alloc")]
+fn vec_with_reserve(capacity: usize) -> Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(capacity)?;
+    Ok(buffer)
+}
+
+/// Fallibly allocate a zero-filled byte buffer.
+#[cfg(feature = "alloc")]
+fn vec_zeroed(len: usize) -> Result<Vec<u8>> {
+    let mut buffer = vec_with_reserve(len)?;
+    buffer.resize(len, 0);
+    Ok(buffer)
+}

@@ -149,7 +149,7 @@ impl Decode for Vec<u8> {
 
     fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
-            let mut result = vec![0u8; reader.remaining_len()];
+            let mut result = crate::vec_zeroed(reader.remaining_len())?;
             reader.read(&mut result)?;
             Ok(result)
         })
@@ -192,6 +192,7 @@ impl Decode for Vec<String> {
             let mut entries = Self::new();
 
             while !reader.is_finished() {
+                entries.try_reserve(1)?;
                 entries.push(String::decode(reader)?);
             }
 
