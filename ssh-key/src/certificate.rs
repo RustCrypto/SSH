@@ -32,6 +32,10 @@ use {
     std::{fs, path::Path, time::SystemTime},
 };
 
+/// Maximum number of certificate principals. Matches OpenSSH's `SSHKEY_CERT_MAX_PRINCIPALS`.
+/// <https://github.com/openssh/openssh-portable/blob/65666f4/sshkey.h#L96>
+const MAX_PRINCIPALS: usize = 256;
+
 /// OpenSSH certificate as specified in [draft-ietf-sshm-cert].
 ///
 /// OpenSSH supports X.509-like certificate authorities, but using a custom encoding format.
@@ -176,6 +180,7 @@ impl Certificate {
     /// # Errors
     /// - Returns [`Error::AlgorithmUnknown`] in the event of an algorithm mismatch.
     /// - Returns [`Error::Encoding`] in the event of an encoding error.
+    /// - Returns [`Error::CertificateFieldInvalid`] if a certificate field is invalid.
     pub fn from_openssh(certificate_str: &str) -> Result<Self> {
         let encapsulation = SshFormat::decode(certificate_str.trim_end().as_bytes())?;
         let mut reader = Decoder::new(Base64Reader::new(encapsulation.base64_data)?)?;
@@ -193,7 +198,8 @@ impl Certificate {
     /// Parse a raw binary OpenSSH certificate.
     ///
     /// # Errors
-    /// Returns [`Error::Encoding`] in the event of an encoding error.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
+    /// - Returns [`Error::CertificateFieldInvalid`] if a certificate field is invalid.
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let mut reader = Decoder::new(bytes)?;
         let cert = Certificate::decode(&mut reader)?;
@@ -303,7 +309,7 @@ impl Certificate {
         &self.key_id
     }
 
-    /// List of zero or more principals which this certificate is valid for.
+    /// List of 0 to 256 principals for which this certificate is valid.
     ///
     /// Principals are hostnames for host certificates and usernames for user
     /// certificates.
@@ -502,7 +508,8 @@ impl Certificate {
     /// Decode [`Certificate`] for the specified algorithm.
     ///
     /// # Errors
-    /// Returns [`Error::Encoding`] in the event of an encoding error.
+    /// - Returns [`Error::Encoding`] in the event of an encoding error.
+    /// - Returns [`Error::CertificateFieldInvalid`] if a certificate field is invalid.
     pub fn decode_as(reader: &mut Decoder<impl Reader>, algorithm: Algorithm) -> Result<Self> {
         Ok(Self {
             nonce: Vec::decode(reader)?,
@@ -510,28 +517,51 @@ impl Certificate {
             serial: u64::decode(reader)?,
             cert_type: CertType::decode(reader)?,
             key_id: String::decode(reader)?,
-            valid_principals: Vec::decode(reader)?,
+            valid_principals: decode_principals(reader)?,
             valid_after: u64::decode(reader)?,
             valid_before: u64::decode(reader)?,
             critical_options: OptionsMap::decode(reader)?,
             extensions: OptionsMap::decode(reader)?,
             reserved: Vec::decode(reader)?,
-            signature_key: reader.read_prefixed(|reader| {
-                let algorithm = Algorithm::decode(reader)?;
-
-                // From draft-ietf-sshm-cert-01 §2.1.1:
-                // > Implementations MUST NOT accept certificate keys as CA keys
-                // (See https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html#section-2.1.1)
-                if Algorithm::new_certificate(algorithm.as_str()).is_ok() {
-                    return Err(Field::SignatureKey.invalid_error());
-                }
-
-                KeyData::decode_as(reader, algorithm)
-            })?,
+            signature_key: decode_signature_key(reader)?,
             signature: reader.read_prefixed(Signature::decode)?,
             comment: Comment::default(),
         })
     }
+}
+
+/// Enforces `MAX_PRINCIPALS`.
+fn decode_principals(reader: &mut Decoder<impl Reader>) -> Result<Vec<String>> {
+    reader.read_prefixed(|reader| {
+        let mut principals = Vec::new();
+
+        while !reader.is_finished() {
+            if principals.len() >= MAX_PRINCIPALS {
+                return Err(Field::ValidPrincipals.invalid_error());
+            }
+
+            principals.try_reserve(1).map_err(encoding::Error::from)?;
+            principals.push(String::decode(reader)?);
+        }
+
+        Ok(principals)
+    })
+}
+
+/// From draft-ietf-sshm-cert-01 §2.1.1:
+/// > Implementations MUST NOT accept certificate keys as CA keys
+///
+/// See: <https://www.ietf.org/archive/id/draft-ietf-sshm-cert-01.html#section-2.1.1>
+fn decode_signature_key(reader: &mut Decoder<impl Reader>) -> Result<KeyData> {
+    reader.read_prefixed(|reader| {
+        let algorithm = Algorithm::decode(reader)?;
+
+        if Algorithm::new_certificate(algorithm.as_str()).is_ok() {
+            return Err(Field::SignatureKey.invalid_error());
+        }
+
+        KeyData::decode_as(reader, algorithm)
+    })
 }
 
 impl Decode for Certificate {
