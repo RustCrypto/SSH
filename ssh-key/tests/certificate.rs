@@ -6,7 +6,7 @@
 use core::str::FromStr;
 use encoding::{Base64Reader, Decode, Decoder, Encode, Reader};
 use hex_literal::hex;
-use ssh_key::{Algorithm, Certificate, public::KeyData};
+use ssh_key::{Algorithm, Certificate, certificate::Field, public::KeyData};
 
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
@@ -63,6 +63,48 @@ const PAST_TIMESTAMP: u64 = 1500000000;
 /// Expired certificate timestamp.
 #[cfg(feature = "ed25519")]
 const EXPIRED_TIMESTAMP: u64 = 2500000000;
+
+#[test]
+fn valid_principals_limit() {
+    let original = Certificate::from_openssh(ED25519_CERT_EXAMPLE)
+        .unwrap()
+        .to_bytes()
+        .unwrap();
+    let mut reader = original.as_slice().into_decoder().unwrap();
+
+    // Locate the principals field after the algorithm, nonce, Ed25519 public key,
+    // serial, certificate type, and key ID.
+    for _ in 0..3 {
+        reader.drain_prefixed().unwrap();
+    }
+    u64::decode(&mut reader).unwrap();
+    u32::decode(&mut reader).unwrap();
+    reader.drain_prefixed().unwrap();
+    let start = original.len() - reader.remaining_len();
+    reader.drain_prefixed().unwrap();
+    let end = original.len() - reader.remaining_len();
+
+    for count in [0, 256, 257] {
+        let mut encoded = original[..start].to_vec();
+        vec![String::new(); count].encode(&mut encoded).unwrap();
+        encoded.extend_from_slice(&original[end..]);
+
+        let mut remaining = encoded.as_slice();
+        let result = Certificate::decode(&mut Decoder::new(&mut remaining).unwrap());
+
+        if count <= 256 {
+            let cert = result.unwrap();
+            assert_eq!(cert.valid_principals().len(), count);
+            assert!(cert.valid_principals().iter().all(String::is_empty));
+            assert!(remaining.is_empty());
+        } else {
+            assert_eq!(result, Err(Field::ValidPrincipals.invalid_error()));
+            // Leave principal 257's length prefix unread, along with the rest
+            // of the certificate. Empty principals still count toward the limit.
+            assert_eq!(remaining, &encoded[start + 4 + 256 * 4..]);
+        }
+    }
+}
 
 #[test]
 fn decode_dsa_openssh() {

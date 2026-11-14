@@ -121,12 +121,41 @@ fn ecdsa_nistp256_sign_and_verify() {
     let cert = cert_builder.sign(&ca_key).unwrap();
 
     assert_eq!(cert.algorithm(), algorithm);
+    assert!(cert.valid_principals().is_empty());
     assert_eq!(cert.nonce(), &hex!("321fdf7e0a2afe803308f394f54c6abe"));
     assert_eq!(cert.public_key(), subject_key.public_key().key_data());
     assert_eq!(cert.signature_key(), ca_key.public_key().key_data());
 
     let ca_fingerprint = ca_key.fingerprint(Default::default());
     assert!(cert.validate_at(VALID_AT, &[ca_fingerprint]).is_ok());
+}
+
+#[cfg(feature = "ed25519")]
+#[test]
+fn valid_principals_limit() {
+    let mut rng = ChaCha8Rng::from_seed(PRNG_SEED);
+    let ca_key = PrivateKey::random(&mut rng, Algorithm::Ed25519).unwrap();
+    let mut builder = certificate::Builder::new_with_random_nonce(
+        &mut rng,
+        ca_key.public_key(),
+        ISSUED_AT,
+        EXPIRES_AT,
+    )
+    .unwrap();
+
+    for _ in 0..256 {
+        builder.valid_principal("").unwrap();
+    }
+    assert_eq!(
+        builder.valid_principal("").unwrap_err(),
+        certificate::Field::ValidPrincipals.invalid_error()
+    );
+
+    // A rejected addition must leave the builder usable with exactly 256 principals.
+    let cert = builder.sign(&ca_key).unwrap();
+    assert_eq!(cert.valid_principals().len(), 256);
+    let decoded = ssh_key::Certificate::from_bytes(&cert.to_bytes().unwrap()).unwrap();
+    assert_eq!(decoded, cert);
 }
 
 #[cfg(all(feature = "ed25519", feature = "rsa"))]
