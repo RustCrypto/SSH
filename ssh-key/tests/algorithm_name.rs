@@ -33,6 +33,7 @@ fn invalid_algorithm_name() {
     ];
 
     const INVALID_CERT_STRS: &[&str] = &[
+        "-cert-v01@example.com",
         "nameß-cert-v01@example.com",
         "name-cert-v01@example@com",
         "name@example.com",
