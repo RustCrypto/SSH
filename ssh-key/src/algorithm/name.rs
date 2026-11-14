@@ -74,9 +74,7 @@ impl AlgorithmName {
             .strip_suffix(CERT_STR_SUFFIX)
             .ok_or_else(|| LabelError::new(id))?;
 
-        Ok(Self {
-            id: format!("{name}@{domain}"),
-        })
+        Self::new(format!("{name}@{domain}"))
     }
 }
 
