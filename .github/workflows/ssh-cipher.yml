@@ -21,16 +21,13 @@ jobs:
   minimal-versions:
     uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
     with:
-      stable-cmd: cargo test --all-features --release
+      toolchain: 1.87.0 # MSRV
       working-directory: ${{ github.workflow }}
 
   no_std:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        rust:
-          - 1.87.0 # MSRV
-          - stable
         target:
           - thumbv7em-none-eabi
           - wasm32-unknown-unknown
@@ -38,22 +35,14 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
       - uses: RustCrypto/actions/cargo-hack-install@master
       - run: cargo hack build --target ${{ matrix.target }} --feature-powerset --exclude-features default,getrandom
 
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - 1.87.0 # MSRV
-          - stable
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.rust }}
       - uses: RustCrypto/actions/cargo-hack-install@master
       - run: cargo hack test --feature-powerset
