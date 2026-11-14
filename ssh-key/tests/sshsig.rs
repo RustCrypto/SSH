@@ -186,6 +186,45 @@ fn encode_sk_ed25519() {
     assert_eq!(&sshsig_pem, SK_ED25519_SIGNATURE);
 }
 
+#[cfg(feature = "serde")]
+#[test]
+fn deserialize_binary_trailing_data() {
+    use encoding::Encode;
+    use serde::{Deserialize, de};
+
+    struct Binary<'a>(&'a [u8]);
+
+    impl<'de> de::Deserializer<'de> for Binary<'_> {
+        type Error = de::value::Error;
+
+        fn is_human_readable(&self) -> bool {
+            false
+        }
+
+        fn deserialize_any<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+            de::value::SeqDeserializer::new(self.0.iter().copied()).deserialize_any(visitor)
+        }
+
+        serde::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+            byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
+            map struct enum identifier ignored_any
+        }
+    }
+
+    for pem in [ED25519_SIGNATURE, SK_ED25519_SIGNATURE] {
+        let sshsig = pem.parse::<SshSig>().unwrap();
+        let mut bytes = sshsig.encode_vec().unwrap();
+        assert_eq!(SshSig::deserialize(Binary(&bytes)).unwrap(), sshsig);
+
+        bytes.push(0);
+        assert_eq!(
+            SshSig::deserialize(Binary(&bytes)).unwrap_err().to_string(),
+            encoding::Error::TrailingData { remaining: 1 }.to_string()
+        );
+    }
+}
+
 #[test]
 #[cfg(all(feature = "dsa", feature = "sha2"))]
 fn sign_dsa() {
