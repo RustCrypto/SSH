@@ -238,7 +238,9 @@ impl TryFrom<&[u8]> for Signature {
     type Error = Error;
 
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        Self::decode(&mut bytes.into_decoder()?)
+        let mut decoder = bytes.into_decoder()?;
+        let signature = Self::decode(&mut decoder)?;
+        Ok(decoder.finish(signature)?)
     }
 }
 
@@ -881,6 +883,25 @@ mod tests {
             },
             signature.algorithm()
         );
+    }
+
+    #[test]
+    fn decode_trailing_data() {
+        for signature in [
+            DSA_SIGNATURE,
+            ECDSA_SHA2_P256_SIGNATURE,
+            ED25519_SIGNATURE,
+            SK_ED25519_SIGNATURE,
+            SK_ECDSA_SHA2_P256_SIGNATURE,
+            RSA_SHA512_SIGNATURE,
+        ] {
+            let mut bytes = signature.to_vec();
+            bytes.push(0);
+            assert_eq!(
+                Signature::try_from(bytes.as_slice()),
+                Err(encoding::Error::TrailingData { remaining: 1 }.into())
+            );
+        }
     }
 
     #[test]
