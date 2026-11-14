@@ -20,16 +20,15 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
+  minimal-versions:
+    uses: RustCrypto/actions/.github/workflows/minimal-versions.yml@master
+    with:
+      toolchain: 1.87.0 # MSRV
+      working-directory: ${{ github.workflow }}
+
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust:
-          - 1.87.0 # MSRV
-          - stable
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ matrix.rust }}
       - run: cargo test --release
