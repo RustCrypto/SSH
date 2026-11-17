@@ -11,9 +11,6 @@ use alloc::{string::String, vec::Vec};
 #[cfg(feature = "bytes")]
 use bytes::Bytes;
 
-/// Maximum size of a `usize` this library will accept.
-const MAX_USIZE: usize = 0xFFFFF;
-
 /// Decoding trait.
 ///
 /// This trait describes how to decode a given type.
@@ -92,24 +89,15 @@ impl Decode for u64 {
     }
 }
 
-/// Decode a `usize`.
+/// Decode an SSH `uint32` as a `usize`.
 ///
-/// Uses [`Decode`] impl on `u32` and then converts to a `usize`, handling
-/// potential overflow if `usize` is smaller than `u32`.
-///
-/// Enforces a library-internal limit of 1048575, as the main use case for
-/// `usize` is length prefixes.
+/// Returns [`Error::Overflow`] if the value does not fit in `usize`.
+/// Use [`Decoder::read_prefixed`] to decode a length-prefixed field.
 impl Decode for usize {
     type Error = Error;
 
     fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
-        let n = usize::try_from(u32::decode(reader)?)?;
-
-        if n <= MAX_USIZE {
-            Ok(n)
-        } else {
-            Err(Error::Overflow)
-        }
+        Ok(usize::try_from(u32::decode(reader)?)?)
     }
 }
 

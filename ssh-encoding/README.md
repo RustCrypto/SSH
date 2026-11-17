@@ -35,9 +35,9 @@ the same decoder type and store enclosing bounds on the call stack without alloc
 `Decode` implementations accept `&mut Decoder<impl Reader>`.
 
 Construct a decoder with `Decoder::new(reader)` or `reader.into_decoder()`.
-Both return an error if the remaining binary input exceeds `MAX_SIZE` (128 MiB),
-matching OpenSSH's hard buffer limit. The limit is checked once at construction;
-nested scopes are already bounded by their parent.
+Both return an error if the remaining binary input exceeds 128 MiB, matching
+OpenSSH's hard buffer limit. `Decoder::read_prefixed` checks that the declared
+body fits in the remaining bytes of the current scope before decoding it.
 
 Raw byte slices implement `Reader`. With the corresponding features enabled,
 `Base64Reader` decodes Base64 incrementally, and `DecodePem` wraps a PEM reader in
