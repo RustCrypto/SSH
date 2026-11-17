@@ -75,7 +75,7 @@ impl RsaPrivateKey {
 impl CtEq for RsaPrivateKey {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.d.ct_eq(&other.d)
-            & self.iqmp.ct_eq(&self.iqmp)
+            & self.iqmp.ct_eq(&other.iqmp)
             & self.p.ct_eq(&other.p)
             & self.q.ct_eq(&other.q)
     }
