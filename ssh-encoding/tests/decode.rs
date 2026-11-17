@@ -41,17 +41,20 @@ fn decode_u64() {
 
 #[test]
 fn decode_usize() {
-    let mut bytes = Decoder::new(hex!("000FFFFF").as_slice()).unwrap();
-    let ret = usize::decode(&mut bytes).unwrap();
-    assert_eq!(ret, 0xFFFFFusize);
+    let mut bytes = Decoder::new(hex!("FFFFFFFF").as_slice()).unwrap();
+    assert_eq!(
+        usize::decode(&mut bytes),
+        usize::try_from(u32::MAX).map_err(Error::from)
+    );
 }
 
-/// `usize` decoder has a sanity limit of 0xFFFFF.
 #[test]
-fn reject_oversize_usize() {
+fn read_prefixed_rejects_length_past_end() {
     let mut bytes = Decoder::new(hex!("00100000").as_slice()).unwrap();
-    let err = usize::decode(&mut bytes).err().unwrap();
-    assert_eq!(err, Error::Overflow);
+    let result: Result<(), Error> =
+        bytes.read_prefixed(|_| panic!("body must fit before decoding"));
+    assert_eq!(result, Err(Error::Length));
+    assert_eq!(bytes.ensure_finished(), Err(Error::Failed));
 }
 
 #[test]
