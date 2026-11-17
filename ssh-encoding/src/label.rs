@@ -6,8 +6,10 @@ use core::{fmt, str::FromStr};
 #[cfg(feature = "alloc")]
 use alloc::string::String;
 
-/// Maximum size of any algorithm name/identifier.
-const MAX_LABEL_SIZE: usize = 48;
+/// Maximum length of an SSH algorithm or method name in bytes ([RFC4251 §6]).
+///
+/// [RFC4251 §6]: https://www.rfc-editor.org/rfc/rfc4251.html#section-6
+const MAX_LABEL_SIZE: usize = 64;
 
 /// Labels for e.g. cryptographic algorithms.
 ///
