@@ -19,7 +19,7 @@ use crate::public::KeyData;
 use crate::{Algorithm, Error, PublicKey};
 use ctutils::CtEq;
 use encoding::base64::{self, Base64, Encoding};
-use encoding::{Decode, Decoder, Encode, LabelError, Reader};
+use encoding::{Decode, Decoder, Encode, Reader};
 
 /// Maximum Argon2 memory cost in KiB (1 GiB).
 // These are resource limits imposed by this crate, not limits of the PPK format.
@@ -47,7 +47,7 @@ impl Kdf {
             "Argon2i" => Ok(argon2::Algorithm::Argon2i),
             "Argon2d" => Ok(argon2::Algorithm::Argon2d),
             "Argon2id" => Ok(argon2::Algorithm::Argon2id),
-            _ => Err(PpkParseError::UnsupportedKdf(algorithm.into())),
+            _ => Err(PpkParseError::UnsupportedKdf),
         }?;
 
         let parse_int = |key: PpkKey| -> Result<u32, PpkParseError> {
@@ -72,7 +72,7 @@ impl Kdf {
                 .get(&PpkKey::Argon2Salt)
                 .ok_or(PpkParseError::MissingValue(PpkKey::Argon2Salt))?,
         )
-        .map_err(|e| PpkParseError::HexFormat(e.to_string()))?;
+        .map_err(|_| PpkParseError::HexFormat)?;
 
         Ok(Self::Argon2 { kdf: argon, salt })
     }
@@ -101,10 +101,7 @@ fn validate_argon2_params(params: &argon2::Params) -> Result<(), PpkParseError> 
         ),
     ] {
         if value > max {
-            return Err(PpkParseError::ValueFormat {
-                key,
-                value: value.to_string(),
-            });
+            return Err(PpkParseError::ValueFormat(key));
         }
     }
     Ok(())
@@ -244,22 +241,22 @@ impl Debug for PpkWrapper {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PpkParseError {
-    Algorithm(LabelError),
-    Header(String),
-    Syntax(String),
-    ValueFormat { key: PpkKey, value: String },
-    HexFormat(String), // FromHexError does not implement Eq
+    Algorithm,
+    Header,
+    Syntax,
+    ValueFormat(PpkKey),
+    HexFormat,
     InvalidInteger(ParseIntError),
     IncorrectMac,
-    UnknownKey(String),
+    UnknownKey,
     MissingValue(PpkKey),
     MissingPublicKey,
     MissingPrivateKey,
     Base64(base64::Error),
     Eof,
     UnsupportedFormatVersion(u8),
-    UnsupportedEncryption(String),
-    UnsupportedKdf(String),
+    UnsupportedEncryption,
+    UnsupportedKdf,
     Argon2(argon2::Error),
     Encrypted,
 }
@@ -267,16 +264,16 @@ pub enum PpkParseError {
 impl Display for PpkParseError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::Algorithm(err) => write!(f, "invalid algorithm: {:?}", err),
-            Self::Header(header) => write!(f, "invalid header: {:?}", header),
-            Self::Syntax(line) => write!(f, "invalid syntax: {:?}", line),
-            Self::ValueFormat { key, value } => {
-                write!(f, "invalid value format for key {:?}: {:?}", key, value)
+            Self::Algorithm => write!(f, "invalid algorithm"),
+            Self::Header => write!(f, "invalid header"),
+            Self::Syntax => write!(f, "invalid syntax"),
+            Self::ValueFormat(key) => {
+                write!(f, "invalid value format for key {:?}", key)
             }
-            Self::HexFormat(err) => write!(f, "invalid hex format: {}", err),
+            Self::HexFormat => write!(f, "invalid hex format"),
             Self::InvalidInteger(err) => write!(f, "invalid integer: {}", err),
             Self::IncorrectMac => write!(f, "incorrect MAC"),
-            Self::UnknownKey(key) => write!(f, "unknown key: {:?}", key),
+            Self::UnknownKey => write!(f, "unknown key"),
             Self::MissingValue(key) => write!(f, "missing value for key: {:?}", key),
             Self::MissingPublicKey => write!(f, "missing public key"),
             Self::MissingPrivateKey => write!(f, "missing private key"),
@@ -285,10 +282,10 @@ impl Display for PpkParseError {
             Self::UnsupportedFormatVersion(version) => {
                 write!(f, "unsupported format version: {}", version)
             }
-            Self::UnsupportedEncryption(encryption) => {
-                write!(f, "unsupported encryption mode: {:?}", encryption)
+            Self::UnsupportedEncryption => {
+                write!(f, "unsupported encryption mode")
             }
-            Self::UnsupportedKdf(kdf) => write!(f, "unsupported KDF: {:?}", kdf),
+            Self::UnsupportedKdf => write!(f, "unsupported KDF"),
             Self::Argon2(err) => write!(f, "Argon2 error: {:?}", err),
             Self::Encrypted => write!(f, "private key is encrypted"),
         }
@@ -310,29 +307,25 @@ impl TryFrom<&str> for PpkWrapper {
         let mut lines = contents.lines();
         let header = lines.next().ok_or(PpkParseError::Eof)?;
         let Some(header) = header.strip_prefix(PPK_HEADER_PREFIX) else {
-            return Err(PpkParseError::Header(header.into()));
+            return Err(PpkParseError::Header);
         };
 
-        let (header_version, header_algorithm) = header
-            .split_once(": ")
-            .ok_or(PpkParseError::Header(header.into()))?;
+        let (header_version, header_algorithm) =
+            header.split_once(": ").ok_or(PpkParseError::Header)?;
 
-        let version = header_version
-            .parse()
-            .map_err(|_| PpkParseError::Header(header.into()))?;
+        let version = header_version.parse().map_err(|_| PpkParseError::Header)?;
         if version != 3 && version != 2 {
             return Err(PpkParseError::UnsupportedFormatVersion(version));
         }
 
-        let algorithm = Algorithm::from_str(header_algorithm).map_err(PpkParseError::Algorithm)?;
+        let algorithm =
+            Algorithm::from_str(header_algorithm).map_err(|_| PpkParseError::Algorithm)?;
         let mut public_key = None;
         let mut private_key = None;
 
         let mut values = BTreeMap::new();
         while let Some(line) = lines.next() {
-            let (key, value) = line
-                .split_once(": ")
-                .ok_or(PpkParseError::Syntax(line.into()))?;
+            let (key, value) = line.split_once(": ").ok_or(PpkParseError::Syntax)?;
 
             if key.ends_with("-Lines") {
                 let n_lines: usize = value.parse().map_err(PpkParseError::InvalidInteger)?;
@@ -349,11 +342,10 @@ impl TryFrom<&str> for PpkWrapper {
                 match key {
                     "Public-Lines" => public_key = Some(decoded.to_vec()),
                     "Private-Lines" => private_key = Some(decoded.to_vec()),
-                    _ => return Err(PpkParseError::UnknownKey(key.into())),
+                    _ => return Err(PpkParseError::UnknownKey),
                 }
             } else {
-                let key =
-                    PpkKey::try_from(key).map_err(|_| PpkParseError::UnknownKey(key.into()))?;
+                let key = PpkKey::try_from(key).map_err(|_| PpkParseError::UnknownKey)?;
 
                 values.insert(key, value.to_string());
             }
@@ -402,7 +394,7 @@ impl PpkContainer {
                     v => return Err(PpkParseError::UnsupportedFormatVersion(v).into()),
                 }
             }
-            Some(v) => return Err(PpkParseError::UnsupportedEncryption(v.into()).into()),
+            Some(_) => return Err(PpkParseError::UnsupportedEncryption.into()),
         };
 
         let mac = Vec::from_hex(
@@ -410,7 +402,7 @@ impl PpkContainer {
                 .get(&PpkKey::Mac)
                 .ok_or(PpkParseError::MissingValue(PpkKey::Mac))?,
         )
-        .map_err(|e| PpkParseError::HexFormat(e.to_string()))?;
+        .map_err(|_| PpkParseError::HexFormat)?;
 
         let comment = ppk.values.remove(&PpkKey::Comment);
         let public_key = ppk.public_key.ok_or(PpkParseError::MissingPublicKey)?;
@@ -619,26 +611,13 @@ mod tests {
 
     #[test]
     fn derive_rejects_excessive_argon2_params() {
-        for (key, memory, passes, parallelism, value) in [
-            (
-                PpkKey::Argon2Memory,
-                MAX_ARGON2_MEMORY + 1,
-                1,
-                1,
-                MAX_ARGON2_MEMORY + 1,
-            ),
-            (
-                PpkKey::Argon2Passes,
-                8,
-                MAX_ARGON2_PASSES + 1,
-                1,
-                MAX_ARGON2_PASSES + 1,
-            ),
+        for (key, memory, passes, parallelism) in [
+            (PpkKey::Argon2Memory, MAX_ARGON2_MEMORY + 1, 1, 1),
+            (PpkKey::Argon2Passes, 8, MAX_ARGON2_PASSES + 1, 1),
             (
                 PpkKey::Argon2Parallelism,
                 8 * (MAX_ARGON2_PARALLELISM + 1),
                 1,
-                MAX_ARGON2_PARALLELISM + 1,
                 MAX_ARGON2_PARALLELISM + 1,
             ),
         ] {
@@ -651,10 +630,7 @@ mod tests {
             let mut output = [0xa5; 80];
             assert_eq!(
                 kdf.derive(b"password", &mut output),
-                Err(PpkParseError::ValueFormat {
-                    key,
-                    value: value.to_string(),
-                })
+                Err(PpkParseError::ValueFormat(key))
             );
             assert_eq!(output, [0xa5; 80]);
         }
