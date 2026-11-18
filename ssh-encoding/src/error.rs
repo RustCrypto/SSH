@@ -34,6 +34,9 @@ pub enum Error {
     #[cfg(feature = "alloc")]
     MpintEncoding,
 
+    /// Maximum decoding nesting depth exceeded.
+    NestingDepth,
+
     /// Overflow errors.
     Overflow,
 
@@ -78,6 +81,7 @@ impl fmt::Display for Error {
             Error::Length => write!(f, "length invalid"),
             #[cfg(feature = "alloc")]
             Error::MpintEncoding => write!(f, "`mpint` encoding invalid"),
+            Error::NestingDepth => write!(f, "maximum nesting depth exceeded"),
             Error::Overflow => write!(f, "internal overflow error"),
             #[cfg(feature = "pem")]
             Error::Pem(err) => write!(f, "{err}"),

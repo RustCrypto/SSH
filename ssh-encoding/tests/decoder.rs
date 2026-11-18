@@ -168,6 +168,29 @@ fn recursive_decoding_keeps_the_same_reader_type() {
 }
 
 #[test]
+fn nesting_depth_limit() {
+    fn descend(decoder: &mut Decoder<impl Reader>, levels: u8) -> Result<(), Error> {
+        if levels == 0 {
+            return Ok(());
+        }
+        decoder.read_nested(0, |decoder| descend(decoder, levels - 1))
+    }
+
+    // Each empty prefixed string occupies one scope while its callback runs.
+    let mut decoder = Decoder::new([0; 12].as_slice()).unwrap();
+    for _ in 0..2 {
+        decoder
+            .read_prefixed(|decoder| descend(decoder, 63))
+            .unwrap();
+    }
+    assert_eq!(
+        decoder.read_prefixed(|decoder| descend(decoder, 64)),
+        Err(Error::NestingDepth)
+    );
+    assert_eq!(decoder.finish(()), Err(Error::Failed));
+}
+
+#[test]
 fn callback_error_restores_scope_and_invalidates_decoder() {
     #[derive(Debug, Eq, PartialEq)]
     struct Value;
