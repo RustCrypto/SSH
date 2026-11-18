@@ -3,12 +3,16 @@
 use crate::{Decode, Error, MAX_MSG_SIZE, Reader, Result};
 use core::{fmt, str};
 
+/// Maximum number of simultaneously active nested decoding scopes.
+const MAX_NESTING_DEPTH: u8 = 64;
+
 /// Decoder for SSH protocol data types over a byte [`Reader`].
 ///
 /// Construct a decoder with [`Decoder::new`] or [`Reader::into_decoder`].
 ///
 /// All nested decoding uses the same decoder type, with enclosing bounds stored on the call
-/// stack. Neither nesting nor decoding from Base64 or PEM requires a heap allocation.
+/// stack. A decoder permits up to 64 active nested scopes. Neither nesting nor decoding from
+/// Base64 or PEM requires a heap allocation.
 ///
 /// A failed read or nested decoding operation invalidates the decoder. Subsequent reads and
 /// completion checks return [`Error::Failed`]. The underlying reader is not rewound on errors.
@@ -32,6 +36,9 @@ pub struct Decoder<R> {
     /// End of the currently active decoding scope.
     end: usize,
 
+    /// Number of active nested scopes.
+    depth: u8,
+
     /// Whether a read or nested decoding operation failed.
     failed: bool,
 }
@@ -51,6 +58,7 @@ impl<R: Reader> Decoder<R> {
             reader,
             position: 0,
             end,
+            depth: 0,
             failed: false,
         })
     }
@@ -110,6 +118,7 @@ impl<R: Reader> Decoder<R> {
     /// # Errors
     /// - Returns [`Error::Failed`] if the decoder has already failed.
     /// - Returns [`Error::Length`] if `len` exceeds the remaining length.
+    /// - Returns [`Error::NestingDepth`] if the decoder already has 64 active nested scopes.
     /// - Returns [`Error::TrailingData`] if the callback leaves unread bytes.
     /// - Propagates errors returned from the callback.
     pub fn read_nested<T, E, F>(&mut self, len: usize, f: F) -> core::result::Result<T, E>
@@ -257,11 +266,19 @@ impl<R: Reader> Decoder<R> {
             return Err(Error::Length);
         }
 
+        let outer_depth = self.depth;
+        if outer_depth >= MAX_NESTING_DEPTH {
+            self.failed = true;
+            return Err(Error::NestingDepth);
+        }
+
         let outer_end = self.end;
         self.end = self.position + len;
+        self.depth = outer_depth + 1;
         Ok(NestedScope {
             decoder: self,
             outer_end,
+            outer_depth,
             completed: false,
         })
     }
@@ -272,6 +289,7 @@ impl<R: Reader> fmt::Debug for Decoder<R> {
         f.debug_struct("Decoder")
             .field("position", &self.position)
             .field("remaining_len", &self.remaining_len())
+            .field("depth", &self.depth)
             .field("failed", &self.failed)
             .finish_non_exhaustive()
     }
@@ -281,12 +299,14 @@ impl<R: Reader> fmt::Debug for Decoder<R> {
 struct NestedScope<'a, R> {
     decoder: &'a mut Decoder<R>,
     outer_end: usize,
+    outer_depth: u8,
     completed: bool,
 }
 
 impl<R> Drop for NestedScope<'_, R> {
     fn drop(&mut self) {
         self.decoder.end = self.outer_end;
+        self.decoder.depth = self.outer_depth;
         if !self.completed {
             self.decoder.failed = true;
         }
