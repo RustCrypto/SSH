@@ -47,6 +47,42 @@ fn round_trip() {
 
 #[cfg(feature = "aes")]
 #[test]
+fn aes_key_and_iv_sizes() {
+    use ssh_cipher::{
+        Error,
+        block_cipher::{AesDecryptor, AesEncryptor},
+    };
+
+    let key = [0; 32];
+    let iv = [0; 16];
+
+    for (cipher, expected_len) in [
+        (Cipher::Aes128Cbc, 16),
+        (Cipher::Aes192Cbc, 24),
+        (Cipher::Aes256Cbc, 32),
+        (Cipher::Aes128Ctr, 16),
+        (Cipher::Aes192Ctr, 24),
+        (Cipher::Aes256Ctr, 32),
+    ] {
+        for len in [16, 24, 32] {
+            let key = &key[..len];
+            let expected = (len != expected_len).then_some(Error::KeySize);
+            let enc = AesEncryptor::new(cipher, key, &iv);
+            let dec = AesDecryptor::new(cipher, key, &iv);
+            assert_eq!(enc.err(), expected, "{cipher}, {len}-byte key");
+            assert_eq!(dec.err(), expected, "{cipher}, {len}-byte key");
+        }
+
+        let key = &key[..expected_len];
+        let enc = AesEncryptor::new(cipher, key, &[]);
+        let dec = AesDecryptor::new(cipher, key, &[]);
+        assert_eq!(enc.unwrap_err(), Error::IvSize, "{cipher}");
+        assert_eq!(dec.unwrap_err(), Error::IvSize, "{cipher}");
+    }
+}
+
+#[cfg(feature = "aes")]
+#[test]
 fn decrypt_blocks_b2b() {
     use hex_literal::hex;
     use ssh_cipher::block_cipher::{AesDecryptor, Block, BlockModeDecrypt};

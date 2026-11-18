@@ -29,14 +29,15 @@ impl<C: BlockCipher> Encryptor<C> {
     ///
     /// # Errors
     /// - Returns [`Error::Crypto`] if the given `cipher` cannot be used with `Encryptor`.
-    /// - Returns [`Error::Length`] if `key` or `iv` are the wrong length for the given `cipher`.
-    /// - Returns [`Error::UnsupportedCipher`] if support for the given `cipher` is not enabled
-    ///   in the crate features.
+    /// - Returns [`Error::KeySize`] if `key` is the wrong length for the given `cipher`.
+    /// - Returns [`Error::IvSize`] if `iv` is the wrong length for the given `cipher`.
+    /// - Returns [`Error::UnsupportedCipher`] if `C` does not support the given `cipher`.
     pub fn new(cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<Self> {
         if !C::is_supported(cipher) {
             return Err(Error::UnsupportedCipher(cipher));
         }
 
+        cipher.check_key_and_iv(key, iv)?;
         let mode = cipher.block_mode().ok_or(Error::Crypto)?;
         let cipher = C::new_from_slice(key)?;
         let state = State::new_from_slice(mode, iv)?;
