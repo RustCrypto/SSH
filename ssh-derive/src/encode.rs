@@ -4,7 +4,7 @@ use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
 use syn::{DataEnum, DataStruct, DeriveInput, spanned::Spanned};
 
-use crate::attributes::{ContainerAttributes, FieldAttributes};
+use crate::attributes::{ContainerAttributes, FieldAttributes, validate_variant_attributes};
 
 pub(crate) fn try_derive_encode(input: DeriveInput) -> syn::Result<TokenStream> {
     match input.data {
@@ -110,6 +110,7 @@ fn derive_for_variants<'a>(
     let mut length_arms = Vec::new();
     let mut encode_arms = Vec::new();
     for variant in variants {
+        validate_variant_attributes(variant)?;
         let variant_name = &variant.ident;
         let names = fields_variables(&variant.fields, false);
         let match_variant = match &variant.fields {

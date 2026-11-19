@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DataEnum, DataStruct, DeriveInput, spanned::Spanned};
 
-use crate::attributes::{ContainerAttributes, FieldAttributes};
+use crate::attributes::{ContainerAttributes, FieldAttributes, validate_variant_attributes};
 
 pub(crate) fn try_derive_decode(input: DeriveInput) -> syn::Result<TokenStream> {
     match input.data {
@@ -54,6 +54,7 @@ fn try_derive_decode_for_enum(
     let variant_branches = variants
         .iter()
         .map(|variant| {
+            validate_variant_attributes(variant)?;
             let variant_name = &variant.ident;
             let discriminant = variant
                 .discriminant
