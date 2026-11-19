@@ -51,7 +51,7 @@ fn try_derive_decode_for_enum(
                 "enums must have a repr attribute to derive `Decode`",
             )
         })?;
-    let variant_arms = variants
+    let variant_branches = variants
         .iter()
         .map(|variant| {
             let variant_name = &variant.ident;
@@ -66,16 +66,18 @@ fn try_derive_decode_for_enum(
                     )
                 })?;
             let body = derive_for_fields(&variant.fields, quote! { #enum_name::#variant_name })?;
-            Ok(quote! { #discriminant => { #body } })
+            Ok(quote! { if discriminant == const { #discriminant } { #body } })
         })
         .collect::<syn::Result<Vec<_>>>()?;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
 
     let body = quote! {
         let discriminant = <#discriminant_type as ::ssh_encoding::Decode>::decode(reader)?;
-        match discriminant {
-            #(#variant_arms,)*
-            _ => return Err(::ssh_encoding::Error::InvalidDiscriminant(discriminant.into()).into()),
+        #(#variant_branches else)* {
+            return Err(::ssh_encoding::Error::InvalidDiscriminant(
+                ::core::convert::TryFrom::try_from(discriminant)
+                    .map_err(|_| ::ssh_encoding::Error::Overflow)?,
+            ));
         }
     };
     let body = maybe_length_prefixed_result(container_attributes.length_prefixed, &body);
@@ -278,10 +280,15 @@ mod tests {
                     reader.read_prefixed(|reader| {
                         Ok::<_, ::ssh_encoding::Error>({
                             let discriminant = <u8 as ::ssh_encoding::Decode>::decode(reader)?;
-                            match discriminant {
-                                0 => { Foo :: A },
-                                1 => { Foo :: B },
-                                _ => return Err(::ssh_encoding::Error::InvalidDiscriminant(discriminant.into()).into()),
+                            if discriminant == const { 0 } {
+                                Foo::A
+                            } else if discriminant == const { 1 } {
+                                Foo::B
+                            } else {
+                                return Err(::ssh_encoding::Error::InvalidDiscriminant(
+                                    ::core::convert::TryFrom::try_from(discriminant)
+                                        .map_err(|_| ::ssh_encoding::Error::Overflow)?,
+                                ));
                             }
                         })
                     })
