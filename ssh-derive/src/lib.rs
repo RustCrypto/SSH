@@ -46,3 +46,29 @@ pub fn derive_encode(input: TokenStream) -> TokenStream {
         Err(e) => e.to_compile_error().into(),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{decode, encode};
+    use quote::quote;
+
+    #[test]
+    fn reject_ssh_attributes_on_variants() {
+        for derive in [encode::try_derive_encode, decode::try_derive_decode] {
+            for option in [quote!(length_prefixed), quote!(unknown)] {
+                let input = syn::parse_quote! {
+                    #[repr(u8)]
+                    enum Message {
+                        #[ssh(#option)]
+                        Data(u8) = 1,
+                    }
+                };
+                let err = derive(input).expect_err("variant attribute should be rejected");
+                assert_eq!(
+                    err.to_string(),
+                    "`#[ssh(...)]` is unsupported on enum variants"
+                );
+            }
+        }
+    }
+}

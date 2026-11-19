@@ -95,3 +95,12 @@ impl TryFrom<&syn::Field> for FieldAttributes {
         Ok(Self { length_prefixed })
     }
 }
+
+pub(crate) fn validate_variant_attributes(variant: &syn::Variant) -> syn::Result<()> {
+    for attr in &variant.attrs {
+        if attr.path().is_ident("ssh") {
+            abort!(attr, "`#[ssh(...)]` is unsupported on enum variants");
+        }
+    }
+    Ok(())
+}
