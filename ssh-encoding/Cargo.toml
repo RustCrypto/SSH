@@ -1,6 +1,6 @@
 [package]
 name = "ssh-encoding"
-version = "0.4.0-pre"
+version = "0.4.0-rc.0"
 description = "Pure Rust implementation of SSH data type decoders/encoders as described in RFC4251"
 authors = ["RustCrypto Developers"]
 license = "Apache-2.0 OR MIT"
