@@ -17,7 +17,7 @@ rust-version = "1.87"
 
 [dependencies]
 cipher = { package = "ssh-cipher", version = "0.4.0-pre", default-features = false }
-encoding = { package = "ssh-encoding", version = "0.4.0-pre", default-features = false }
+encoding = { package = "ssh-encoding", version = "0.4.0-rc.0", default-features = false }
 key = { package = "ssh-key", version = "0.7.0-rc.8", default-features = false }
 
 [features]
