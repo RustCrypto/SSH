@@ -146,23 +146,19 @@ impl<R: Reader> Decoder<R> {
         self.read_nested(len, f)
     }
 
-    /// Decodes `[u8]` from `byte[n]` as described in [RFC4251 § 5]:
+    /// Decode an SSH binary `string` into `out` and return the filled portion.
     ///
-    /// > A byte represents an arbitrary 8-bit value (octet).  Fixed length
-    /// > data is sometimes represented as an array of bytes, written
-    /// > `byte[n]`, where n is the number of bytes in the array.
-    ///
-    /// Storage for the byte array must be provided as mutable byte slice in order to accommodate
-    /// `no_alloc` use cases.
+    /// The `uint32` length prefix gives the number of payload bytes to read ([RFC4251 §5]).
+    /// To decode to a `str`, use [`Decoder::read_string`].
     ///
     /// The [`Decode`] impl on `Vec<u8>` can be used to allocate a buffer for the result.
     ///
-    /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
+    /// [RFC4251 §5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
     ///
     /// # Errors
-    /// - Returns [`Error::Length`] if `out` is too small to accommodate the full `byte[n]`.
-    /// - Propagates errors returned from [`Decoder::read`].
-    pub fn read_byten<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
+    /// - Returns [`Error::Length`] if the payload is larger than `out`.
+    /// - Propagates errors returned from [`Decoder::read_prefixed`] or [`Decoder::read`].
+    pub fn read_string_bytes<'o>(&mut self, out: &'o mut [u8]) -> Result<&'o [u8]> {
         self.read_prefixed(|reader| {
             let slice = out.get_mut(..reader.remaining_len()).ok_or(Error::Length)?;
             reader.read(slice)?;
@@ -170,7 +166,7 @@ impl<R: Reader> Decoder<R> {
         })
     }
 
-    /// Decode a `string` as described in [RFC4251 § 5]:
+    /// Decode an SSH `string` into `buf` and return the filled portion as a `&str` ([RFC4251 § 5]).
     ///
     /// > Arbitrary length binary string.  Strings are allowed to contain
     /// > arbitrary binary data, including null characters and 8-bit
@@ -194,10 +190,10 @@ impl<R: Reader> Decoder<R> {
     /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
     ///
     /// # Errors
-    /// - Propagates errors returned from [`Decoder::read_byten`].
+    /// - Propagates errors returned from [`Decoder::read_string_bytes`].
     /// - Returns [`Error::CharacterEncoding`] if the data is not valid UTF-8.
     pub fn read_string<'o>(&mut self, buf: &'o mut [u8]) -> Result<&'o str> {
-        Ok(str::from_utf8(self.read_byten(buf)?)?)
+        Ok(str::from_utf8(self.read_string_bytes(buf)?)?)
     }
 
     /// Drain the given number of bytes from the reader, discarding them.
