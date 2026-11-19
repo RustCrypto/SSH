@@ -41,7 +41,7 @@ pub enum ComplexEnum {
     Baz {
         a: u32,
         #[ssh(length_prefixed)]
-        b: u8,
+        writer: u8,
     } = 2,
     Fiz(u32, #[ssh(length_prefixed)] u8) = 3,
 }
@@ -49,8 +49,8 @@ pub enum ComplexEnum {
 #[derive(Debug, PartialEq, Encode, Decode)]
 #[repr(u32)]
 pub enum SimpleEnum {
-    A = 1,
-    B = 2,
+    A = 1 | 2,
+    B = 1 << 2,
 }
 
 #[derive(Debug, PartialEq, Encode, Decode)]
@@ -145,12 +145,12 @@ fn derive_encode_decode_enum_struct() {
     #[rustfmt::skip]
     let data = [
         0, 0, 0, 10,  // Length prefix of entire enum.
-        2,            // Discriminant for Foo::Baz.
-        0, 0, 0, 1,   // Value of Foo::Baz::a.
-        0, 0, 0, 1,   // Length prefix of Foo::Baz::b.
-        2             // Value of Foo::Baz::b.
+        2,            // Discriminant for ComplexEnum::Baz.
+        0, 0, 0, 1,   // Value of ComplexEnum::Baz::a.
+        0, 0, 0, 1,   // Length prefix of ComplexEnum::Baz::writer.
+        2             // Value of ComplexEnum::Baz::writer.
     ];
-    let expected = ComplexEnum::Baz { a: 1, b: 2 };
+    let expected = ComplexEnum::Baz { a: 1, writer: 2 };
     assert_eq!(data, expected.encode_vec().unwrap().as_slice());
     let actual = ComplexEnum::decode(&mut data.as_slice().into_decoder().unwrap()).unwrap();
     assert_eq!(actual, expected);
@@ -174,12 +174,44 @@ fn derive_encode_decode_enum_tuple() {
 
 #[test]
 fn derive_encode_decode_enum_no_prefix_u32_repr() {
-    #[rustfmt::skip]
-    let data = [
-        0, 0, 0, 1,  // Discriminant for Bar::A.
-    ];
-    let expected = SimpleEnum::A;
-    assert_eq!(data, expected.encode_vec().unwrap().as_slice());
-    let actual = SimpleEnum::decode(&mut data.as_slice().into_decoder().unwrap()).unwrap();
-    assert_eq!(actual, expected);
+    for (value, tag) in [(SimpleEnum::A, 3u32), (SimpleEnum::B, 4)] {
+        let data = tag.to_be_bytes();
+        assert_eq!(value.encode_vec().unwrap(), data);
+        assert_eq!(
+            SimpleEnum::decode(&mut data.as_slice().into_decoder().unwrap()),
+            Ok(value)
+        );
+    }
+
+    for tag in [1u32, 2] {
+        let data = tag.to_be_bytes();
+        assert_eq!(
+            SimpleEnum::decode(&mut data.as_slice().into_decoder().unwrap()),
+            Err(Error::InvalidDiscriminant(tag.into()))
+        );
+    }
+}
+
+#[test]
+fn derive_length_prefixed_usize_discriminant() {
+    #[derive(Debug, PartialEq, Encode, Decode)]
+    #[repr(usize)]
+    #[ssh(length_prefixed)]
+    enum Message {
+        Value = 4,
+    }
+
+    let data = [0, 0, 0, 4, 0, 0, 0, 4];
+    assert_eq!(Message::Value.encoded_len().unwrap(), data.len());
+    assert_eq!(Message::Value.encode_vec().unwrap(), data);
+    assert_eq!(
+        Message::decode(&mut data.as_slice().into_decoder().unwrap()),
+        Ok(Message::Value)
+    );
+
+    let unknown = [0, 0, 0, 4, 0, 0, 0xab, 0xcd];
+    assert_eq!(
+        Message::decode(&mut unknown.as_slice().into_decoder().unwrap()),
+        Err(Error::InvalidDiscriminant(0xabcd))
+    );
 }
