@@ -153,23 +153,14 @@ impl Decode for String {
     }
 }
 
-/// Decodes `Vec<String>` from `name-list` as described in [RFC4251 § 5]:
+/// Decodes `Vec<String>` from an SSH `string` containing a sequence of SSH `string` values.
 ///
-/// > A string containing a comma-separated list of names.  A name-list
-/// > is represented as a uint32 containing its length (number of bytes
-/// > that follow) followed by a comma-separated list of zero or more
-/// > names.  A name MUST have a non-zero length, and it MUST NOT
-/// > contain a comma (",").  As this is a list of names, all of the
-/// > elements contained are names and MUST be in US-ASCII.  Context may
-/// > impose additional restrictions on the names.  For example, the
-/// > names in a name-list may have to be a list of valid algorithm
-/// > identifiers (see Section 6 below), or a list of [RFC3066] language
-/// > tags.  The order of the names in a name-list may or may not be
-/// > significant.  Again, this depends on the context in which the list
-/// > is used.  Terminating null characters MUST NOT be used, neither
-/// > for the individual names, nor for the list as a whole.
+/// The outer `uint32` length prefix covers all encoded entries, including their individual
+/// length prefixes. Each entry is decoded as UTF-8. This encoding is used for the valid
+/// principals field in OpenSSH certificates.
 ///
-/// [RFC3066]: https://datatracker.ietf.org/doc/html/rfc3066
+/// This differs from the comma-separated `name-list` encoding described in [RFC4251 § 5].
+///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 #[cfg(feature = "alloc")]
 impl Decode for Vec<String> {

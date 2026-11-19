@@ -91,35 +91,19 @@
 //! `9a378f9b2e332a7`  | `00 00 00 08 09 a3 78 f9 b2 e3 32 a7`
 //! `80`               | `00 00 00 02 00 80`
 //!
-//! ### `name-list`: string containing a comma-separated list of names
+//! ### `string` containing a sequence of strings
 //! #### [`Decode`]/[`Encode`] trait impls: `Vec<String>`
 //!
-//! A `name-list` is represented as a `uint32` containing its length
-//! (number of bytes that follow) followed by a comma-separated list of zero or more
-//! names.  A name MUST have a non-zero length, and it MUST NOT
-//! contain a comma (",").
+//! An outer `uint32` length prefix is followed by zero or more SSH `string` values,
+//! each with its own `uint32` length prefix. The outer length covers all encoded entries,
+//! including their individual length prefixes. Each entry is UTF-8 text.
 //!
-//! As this is a list of names, all the elements contained are names and MUST be in US-ASCII.
+//! This encoding is used for the valid principals field in OpenSSH certificates.
 //!
-//! Context may impose additional restrictions on the names. For example,
-//! the names in a name-list may have to be a list of valid algorithm
-//! identifiers (see Section 6 below), or a list of [RFC3066] language
-//! tags.  The order of the names in a name-list may or may not be
-//! significant.  Again, this depends on the context in which the list
-//! is used.
+//! It differs from the `name-list` encoding in [RFC4251 § 5], which stores comma-separated
+//! names within a single SSH `string`. This crate does not currently provide a dedicated
+//! `name-list` type.
 //!
-//! Terminating null characters MUST NOT be used, neither
-//! for the individual names, nor for the list as a whole.
-//!
-//! #### Examples:
-//!
-//! value                      | representation (hex)
-//! ---------------------------|---------------------
-//! `()`, the empty name-list  | `00 00 00 00`
-//! `("zlib")`                 | `00 00 00 04 7a 6c 69 62`
-//! `("zlib,none")`            | `00 00 00 09 7a 6c 69 62 2c 6e 6f 6e 65`
-//!
-//! [RFC3066]: https://datatracker.ietf.org/doc/html/rfc3066
 //! [RFC4251]: https://datatracker.ietf.org/doc/html/rfc4251
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 //!
