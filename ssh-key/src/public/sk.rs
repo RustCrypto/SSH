@@ -70,7 +70,7 @@ impl Decode for SkEcdsaSha2NistP256 {
         }
 
         let mut buf = [0u8; 65];
-        let ec_point = EcdsaNistP256PublicKey::from_bytes(reader.read_byten(&mut buf)?)?;
+        let ec_point = EcdsaNistP256PublicKey::from_bytes(reader.read_string_bytes(&mut buf)?)?;
 
         // application string (e.g. `ssh:`)
         #[cfg(not(feature = "alloc"))]

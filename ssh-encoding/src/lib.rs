@@ -49,7 +49,7 @@
 //! #### [`Decode`]/[`Encode`] trait impls: `Vec<u8>`, `String`, `bytes::Bytes` (requires `bytes` crate feature)
 //!
 //! *NOTE: `string` is effectively equivalent to `byte[]`, however the latter is not defined in
-//! [RFC4251] and so trait impls in this crate for bytestring types like `[u8; N]` and `Vec<u8>`
+//! [RFC4251] and so trait impls in this crate for bytestring types like `[u8]` and `Vec<u8>`
 //! are described as being impls of `string`*.
 //!
 //! Strings are allowed to contain arbitrary binary data, including null characters and 8-bit

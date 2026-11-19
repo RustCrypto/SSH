@@ -111,7 +111,7 @@ impl Decode for EcdsaPublicKey {
         let curve = EcdsaCurve::decode(reader)?;
 
         let mut buf = [0u8; Self::MAX_SIZE];
-        let key = Self::from_sec1_bytes(reader.read_byten(&mut buf)?)?;
+        let key = Self::from_sec1_bytes(reader.read_string_bytes(&mut buf)?)?;
 
         if key.curve() == curve {
             Ok(key)
