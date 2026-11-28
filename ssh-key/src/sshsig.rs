@@ -4,10 +4,10 @@ use crate::{Algorithm, AssociatedHashAlg, Error, HashAlg, Result, Signature, Sig
 use alloc::{string::String, string::ToString, vec::Vec};
 use core::str::FromStr;
 use encoding::{
-    CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
+    CheckedSum, Decode, DecodePem, Decoder, Encode, EncodePem, Reader, Writer,
+    digest::Digest,
     pem::{LineEnding, PemLabel},
 };
-use sha2::Digest;
 use signature::Verifier;
 
 #[cfg(doc)]
@@ -117,6 +117,7 @@ impl SshSig {
     /// - Returns [`Error::Crypto`] in the event of an error occurring in the cryptographic
     ///   implementation.
     /// - Returns [`Error::Namespace`] if the namespace is empty.
+    #[cfg(feature = "sha2")]
     pub fn sign<S: SigningKey>(
         signing_key: &S,
         namespace: &str,
@@ -195,6 +196,7 @@ impl SshSig {
     ///
     /// # Errors
     /// Returns [`Error::Namespace`] if the namespace is empty.
+    #[cfg(feature = "sha2")]
     pub fn signed_data(namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<Vec<u8>> {
         Self::signed_data_for_prehash(namespace, hash_alg, hash_alg.digest(msg).as_slice())
     }
@@ -320,7 +322,7 @@ impl SshSig {
 impl Decode for SshSig {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut magic_preamble = [0u8; Self::MAGIC_PREAMBLE.len()];
         reader.read(&mut magic_preamble)?;
 
@@ -452,7 +454,9 @@ impl<'de> Deserialize<'de> for SshSig {
             string.parse::<SshSig>().map_err(de::Error::custom)
         } else {
             let bytes = Vec::<u8>::deserialize(deserializer)?;
-            Self::decode(&mut bytes.as_slice()).map_err(de::Error::custom)
+            let mut decoder = bytes.as_slice().into_decoder().map_err(de::Error::custom)?;
+            let sshsig = Self::decode(&mut decoder).map_err(de::Error::custom)?;
+            decoder.finish(sshsig).map_err(de::Error::custom)
         }
     }
 }

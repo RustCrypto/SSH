@@ -2,7 +2,7 @@
 
 use crate::{Error, Mpint, Result};
 use core::hash::{Hash, Hasher};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "rsa")]
 use {
@@ -33,20 +33,13 @@ impl RsaPublicKey {
     /// - `n`: RSA modulus.
     ///
     /// # Errors
-    /// Returns [`Error::FormatEncoding`] in the event one of the components is odd.
+    /// Returns [`Error::FormatEncoding`] if either component is zero.
     pub fn new(e: Mpint, n: Mpint) -> Result<Self> {
-        if !e.is_positive() {
+        if e.is_zero() || n.is_zero() {
             return Err(Error::FormatEncoding);
         }
 
-        let bits = match n.as_positive_bytes() {
-            Some(bytes) => bytes
-                .len()
-                .checked_mul(8)
-                .and_then(|bits| u32::try_from(bits).ok())
-                .ok_or(Error::FormatEncoding)?,
-            None => return Err(Error::FormatEncoding),
-        };
+        let bits = u32::try_from(n.as_bytes().len() * 8).map_err(|_| Error::FormatEncoding)?;
 
         Ok(Self { e, n, bits })
     }
@@ -73,7 +66,7 @@ impl RsaPublicKey {
 impl Decode for RsaPublicKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let e = Mpint::decode(reader)?;
         let n = Mpint::decode(reader)?;
         Self::new(e, n)
@@ -100,42 +93,42 @@ impl Hash for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<RsaPublicKey> for rsa::RsaPublicKey {
+impl TryFrom<RsaPublicKey> for rsa::PublicKey {
     type Error = Error;
 
-    fn try_from(key: RsaPublicKey) -> Result<rsa::RsaPublicKey> {
-        rsa::RsaPublicKey::try_from(&key)
+    fn try_from(key: RsaPublicKey) -> Result<rsa::PublicKey> {
+        rsa::PublicKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&RsaPublicKey> for rsa::RsaPublicKey {
+impl TryFrom<&RsaPublicKey> for rsa::PublicKey {
     type Error = Error;
 
-    fn try_from(key: &RsaPublicKey) -> Result<rsa::RsaPublicKey> {
-        let n = Uint::try_from(&key.n)?;
-        let e = Uint::try_from(&key.e)?;
-        let ret = rsa::RsaPublicKey::new(n, e).map_err(|_| Error::Crypto)?;
+    fn try_from(key: &RsaPublicKey) -> Result<rsa::PublicKey> {
+        let n = Uint::from(&key.n);
+        let e = Uint::from(&key.e);
+        let ret = rsa::PublicKey::new(n, e).map_err(|_| Error::Crypto)?;
 
         Ok(ret)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<rsa::RsaPublicKey> for RsaPublicKey {
+impl TryFrom<rsa::PublicKey> for RsaPublicKey {
     type Error = Error;
 
-    fn try_from(key: rsa::RsaPublicKey) -> Result<RsaPublicKey> {
+    fn try_from(key: rsa::PublicKey) -> Result<RsaPublicKey> {
         RsaPublicKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&rsa::RsaPublicKey> for RsaPublicKey {
+impl TryFrom<&rsa::PublicKey> for RsaPublicKey {
     type Error = Error;
 
-    fn try_from(key: &rsa::RsaPublicKey) -> Result<RsaPublicKey> {
-        RsaPublicKey::new(key.e().into(), key.n().as_ref().into())
+    fn try_from(key: &rsa::PublicKey) -> Result<RsaPublicKey> {
+        RsaPublicKey::new(key.e().try_into()?, key.n().as_ref().try_into()?)
     }
 }
 

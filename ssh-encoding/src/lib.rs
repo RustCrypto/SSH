@@ -49,7 +49,7 @@
 //! #### [`Decode`]/[`Encode`] trait impls: `Vec<u8>`, `String`, `bytes::Bytes` (requires `bytes` crate feature)
 //!
 //! *NOTE: `string` is effectively equivalent to `byte[]`, however the latter is not defined in
-//! [RFC4251] and so trait impls in this crate for bytestring types like `[u8; N]` and `Vec<u8>`
+//! [RFC4251] and so trait impls in this crate for bytestring types like `[u8]` and `Vec<u8>`
 //! are described as being impls of `string`*.
 //!
 //! Strings are allowed to contain arbitrary binary data, including null characters and 8-bit
@@ -72,12 +72,13 @@
 //!
 //! Stored as a byte string, 8 bits per byte, MSB first (a.k.a. big endian).
 //!
-//! Negative numbers have the value 1 as the most significant bit of the first byte of
-//! the data partition.  If the most significant bit would be set for
-//! a positive number, the number MUST be preceded by a zero byte.
-//! Unnecessary leading bytes with the value 0 or 255 MUST NOT be
-//! included.  The value zero MUST be stored as a string with zero
-//! bytes of data.
+//! This crate supports only non-negative values, matching OpenSSH, and enforces a 16384-bit
+//! magnitude limit. Negative wire encodings are rejected. A leading zero byte is added when
+//! the most significant bit is set. Zero is encoded as an empty string.
+//!
+//! Decoding accepts redundant leading zeros like OpenSSH, subject to a 2049-byte wire limit
+//! (the extra byte must be zero). Encoding always produces the canonical representation.
+//! The byte APIs use unsigned magnitudes without sign padding or the length prefix.
 //!
 //! By convention, a number that is used in modular computations in
 //! `Z_n` SHOULD be represented in the range `0 <= x < n`.
@@ -89,38 +90,20 @@
 //! `0`                | `00 00 00 00`
 //! `9a378f9b2e332a7`  | `00 00 00 08 09 a3 78 f9 b2 e3 32 a7`
 //! `80`               | `00 00 00 02 00 80`
-//! `-1234`            | `00 00 00 02 ed cc`
-//! `-deadbeef`        | `00 00 00 05 ff 21 52 41 11`
 //!
-//! ### `name-list`: string containing a comma-separated list of names
+//! ### `string` containing a sequence of strings
 //! #### [`Decode`]/[`Encode`] trait impls: `Vec<String>`
 //!
-//! A `name-list` is represented as a `uint32` containing its length
-//! (number of bytes that follow) followed by a comma-separated list of zero or more
-//! names.  A name MUST have a non-zero length, and it MUST NOT
-//! contain a comma (",").
+//! An outer `uint32` length prefix is followed by zero or more SSH `string` values,
+//! each with its own `uint32` length prefix. The outer length covers all encoded entries,
+//! including their individual length prefixes. Each entry is UTF-8 text.
 //!
-//! As this is a list of names, all the elements contained are names and MUST be in US-ASCII.
+//! This encoding is used for the valid principals field in OpenSSH certificates.
 //!
-//! Context may impose additional restrictions on the names. For example,
-//! the names in a name-list may have to be a list of valid algorithm
-//! identifiers (see Section 6 below), or a list of [RFC3066] language
-//! tags.  The order of the names in a name-list may or may not be
-//! significant.  Again, this depends on the context in which the list
-//! is used.
+//! It differs from the `name-list` encoding in [RFC4251 § 5], which stores comma-separated
+//! names within a single SSH `string`. This crate does not currently provide a dedicated
+//! `name-list` type.
 //!
-//! Terminating null characters MUST NOT be used, neither
-//! for the individual names, nor for the list as a whole.
-//!
-//! #### Examples:
-//!
-//! value                      | representation (hex)
-//! ---------------------------|---------------------
-//! `()`, the empty name-list  | `00 00 00 00`
-//! `("zlib")`                 | `00 00 00 04 7a 6c 69 62`
-//! `("zlib,none")`            | `00 00 00 09 7a 6c 69 62 2c 6e 6f 6e 65`
-//!
-//! [RFC3066]: https://datatracker.ietf.org/doc/html/rfc3066
 //! [RFC4251]: https://datatracker.ietf.org/doc/html/rfc4251
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 //!
@@ -137,7 +120,7 @@
 //!
 #![cfg_attr(all(feature = "alloc", feature = "derive"), doc = "```")]
 #![cfg_attr(not(all(feature = "alloc", feature = "derive")), doc = "```ignore")]
-//! use ssh_encoding::{Decode, Encode};
+//! use ssh_encoding::{Decode, Encode, Reader};
 //!
 //! #[derive(Debug, PartialEq, Encode, Decode)]
 //! #[repr(u8)]
@@ -185,24 +168,24 @@
 //!     },
 //! };
 //!
-//! let encoded = message.encode_vec().unwrap();
+//! let encoded = message.encode_vec()?;
 //! assert_eq!(&encoded[..13], &[31, 0, 0, 0, 42, 0, 0, 0, 19, 101, 99, 100, 115]);
-//! let decoded = Message::decode(&mut &encoded[..]).unwrap();
+//! let decoded = Message::decode(&mut encoded.as_slice().into_decoder()?)?;
 //! assert_eq!(message, decoded);
+//! # Ok::<(), ssh_encoding::Error>(())
 //! ```
 
 #[cfg(feature = "alloc")]
-#[macro_use]
 extern crate alloc;
 
 mod checked;
 mod decode;
+mod decoder;
 mod encode;
 mod error;
 mod label;
 #[cfg(feature = "alloc")]
 mod mpint;
-#[macro_use]
 mod reader;
 mod writer;
 
@@ -214,6 +197,7 @@ pub mod pem;
 pub use crate::{
     checked::CheckedSum,
     decode::Decode,
+    decoder::Decoder,
     encode::Encode,
     error::{Error, Result},
     label::{Label, LabelError},
@@ -244,8 +228,32 @@ pub use crate::pem::{DecodePem, EncodePem};
 #[cfg(feature = "derive")]
 pub use ssh_derive::{Decode, Encode};
 
-#[cfg(all(doc, feature = "alloc"))]
+#[cfg(feature = "alloc")]
 use alloc::vec::Vec;
 
 #[cfg(feature = "bigint")]
 pub use bigint::BoxedUint as Uint;
+
+/// Maximum binary input size accepted by [`Decoder`]: 128 MiB.
+///
+/// Matches OpenSSH's [`SSHBUF_SIZE_MAX`]. For Base64 and PEM readers, this bounds the decoded
+/// binary length, excluding textual encapsulation. Nested scopes are bounded by their parent.
+///
+/// [`SSHBUF_SIZE_MAX`]: https://github.com/openssh/openssh-portable/blob/1bf5871aead6d73177d727add15ab0f14c258fdf/sshbuf.h#L39
+const MAX_MSG_SIZE: usize = 0x800_0000;
+
+/// Fallibly allocate an empty byte buffer with the requested capacity.
+#[cfg(feature = "alloc")]
+fn vec_with_reserve(capacity: usize) -> Result<Vec<u8>> {
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(capacity)?;
+    Ok(buffer)
+}
+
+/// Fallibly allocate a zero-filled byte buffer.
+#[cfg(feature = "alloc")]
+fn vec_zeroed(len: usize) -> Result<Vec<u8>> {
+    let mut buffer = vec_with_reserve(len)?;
+    buffer.resize(len, 0);
+    Ok(buffer)
+}

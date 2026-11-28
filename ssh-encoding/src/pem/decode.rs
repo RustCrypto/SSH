@@ -1,5 +1,5 @@
 use super::{PemLabel, reader::PemReader};
-use crate::{Decode, Error, Reader};
+use crate::{Decode, Decoder, Error};
 
 /// Decoding trait for PEM documents.
 ///
@@ -13,6 +13,7 @@ pub trait DecodePem: Decode + PemLabel + Sized {
     /// using the [`Decode`] trait.
     ///
     /// # Errors
+    /// - Returns [`Error::Length`] if the decoded binary input exceeds `MAX_MSG_SIZE`.
     /// - Returns [`Error::Pem`] in the event of PEM decoding errors.
     /// - Propagates errors returned from the [`Decode::decode`] method.
     fn decode_pem(pem: impl AsRef<[u8]>) -> Result<Self, Self::Error>;
@@ -20,10 +21,11 @@ pub trait DecodePem: Decode + PemLabel + Sized {
 
 impl<T: Decode + PemLabel + Sized> DecodePem for T {
     fn decode_pem(pem: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
-        let mut reader = PemReader::new(pem.as_ref())?;
+        let reader = PemReader::new(pem.as_ref())?;
         Self::validate_pem_label(reader.type_label()).map_err(Error::from)?;
 
-        let ret = Self::decode(&mut reader)?;
-        Ok(reader.finish(ret)?)
+        let mut decoder = Decoder::new(reader)?;
+        let ret = Self::decode(&mut decoder)?;
+        Ok(decoder.finish(ret)?)
     }
 }

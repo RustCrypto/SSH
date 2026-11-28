@@ -114,13 +114,13 @@ pub use self::{
 #[cfg(feature = "alloc")]
 pub use crate::{
     Comment, SshSig,
+    encoding::digest::Digest,
     private::{
         dsa::{DsaKeypair, DsaPrivateKey},
         opaque::{OpaqueKeypair, OpaqueKeypairBytes, OpaquePrivateKeyBytes},
         rsa::{RsaKeypair, RsaPrivateKey},
         sk::SkEd25519,
     },
-    sha2::Digest,
 };
 
 #[cfg(feature = "mldsa-eddsa")]
@@ -132,12 +132,12 @@ pub use self::ecdsa::{EcdsaKeypair, EcdsaPrivateKey};
 #[cfg(all(feature = "alloc", feature = "ecdsa"))]
 pub use self::sk::SkEcdsaSha2NistP256;
 
-use crate::{Algorithm, Cipher, Error, Fingerprint, HashAlg, Kdf, PublicKey, Result, public};
+use crate::{Algorithm, Cipher, Error, Kdf, PublicKey, Result, public};
 use cipher::Tag;
 use core::str;
 use ctutils::{Choice, CtEq};
 use encoding::{
-    CheckedSum, Decode, DecodePem, Encode, EncodePem, Reader, Writer,
+    CheckedSum, Decode, DecodePem, Decoder, Encode, EncodePem, Reader, Writer,
     pem::{LineEnding, PemLabel},
 };
 
@@ -153,6 +153,12 @@ use rand_core::TryCryptoRng;
 
 #[cfg(feature = "rand_core")]
 use rand_core::CryptoRng;
+
+#[cfg(feature = "sha2")]
+use crate::Fingerprint;
+
+#[cfg(any(feature = "alloc", feature = "sha2"))]
+use crate::HashAlg;
 
 #[cfg(feature = "std")]
 use std::{fs::File, path::Path};
@@ -269,9 +275,9 @@ impl PrivateKey {
     ///
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
-        let reader = &mut bytes;
-        let private_key = Self::decode(reader)?;
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let mut reader = Decoder::new(bytes)?;
+        let private_key = Self::decode(&mut reader)?;
         Ok(reader.finish(private_key)?)
     }
 
@@ -357,7 +363,7 @@ impl PrivateKey {
     ///
     /// # Errors
     /// Propagates errors from [`SshSig::sign`].
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "sha2"))]
     pub fn sign(&self, namespace: &str, hash_alg: HashAlg, msg: &[u8]) -> Result<SshSig> {
         SshSig::sign(self, namespace, hash_alg, msg)
     }
@@ -468,7 +474,7 @@ impl PrivateKey {
 
         #[allow(clippy::arithmetic_side_effects)] // block sizes are constants
         Self::decode_privatekey_comment_pair(
-            &mut &**buffer,
+            &mut (&**buffer).into_decoder()?,
             self.public_key.key_data.clone(),
             self.cipher.block_size(),
             self.cipher.block_size() - 1,
@@ -572,6 +578,7 @@ impl PrivateKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.public_key.fingerprint(hash_alg)
@@ -674,7 +681,7 @@ impl PrivateKey {
     ///
     /// [PROTOCOL.key]: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
     fn decode_privatekey_comment_pair(
-        reader: &mut impl Reader,
+        reader: &mut Decoder<impl Reader>,
         public_key: public::KeyData,
         block_size: usize,
         max_padding_size: usize,
@@ -812,7 +819,7 @@ impl PartialEq for PrivateKey {
 impl Decode for PrivateKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut auth_magic = [0u8; Self::AUTH_MAGIC.len()];
         reader.read(&mut auth_magic)?;
 

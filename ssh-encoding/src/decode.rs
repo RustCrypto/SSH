@@ -3,16 +3,13 @@
 //!
 //! [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 
-use crate::{Error, Result, reader::Reader};
+use crate::{Decoder, Error, Reader, Result};
 
 #[cfg(feature = "alloc")]
 use alloc::{string::String, vec::Vec};
 
 #[cfg(feature = "bytes")]
 use bytes::Bytes;
-
-/// Maximum size of a `usize` this library will accept.
-const MAX_USIZE: usize = 0xFFFFF;
 
 /// Decoding trait.
 ///
@@ -21,18 +18,18 @@ pub trait Decode: Sized {
     /// Type returned in the event of a decoding error.
     type Error: From<Error>;
 
-    /// Attempt to decode a value of this type using the provided [`Reader`].
+    /// Attempt to decode a value of this type using the provided [`Decoder`].
     ///
     /// # Errors
     /// Returns errors specific to the concrete implementation of this trait.
-    fn decode(reader: &mut impl Reader) -> core::result::Result<Self, Self::Error>;
+    fn decode(reader: &mut Decoder<impl Reader>) -> core::result::Result<Self, Self::Error>;
 }
 
 /// Decode a single `byte` from the input data.
 impl Decode for u8 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut buf = [0];
         reader.read(&mut buf)?;
         Ok(buf[0])
@@ -50,7 +47,7 @@ impl Decode for u8 {
 impl Decode for bool {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let byte = u8::decode(reader)?;
         match byte {
             0 => Ok(false),
@@ -69,7 +66,7 @@ impl Decode for bool {
 impl Decode for u32 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut bytes = [0u8; 4];
         reader.read(&mut bytes)?;
         Ok(u32::from_be_bytes(bytes))
@@ -85,31 +82,22 @@ impl Decode for u32 {
 impl Decode for u64 {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut bytes = [0u8; 8];
         reader.read(&mut bytes)?;
         Ok(u64::from_be_bytes(bytes))
     }
 }
 
-/// Decode a `usize`.
+/// Decode an SSH `uint32` as a `usize`.
 ///
-/// Uses [`Decode`] impl on `u32` and then converts to a `usize`, handling
-/// potential overflow if `usize` is smaller than `u32`.
-///
-/// Enforces a library-internal limit of 1048575, as the main use case for
-/// `usize` is length prefixes.
+/// Returns [`Error::Overflow`] if the value does not fit in `usize`.
+/// Use [`Decoder::read_prefixed`] to decode a length-prefixed field.
 impl Decode for usize {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
-        let n = usize::try_from(u32::decode(reader)?)?;
-
-        if n <= MAX_USIZE {
-            Ok(n)
-        } else {
-            Err(Error::Overflow)
-        }
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
+        Ok(usize::try_from(u32::decode(reader)?)?)
     }
 }
 
@@ -126,7 +114,7 @@ impl Decode for usize {
 impl<const N: usize> Decode for [u8; N] {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let mut result = [0u8; N];
         reader.read(&mut result)?;
         Ok(result)
@@ -147,9 +135,9 @@ impl<const N: usize> Decode for [u8; N] {
 impl Decode for Vec<u8> {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
-            let mut result = vec![0u8; reader.remaining_len()];
+            let mut result = crate::vec_zeroed(reader.remaining_len())?;
             reader.read(&mut result)?;
             Ok(result)
         })
@@ -160,38 +148,30 @@ impl Decode for Vec<u8> {
 impl Decode for String {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         String::from_utf8(Vec::decode(reader)?).map_err(|_| Error::CharacterEncoding)
     }
 }
 
-/// Decodes `Vec<String>` from `name-list` as described in [RFC4251 § 5]:
+/// Decodes `Vec<String>` from an SSH `string` containing a sequence of SSH `string` values.
 ///
-/// > A string containing a comma-separated list of names.  A name-list
-/// > is represented as a uint32 containing its length (number of bytes
-/// > that follow) followed by a comma-separated list of zero or more
-/// > names.  A name MUST have a non-zero length, and it MUST NOT
-/// > contain a comma (",").  As this is a list of names, all of the
-/// > elements contained are names and MUST be in US-ASCII.  Context may
-/// > impose additional restrictions on the names.  For example, the
-/// > names in a name-list may have to be a list of valid algorithm
-/// > identifiers (see Section 6 below), or a list of [RFC3066] language
-/// > tags.  The order of the names in a name-list may or may not be
-/// > significant.  Again, this depends on the context in which the list
-/// > is used.  Terminating null characters MUST NOT be used, neither
-/// > for the individual names, nor for the list as a whole.
+/// The outer `uint32` length prefix covers all encoded entries, including their individual
+/// length prefixes. Each entry is decoded as UTF-8. This encoding is used for the valid
+/// principals field in OpenSSH certificates.
 ///
-/// [RFC3066]: https://datatracker.ietf.org/doc/html/rfc3066
+/// This differs from the comma-separated `name-list` encoding described in [RFC4251 § 5].
+///
 /// [RFC4251 § 5]: https://datatracker.ietf.org/doc/html/rfc4251#section-5
 #[cfg(feature = "alloc")]
 impl Decode for Vec<String> {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
             let mut entries = Self::new();
 
             while !reader.is_finished() {
+                entries.try_reserve(1)?;
                 entries.push(String::decode(reader)?);
             }
 
@@ -214,7 +194,7 @@ impl Decode for Vec<String> {
 impl Decode for Bytes {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Vec::<u8>::decode(reader).map(Into::into)
     }
 }

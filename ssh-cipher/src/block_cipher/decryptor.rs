@@ -3,8 +3,9 @@
 use super::{BlockMode, State, sealed::BlockCipher};
 use crate::{Cipher, Error, Result};
 use ::cipher::{
-    Block, BlockModeDecClosure, BlockModeDecrypt,
-    common::{BlockSizeUser, InnerUser},
+    Block, BlockModeDecBackend, BlockModeDecClosure, BlockModeDecrypt,
+    common::{BlockSizeUser, InnerUser, ParBlocksSizeUser, array::sizes::U1},
+    inout::InOut,
 };
 use core::fmt::{self, Debug};
 
@@ -27,14 +28,15 @@ impl<C: BlockCipher> Decryptor<C> {
     ///
     /// # Errors
     /// - Returns [`Error::Crypto`] if the given `cipher` cannot be used with `Decryptor`.
-    /// - Returns [`Error::Length`] if `key` or `iv` are the wrong length for the given `cipher`.
-    /// - Returns [`Error::UnsupportedCipher`] if support for the given `cipher` is not enabled
-    ///   in the crate features.
+    /// - Returns [`Error::KeySize`] if `key` is the wrong length for the given `cipher`.
+    /// - Returns [`Error::IvSize`] if `iv` is the wrong length for the given `cipher`.
+    /// - Returns [`Error::UnsupportedCipher`] if `C` does not support the given `cipher`.
     pub fn new(cipher: Cipher, key: &[u8], iv: &[u8]) -> Result<Self> {
         if !C::is_supported(cipher) {
             return Err(Error::UnsupportedCipher(cipher));
         }
 
+        cipher.check_key_and_iv(key, iv)?;
         let mode = cipher.block_mode().ok_or(Error::Crypto)?;
         let cipher = C::new_from_slice(key)?;
         let state = State::new_from_slice(mode, iv)?;
@@ -55,34 +57,12 @@ impl<C: BlockCipher> Decryptor<C> {
 }
 
 impl<C: BlockCipher> BlockModeDecrypt for Decryptor<C> {
-    fn decrypt_with_backend(&mut self, _f: impl BlockModeDecClosure<BlockSize = Self::BlockSize>) {
-        unimplemented!("CTR mode support is incompatible with BlockModeDecrypt")
-    }
-
-    fn decrypt_block(&mut self, block: &mut Block<Self>) {
-        match self.state.mode() {
-            BlockMode::Cbc => {
-                let pad = self.state.clone();
-                self.state.as_mut().copy_from_slice(block);
-                self.cipher.decrypt_block(block);
-                pad.xor_into(block);
-            }
-            BlockMode::Ctr => {
-                let mut pad = self.state.clone();
-                self.cipher.encrypt_block(pad.as_mut());
-                pad.xor_into(block);
-                self.state.increment_counter();
-            }
-        }
-    }
-
-    fn decrypt_blocks(&mut self, blocks: &mut [Block<Self>]) {
-        // TODO(tarcieri): parallel decryption support
-        for block in blocks {
-            self.decrypt_block(block);
-        }
+    fn decrypt_with_backend(&mut self, f: impl BlockModeDecClosure<BlockSize = Self::BlockSize>) {
+        let Self { cipher, state } = self;
+        f.call(&mut Backend { cipher, state });
     }
 }
+
 impl<C: BlockCipher> BlockSizeUser for Decryptor<C> {
     type BlockSize = C::BlockSize;
 }
@@ -95,4 +75,37 @@ impl<C: BlockCipher> Debug for Decryptor<C> {
 
 impl<C: BlockCipher> InnerUser for Decryptor<C> {
     type Inner = C;
+}
+
+struct Backend<'a, C: BlockCipher> {
+    cipher: &'a C,
+    state: &'a mut State<C::BlockSize>,
+}
+
+impl<C: BlockCipher> BlockSizeUser for Backend<'_, C> {
+    type BlockSize = C::BlockSize;
+}
+
+impl<C: BlockCipher> ParBlocksSizeUser for Backend<'_, C> {
+    // TODO(tarcieri): parallel decryption support
+    type ParBlocksSize = U1;
+}
+
+impl<C: BlockCipher> BlockModeDecBackend for Backend<'_, C> {
+    fn decrypt_block(&mut self, mut block: InOut<'_, '_, Block<Self>>) {
+        match self.state.mode() {
+            BlockMode::Cbc => {
+                let ciphertext = block.clone_in();
+                self.cipher.decrypt_block_inout(block.reborrow());
+                self.state.xor_into(block.get_out());
+                *self.state.as_mut() = ciphertext;
+            }
+            BlockMode::Ctr => {
+                let mut pad = self.state.as_ref().clone();
+                self.cipher.encrypt_block(&mut pad);
+                block.xor_in2out(&pad);
+                self.state.increment_counter();
+            }
+        }
+    }
 }

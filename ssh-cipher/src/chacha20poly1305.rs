@@ -16,38 +16,46 @@ use poly1305::{Poly1305, universal_hash::UniversalHash};
 #[cfg(feature = "zeroize")]
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-/// Key for `chacha20-poly1305@openssh.com`.
+/// One 32-byte half of the 64-byte `chacha20-poly1305@openssh.com` packet key.
+///
+/// Each half is an independent ChaCha20 key. The first encrypts the packet body and derives the
+/// Poly1305 key. The second encrypts the packet length.
 pub type ChaChaKey = chacha20::Key;
 
 /// Nonce for `chacha20-poly1305@openssh.com`.
 pub type ChaChaNonce = chacha20::LegacyNonce;
 
-/// OpenSSH variant of ChaCha20Poly1305: `chacha20-poly1305@openssh.com` as described in
-/// [PROTOCOL.chacha20poly1305].
+/// OpenSSH variant of ChaCha20Poly1305 (`chacha20-poly1305@openssh.com`) as described in
+/// [the SSH ChaCha20-Poly1305 draft].
 ///
 /// Differences from ChaCha20Poly1305-IETF as described in [RFC8439]:
 /// - Nonce is 64-bit instead of 96-bit (i.e. uses legacy "djb" ChaCha20 variant).
-/// - The AAD and ciphertext inputs of Poly1305 are not padded.
-/// - The lengths of ciphertext and AAD are not authenticated using Poly1305.
-/// - Maximum supported AAD size is 16.
+/// - The Poly1305 input is the AAD immediately followed by the ciphertext, without RFC8439's
+///   padding or trailing AAD and ciphertext length fields.
+/// - This implementation supports up to 16 bytes of AAD.
 ///
 /// ## Usage notes
 /// - In the context of SSH packet encryption, AAD will be 4 bytes and contain the encrypted length.
 /// - In the context of SSH key encryption, AAD will be empty.
 ///
 /// ## Implementing packet encryption
-/// The [`ChaCha20Poly1305`] type implements *just* the AEAD primitive used by OpenSSH, and takes
-/// a 32-byte/256-bit key. However, the full construction used for packet encryption requires
-/// 64-byte/512-bit keys, which are split into two 32-byte/256-bit keys (`K_1` and `K_2`), where
-/// `K_1` is used for length encryption, and `K_2` for the packet body in addition to authenticating
-/// the ciphertext encrypted under `K_1`.
+/// SSH packet encryption uses 64-bytes of key material per direction. The first 32-bytes are
+/// the main key for [`ChaCha20Poly1305`], which encrypts the body and derives the Poly1305 key.
+/// The last 32 bytes are the header key for the unauthenticated [`ChaCha20`] stream cipher
+/// that encrypts the four-byte packet length.
+///
+/// The receiver first decrypts a copy of the length with the header key. It checks this
+/// unauthenticated length against its packet size limit before using it to read the body and tag.
+/// Verifying the tag over the original encrypted length and encrypted body retroactively
+/// authenticates the length used for that read.
 ///
 /// ## Packet encryption example
 ///
 /// ```
+/// use std::io::{self, Read};
 /// use ssh_cipher::{
 ///     ChaCha20, ChaCha20Poly1305, ChaChaKey, ChaChaNonce, Tag,
-///     aead::{AeadInOut, KeyInit},
+///     aead::{self, AeadInOut, KeyInit},
 ///     cipher::{KeyIvInit, StreamCipher},
 /// };
 ///
@@ -56,51 +64,71 @@ pub type ChaChaNonce = chacha20::LegacyNonce;
 ///     seq_num: u32,
 ///     packet: &mut [u8],
 /// ) -> Result<([u8; 4], Tag), aead::Error> {
-///     let (k1, k2) = split_key(key);
-///     let mut nonce = ChaChaNonce::default();
-///     nonce[4..].copy_from_slice(&seq_num.to_be_bytes());
+///     let (main_key, header_key) = split_key(key);
+///     let nonce = ChaChaNonce::from(u64::from(seq_num).to_be_bytes());
 ///
-///     // Encrypt 4-byte packet length under `K_1` using raw `ChaCha20`.
+///     // The packet body includes the padding length, payload, and padding.
 ///     let packet_len = u32::try_from(packet.len()).map_err(|_| aead::Error)?;
-///     let mut len_bytes = packet_len.to_be_bytes();
-///     let mut len_cipher = ChaCha20::new(&k1, &nonce);
-///     len_cipher.apply_keystream(&mut len_bytes);
+///     let mut encrypted_len = packet_len.to_be_bytes();
+///     ChaCha20::new(header_key, &nonce).apply_keystream(&mut encrypted_len);
 ///
-///     // Encrypt packet body while authenticating encrypted `len_ct` as AAD.
-///     let body_cipher = ChaCha20Poly1305::new(&k2);
-///     let tag = body_cipher.encrypt_inout_detached(&nonce, &len_bytes, packet.into())?;
-///     Ok((len_bytes, tag))
+///     let body_cipher = ChaCha20Poly1305::new(main_key);
+///     let tag = body_cipher.encrypt_inout_detached(&nonce, &encrypted_len, packet.into())?;
+///     Ok((encrypted_len, tag))
 /// }
 ///
 /// fn decrypt_packet(
 ///     key: &[u8; 64],
 ///     seq_num: u32,
-///     mut enc_len: [u8; 4],
-///     packet: &mut [u8],
-///     tag: &Tag,
-/// ) -> Result<u32, aead::Error> {
-///     let (k1, k2) = split_key(key);
-///     let mut nonce = ChaChaNonce::default();
-///     nonce[4..].copy_from_slice(&seq_num.to_be_bytes());
+///     reader: &mut impl Read,
+///     buffer: &mut [u8],
+/// ) -> io::Result<usize> {
+///     let (main_key, header_key) = split_key(key);
+///     let nonce = ChaChaNonce::from(u64::from(seq_num).to_be_bytes());
 ///
-///     // Authenticate length and decrypt body
-///     let aead = ChaCha20Poly1305::new(&k2);
-///     aead.decrypt_inout_detached(&nonce, &enc_len, packet.into(), tag)?;
+///     let mut encrypted_len = [0; 4];
+///     reader.read_exact(&mut encrypted_len)?;
+///     let mut len_bytes = encrypted_len;
+///     ChaCha20::new(header_key, &nonce).apply_keystream(&mut len_bytes);
 ///
-///     // If ciphertext is authentic, decrypt the length
-///     let mut len_cipher = ChaCha20::new(&k2, &nonce);
-///     len_cipher.apply_keystream(&mut enc_len);
-///     Ok(u32::from_be_bytes(enc_len))
+///     // Bound the unauthenticated length by the receive buffer before reading the body.
+///     let len = usize::try_from(u32::from_be_bytes(len_bytes))
+///         .map_err(|_| io::ErrorKind::InvalidData)?;
+///     let packet = buffer.get_mut(..len).ok_or(io::ErrorKind::InvalidData)?;
+///     reader.read_exact(packet)?;
+///     let mut tag = Tag::default();
+///     reader.read_exact(&mut tag)?;
+///
+///     // Verify the original encrypted length and body before decrypting the body.
+///     ChaCha20Poly1305::new(main_key)
+///         .decrypt_inout_detached(&nonce, &encrypted_len, packet.into(), &tag)
+///         .map_err(|_| io::ErrorKind::InvalidData)?;
+///     Ok(len)
 /// }
 ///
-/// // Split 512-bit key into `K_1` and `K_2`
-/// fn split_key(key: &[u8; 64]) -> (ChaChaKey, ChaChaKey) {
-///     let (k1, k2) = key.split_at(32);
-///     (ChaChaKey::try_from(k1).unwrap(), ChaChaKey::try_from(k2).unwrap())
+/// fn split_key(key: &[u8; 64]) -> (&ChaChaKey, &ChaChaKey) {
+///     let (main_key, header_key) = key.split_at(32);
+///     (main_key.try_into().unwrap(), header_key.try_into().unwrap())
 /// }
+/// #
+/// # use hex_literal::hex;
+/// # let key = core::array::from_fn(|i| u8::try_from(i).unwrap());
+/// # let seq_num = 0x0102_0304;
+/// # let plaintext = hex!("0615de5949ab061f");
+/// # // Output of OpenSSH 10.2p1 chachapoly_crypt for this key, sequence number, and body.
+/// # let wire = hex!("bc798073 90d7c2eb92ba20b6 b123141e5be8ac99addade4acfb2964b");
+/// # let mut body = plaintext;
+/// # let (encrypted_len, tag) = encrypt_packet(&key, seq_num, &mut body).unwrap();
+/// # assert_eq!([&encrypted_len[..], &body, &tag[..]].concat(), wire);
+/// # let mut received = [0; 16];
+/// # let len = decrypt_packet(&key, seq_num, &mut wire.as_slice(), &mut received).unwrap();
+/// # assert_eq!(&received[..len], &plaintext);
+/// # let mut input = wire.as_slice();
+/// # assert!(decrypt_packet(&key, seq_num, &mut input, &mut []).is_err());
+/// # assert_eq!(input, &wire[4..]);
 /// ```
 ///
-/// [PROTOCOL.chacha20poly1305]: https://web.mit.edu/freebsd/head/crypto/openssh/PROTOCOL.chacha20poly1305
+/// [the SSH ChaCha20-Poly1305 draft]: https://datatracker.ietf.org/doc/html/draft-ietf-sshm-chacha20-poly1305#section-6
 /// [RFC8439]: https://datatracker.ietf.org/doc/html/rfc8439
 #[derive(Clone)]
 pub struct ChaCha20Poly1305 {

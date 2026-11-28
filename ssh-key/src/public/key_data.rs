@@ -1,8 +1,8 @@
 //! Public key data.
 
 use super::{Ed25519PublicKey, SkEd25519};
-use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use crate::{Algorithm, Error, Result};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "alloc")]
 use {
@@ -16,6 +16,9 @@ use super::{EcdsaPublicKey, SkEcdsaSha2NistP256};
 
 #[cfg(feature = "mldsa-eddsa")]
 use super::MlDsa44Ed25519PublicKey;
+
+#[cfg(feature = "sha2")]
+use crate::{Fingerprint, HashAlg};
 
 /// Public key data.
 #[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -119,6 +122,7 @@ impl KeyData {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         Fingerprint::new(hash_alg, self)
@@ -260,7 +264,7 @@ impl KeyData {
     /// - Returns [`Error::AlgorithmUnknown`] if the provided `algorithm` is unknown or unsupported
     ///   by this library.
     /// - Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as(reader: &mut Decoder<impl Reader>, algorithm: Algorithm) -> Result<Self> {
         match algorithm {
             #[cfg(feature = "alloc")]
             Algorithm::Dsa => DsaPublicKey::decode(reader).map(Self::Dsa),
@@ -293,7 +297,10 @@ impl KeyData {
     /// # Errors
     /// Propagates errors from [`Certificate::decode_as`].
     #[cfg(feature = "alloc")]
-    pub fn decode_as_certificate(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub fn decode_as_certificate(
+        reader: &mut Decoder<impl Reader>,
+        algorithm: Algorithm,
+    ) -> Result<Self> {
         Certificate::decode_as(reader, algorithm).map(|cert| Self::Certificate(Box::new(cert)))
     }
 
@@ -346,7 +353,7 @@ impl KeyData {
 impl Decode for KeyData {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
         #[cfg(feature = "alloc")]
         if let Algorithm::Other(name) = &algorithm {

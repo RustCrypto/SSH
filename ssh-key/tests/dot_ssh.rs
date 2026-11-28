@@ -2,8 +2,13 @@
 
 #![cfg(feature = "std")]
 
-use hex_literal::hex;
-use ssh_key::{Algorithm, DotSsh, Fingerprint};
+use ssh_key::DotSsh;
+
+#[cfg(feature = "sha2")]
+use {
+    hex_literal::hex,
+    ssh_key::{Algorithm, Fingerprint},
+};
 
 /// Number of `mldsa44_ed25519` example keys, which only parse when the
 /// algorithm is enabled.
@@ -34,10 +39,11 @@ fn private_keys() {
     let dot_ssh = dot_ssh();
     assert_eq!(
         dot_ssh.private_keys().unwrap().count(),
-        22 + MLDSA_EDDSA_PRIVATE_KEYS
+        24 + MLDSA_EDDSA_PRIVATE_KEYS
     );
 }
 
+#[cfg(feature = "sha2")]
 #[test]
 fn private_key_with_fingerprint() {
     let fingerprint = Fingerprint::Sha256(hex!(
@@ -58,6 +64,7 @@ fn public_keys() {
     );
 }
 
+#[cfg(feature = "sha2")]
 #[test]
 fn public_key_with_fingerprint() {
     let fingerprint = Fingerprint::Sha256(hex!(

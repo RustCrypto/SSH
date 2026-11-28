@@ -6,7 +6,7 @@ use core::{
     cmp::Ordering,
     ops::{Deref, DerefMut},
 };
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 /// Key/value map type used for certificate's critical options and extensions.
 #[derive(Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
@@ -37,7 +37,7 @@ impl DerefMut for OptionsMap {
 impl Decode for OptionsMap {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         reader.read_prefixed(|reader| {
             let mut entries = Vec::<(String, String)>::new();
 

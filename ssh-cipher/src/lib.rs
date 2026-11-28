@@ -262,7 +262,8 @@ impl Cipher {
     /// Decrypt the ciphertext in the `buffer` in-place using this cipher.
     ///
     /// # Errors
-    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
+    /// Returns [`Error::KeySize`] or [`Error::IvSize`] if the key or IV has the wrong size.
+    /// For CBC and CTR, returns [`Error::Length`] if `buffer` is not a multiple of the
     /// block size.
     #[cfg_attr(not(any(feature = "aes", feature = "tdes")), allow(unused_variables))]
     pub fn decrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8], tag: Option<Tag>) -> Result<()> {
@@ -364,7 +365,8 @@ impl Cipher {
     /// Encrypt the ciphertext in the `buffer` in-place using this cipher.
     ///
     /// # Errors
-    /// Returns [`Error::Length`] in the event that `buffer` is not a multiple of the cipher's
+    /// Returns [`Error::KeySize`] or [`Error::IvSize`] if the key or IV has the wrong size.
+    /// For CBC and CTR, returns [`Error::Length`] if `buffer` is not a multiple of the
     /// block size.
     #[cfg_attr(not(any(feature = "aes", feature = "tdes")), allow(unused_variables))]
     pub fn encrypt(self, key: &[u8], iv: &[u8], buffer: &mut [u8]) -> Result<Option<Tag>> {
@@ -467,6 +469,24 @@ impl Cipher {
             Self::TdesCbc => Some(BlockMode::Cbc),
             _ => None,
         }
+    }
+
+    /// Check that the key and IV are the expected length for this cipher.
+    #[cfg(any(feature = "aes", feature = "tdes"))]
+    fn check_key_and_iv(self, key: &[u8], iv: &[u8]) -> Result<()> {
+        let (key_size, iv_size) = self
+            .key_and_iv_size()
+            .ok_or(Error::UnsupportedCipher(self))?;
+
+        if key.len() != key_size {
+            return Err(Error::KeySize);
+        }
+
+        if iv.len() != iv_size {
+            return Err(Error::IvSize);
+        }
+
+        Ok(())
     }
 }
 

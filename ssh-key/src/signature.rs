@@ -3,7 +3,7 @@
 use crate::{Algorithm, EcdsaCurve, Error, Mpint, PrivateKey, PublicKey, Result, private, public};
 use alloc::vec::Vec;
 use core::fmt;
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use signature::{SignatureEncoding, Signer, Verifier};
 
 #[cfg(feature = "ed25519")]
@@ -38,7 +38,7 @@ use sha1::Sha1;
 use sha2::Sha256;
 
 #[cfg(any(feature = "dsa", feature = "ed25519", feature = "p256"))]
-use sha2::Digest;
+use encoding::digest::Digest;
 
 const DSA_COMPONENT_SIZE: usize = 20;
 const DSA_SIGNATURE_SIZE: usize = DSA_COMPONENT_SIZE * 2;
@@ -160,12 +160,15 @@ impl Signature {
 
 /// Returns Ok() if data holds an ecdsa signature with components of appropriate size
 /// according to curve.
-fn ecdsa_sig_size(mut data: &[u8], curve: EcdsaCurve, sk_trailer: bool) -> Result<()> {
-    let reader = &mut data;
+fn ecdsa_sig_size(data: &[u8], curve: EcdsaCurve, sk_trailer: bool) -> Result<()> {
+    let mut reader = Decoder::new(data)?;
 
     for _ in 0..2 {
-        let component = Mpint::decode(reader)?;
-        let bytes = component.as_positive_bytes().ok_or(Error::FormatEncoding)?;
+        let component = Mpint::decode(&mut reader)?;
+        if component.is_zero() {
+            return Err(Error::FormatEncoding);
+        }
+        let bytes = component.as_bytes();
         if bytes.len() > curve.field_size() {
             return Err(encoding::Error::Length.into());
         }
@@ -187,7 +190,7 @@ impl AsRef<[u8]> for Signature {
 impl Decode for Signature {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let algorithm = Algorithm::decode(reader)?;
         let mut data = Vec::decode(reader)?;
 
@@ -245,8 +248,10 @@ impl SignatureEncoding for Signature {
 impl TryFrom<&[u8]> for Signature {
     type Error = Error;
 
-    fn try_from(mut bytes: &[u8]) -> Result<Self> {
-        Self::decode(&mut bytes)
+    fn try_from(bytes: &[u8]) -> Result<Self> {
+        let mut decoder = bytes.into_decoder()?;
+        let signature = Self::decode(&mut decoder)?;
+        Ok(decoder.finish(signature)?)
     }
 }
 
@@ -537,8 +542,8 @@ macro_rules! impl_signature_for_curve {
                 #[allow(clippy::arithmetic_side_effects)]
                 let mut data = Vec::with_capacity($size * 2 + 4 * 2 + 2);
 
-                Mpint::from_positive_bytes(&r).encode(&mut data)?;
-                Mpint::from_positive_bytes(&s).encode(&mut data)?;
+                Mpint::from_bytes(&r)?.encode(&mut data)?;
+                Mpint::from_bytes(&s)?.encode(&mut data)?;
 
                 Ok(Signature {
                     algorithm: Algorithm::Ecdsa {
@@ -578,7 +583,7 @@ impl_signature_for_curve!(p521, "p521", NistP521, 66);
 fn zero_pad_field_bytes<B: FromIterator<u8> + Copy>(m: Mpint) -> Option<B> {
     use core::mem::size_of;
 
-    let bytes = m.as_positive_bytes()?;
+    let bytes = m.as_bytes();
     size_of::<B>().checked_sub(bytes.len()).map(|i| {
         core::iter::repeat_n(0u8, i)
             .chain(bytes.iter().cloned())
@@ -600,8 +605,8 @@ impl TryFrom<&Signature> for p256::ecdsa::Signature {
     }
 }
 #[cfg(feature = "p256")]
-fn p256_signature_from_openssh_bytes(mut signature_bytes: &[u8]) -> Result<p256::ecdsa::Signature> {
-    let reader = &mut signature_bytes;
+fn p256_signature_from_openssh_bytes(signature_bytes: &[u8]) -> Result<p256::ecdsa::Signature> {
+    let reader = &mut Decoder::new(signature_bytes)?;
     let r = Mpint::decode(reader)?;
     let s = Mpint::decode(reader)?;
 
@@ -623,7 +628,7 @@ impl TryFrom<&Signature> for p384::ecdsa::Signature {
             Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP384,
             } => {
-                let reader = &mut signature.as_bytes();
+                let reader = &mut Decoder::new(signature.as_bytes())?;
                 let r = Mpint::decode(reader)?;
                 let s = Mpint::decode(reader)?;
 
@@ -649,7 +654,7 @@ impl TryFrom<&Signature> for p521::ecdsa::Signature {
             Algorithm::Ecdsa {
                 curve: EcdsaCurve::NistP521,
             } => {
-                let reader = &mut signature.as_bytes();
+                let reader = &mut Decoder::new(signature.as_bytes())?;
                 let r = Mpint::decode(reader)?;
                 let s = Mpint::decode(reader)?;
 
@@ -905,6 +910,25 @@ mod tests {
     }
 
     #[test]
+    fn decode_trailing_data() {
+        for signature in [
+            DSA_SIGNATURE,
+            ECDSA_SHA2_P256_SIGNATURE,
+            ED25519_SIGNATURE,
+            SK_ED25519_SIGNATURE,
+            SK_ECDSA_SHA2_P256_SIGNATURE,
+            RSA_SHA512_SIGNATURE,
+        ] {
+            let mut bytes = signature.to_vec();
+            bytes.push(0);
+            assert_eq!(
+                Signature::try_from(bytes.as_slice()),
+                Err(encoding::Error::TrailingData { remaining: 1 }.into())
+            );
+        }
+    }
+
+    #[test]
     fn encode_dsa() {
         let signature = Signature::try_from(DSA_SIGNATURE).unwrap();
         let result = signature.encode_vec().unwrap();
@@ -945,7 +969,8 @@ mod tests {
     #[test]
     fn try_sign_and_verify_dsa() {
         use super::{DSA_COMPONENT_SIZE, DsaKeypair};
-        use encoding::Decode as _;
+        use encoding::{Decode as _, Reader as _};
+        use signature::{Signer as _, Verifier as _};
 
         fn check_signature_component_lengths(
             keypair: &DsaKeypair,
@@ -985,7 +1010,8 @@ mod tests {
         let keypair = hex!(
             "0000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf277161980000001500ced95f1c7bbb39be4987837ad1f71be31bb7b0d9"
         );
-        let keypair = DsaKeypair::decode(&mut &keypair[..]).expect("properly encoded DSA keypair");
+        let keypair = DsaKeypair::decode(&mut keypair.as_slice().into_decoder().unwrap())
+            .expect("properly encoded DSA keypair");
 
         let data = hex!(
             "F0000040713d5f6fffe0000e6421ab0b3a69774d3da02fd72b107d6b32b6dad7c1660bbf507bf3eac3304cc5058f7e6f81b04239b8471459b1f3b387e2626f7eb8f6bcdd3200000006626c616465320000000e7373682d636f6e6e656374696f6e00000009686f73746261736564000000077373682d647373000001b2000000077373682d6473730000008100c161fb30c9e4e3602c8510f93bbd48d813da845dfcc75f3696e440cd019d609809608cd592b8430db901d7b43740740045b547c60fb035d69f9c64d3dfbfb13bb3edd8ccfdd44705739a639eb70f4aed16b0b8355de1b21cd9d442eff250895573a8af7ce2fb71fb062e887482dab5c68139845fb8afafc5f3819dc782920d510000001500f3fb6762430332bd5950edc5cd1ae6f17b88514f0000008061ef1394d864905e8efec3b610b7288a6522893af2a475f910796e0de47c8b065d365e942e80e471d1e6d4abdee1d3d3ede7103c6996432f1a9f9a671a31388672d63555077911fc69e641a997087260d22cdbf4965aa64bb382204f88987890ec225a5a7723a977dc1ecc5e04cf678f994692b20470adbf697489f800817b920000008100a9a6f1b65fc724d65df7441908b34af66489a4a3872cbbba25ea1bcfc83f25c4af1a62e339eefc814907cfaf0cb6d2d16996212a32a27a63013f01c57d0630f0be16c8c69d16fc25438e613b904b98aeb3e7c356fa8e75ee1d474c9f82f1280c5a6c18e9e607fcf7586eefb75ea9399da893b807375ac1396fd586bf2771619800000015746f6d61746f7373682e6c6f63616c646f6d61696e00000009746f6d61746f737368"
@@ -1052,21 +1078,21 @@ mod tests {
     #[test]
     fn mldsa44_ed25519_key_roundtrip() {
         use crate::{private::KeypairData, public::KeyData};
-        use encoding::Decode;
+        use encoding::{Decode, Reader as _};
 
         let keypair = MlDsa44Ed25519Keypair::from_seed(&[7; 64]).unwrap();
 
         // Public key wire-format round-trips and reports the correct algorithm.
         let public: KeyData = keypair.public.clone().into();
         let encoded = public.encode_vec().unwrap();
-        let decoded = KeyData::decode(&mut &encoded[..]).unwrap();
+        let decoded = KeyData::decode(&mut encoded.as_slice().into_decoder().unwrap()).unwrap();
         assert_eq!(decoded, public);
         assert_eq!(decoded.algorithm(), Algorithm::MlDsa44Ed25519);
 
         // Keypair wire-format round-trips.
         let keypair_data = KeypairData::from(keypair);
         let encoded = keypair_data.encode_vec().unwrap();
-        let decoded = KeypairData::decode(&mut &encoded[..]).unwrap();
+        let decoded = KeypairData::decode(&mut encoded.as_slice().into_decoder().unwrap()).unwrap();
         assert_eq!(decoded, keypair_data);
     }
 
@@ -1076,7 +1102,7 @@ mod tests {
     #[test]
     fn mldsa44_ed25519_mismatched_public_key_is_rejected() {
         use crate::private::KeypairData;
-        use encoding::Decode;
+        use encoding::{Decode, Reader as _};
 
         let keypair = MlDsa44Ed25519Keypair::from_seed(&[7; 64]).unwrap();
         let mut encoded = KeypairData::from(keypair).encode_vec().unwrap();
@@ -1086,7 +1112,7 @@ mod tests {
         let public_key_end = encoded.len() - 4 - 64;
         encoded[public_key_end - 1] ^= 1;
 
-        assert!(KeypairData::decode(&mut &encoded[..]).is_err());
+        assert!(KeypairData::decode(&mut encoded.as_slice().into_decoder().unwrap()).is_err());
     }
 
     #[test]
@@ -1110,7 +1136,7 @@ mod tests {
     #[cfg(all(feature = "rsa", feature = "sha1"))]
     #[test]
     fn sign_and_verify_rsa_sha1() {
-        use encoding::Decode;
+        use encoding::{Decode, Reader};
 
         use crate::PrivateKey;
 
@@ -1120,7 +1146,7 @@ mod tests {
             "000000077373682d727361000001809485247d72bf853272c86dd8c1c3fa0d2bebcdea9d91a376525a4bcc4a9ca2b19d31af48cfc07da086b244c65b37f3eb8fcab9661ccf777ed2f45404dd602b405526e19323f065b44d19f1bbda3eaf87b922b01049fcd8b82f08ffab6582e8427b0af3305f32961816d499d7b4925c1293b2d658dc6ca7cfb2d47c203c7d9512c0ee33e3d74f362d339a112fc94a74e8f388fc7fd1e9b95c7dd94e62ff16c9463476b7cf0e42af0f17fd2b9e325a50fc40ffd02b4a39e692727186b47c8ce9d7037de7e94615966df462238e214e7440bedabc5fbf79cfa93b96be5f27268da7c1ae2246bcabcc18a0d2c507be8727d04e41ed38686e5c455c159ee371f477668e89720191a72fbdb4eef86f1aa5c3596cefad12b20b1a1220accf6145f8583d7559751b2d0445e2e8a8fda85bf30f24b446ac6d0b943f7c519e5a021b1468cf120ed565d95ed8ddf022f97537ec5491226198ec58dd96c6bd218ddb237aa80785ceafa7722f1d2ba3e39dce2a9fdb0038f4124e2aa27d28eef927d87c8708f6"
         );
 
-        let decoded = Signature::decode(&mut &encoded[..]).unwrap();
+        let decoded = Signature::decode(&mut encoded.as_slice().into_decoder().unwrap()).unwrap();
 
         assert!(Verifier::verify(key.public(), EXAMPLE_MSG, &decoded).is_ok());
     }

@@ -25,6 +25,7 @@ pub trait EncodePem: Encode + PemLabel {
     /// returned [`String`].
     ///
     /// # Errors
+    /// Returns [`Error::Alloc`] if reserving capacity fails.
     /// Propagates errors returned from [`EncodePem::encode_pem`].
     #[cfg(feature = "alloc")]
     fn encode_pem_string(&self, line_ending: LineEnding) -> Result<String, Error>;
@@ -49,7 +50,7 @@ impl<T: Encode + PemLabel> EncodePem for T {
         )
         .map_err(Error::from)?;
 
-        let mut buf = vec![0u8; encoded_len];
+        let mut buf = crate::vec_zeroed(encoded_len)?;
         let actual_len = self.encode_pem(line_ending, &mut buf)?.len();
         buf.truncate(actual_len);
         String::from_utf8(buf).map_err(Error::from)

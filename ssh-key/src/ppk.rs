@@ -19,7 +19,17 @@ use crate::public::KeyData;
 use crate::{Algorithm, Error, PublicKey};
 use ctutils::CtEq;
 use encoding::base64::{self, Base64, Encoding};
-use encoding::{Decode, Encode, LabelError, Reader};
+use encoding::{Decode, Decoder, Encode, Reader};
+
+/// Maximum Argon2 memory cost in KiB (1 GiB).
+// These are resource limits imposed by this crate, not limits of the PPK format.
+const MAX_ARGON2_MEMORY: u32 = 1 << 20;
+
+/// Maximum number of Argon2 passes.
+const MAX_ARGON2_PASSES: u32 = 1 << 10;
+
+/// Maximum Argon2 parallelism.
+const MAX_ARGON2_PARALLELISM: u32 = 64;
 
 #[derive(Debug)]
 pub(crate) enum Kdf {
@@ -37,7 +47,7 @@ impl Kdf {
             "Argon2i" => Ok(argon2::Algorithm::Argon2i),
             "Argon2d" => Ok(argon2::Algorithm::Argon2d),
             "Argon2id" => Ok(argon2::Algorithm::Argon2id),
-            _ => Err(PpkParseError::UnsupportedKdf(algorithm.into())),
+            _ => Err(PpkParseError::UnsupportedKdf),
         }?;
 
         let parse_int = |key: PpkKey| -> Result<u32, PpkParseError> {
@@ -47,34 +57,54 @@ impl Kdf {
                 .and_then(|v| v.parse().map_err(PpkParseError::InvalidInteger))
         };
 
-        let argon = Argon2::new(
-            argon_algorithm,
-            argon2::Version::V0x13,
-            argon2::Params::new(
-                parse_int(PpkKey::Argon2Memory)?,
-                parse_int(PpkKey::Argon2Passes)?,
-                parse_int(PpkKey::Argon2Parallelism)?,
-                None,
-            )
-            .map_err(PpkParseError::Argon2)?,
-        );
+        let params = argon2::Params::new(
+            parse_int(PpkKey::Argon2Memory)?,
+            parse_int(PpkKey::Argon2Passes)?,
+            parse_int(PpkKey::Argon2Parallelism)?,
+            None,
+        )
+        .map_err(PpkParseError::Argon2)?;
+        validate_argon2_params(&params)?;
+        let argon = Argon2::new(argon_algorithm, argon2::Version::V0x13, params);
 
         let salt = Vec::from_hex(
             ppk.values
                 .get(&PpkKey::Argon2Salt)
                 .ok_or(PpkParseError::MissingValue(PpkKey::Argon2Salt))?,
         )
-        .map_err(|e| PpkParseError::HexFormat(e.to_string()))?;
+        .map_err(|_| PpkParseError::HexFormat)?;
 
         Ok(Self::Argon2 { kdf: argon, salt })
     }
 
-    pub(crate) fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), argon2::Error> {
+    pub(crate) fn derive(&self, password: &[u8], output: &mut [u8]) -> Result<(), PpkParseError> {
         match self {
-            Kdf::Argon2 { kdf, salt } => kdf.hash_password_into(password, salt, output),
+            Kdf::Argon2 { kdf, salt } => {
+                validate_argon2_params(kdf.params())?;
+                kdf.hash_password_into(password, salt, output)
+                    .map_err(PpkParseError::Argon2)
+            }
             Kdf::PpkV2 => Ok(()),
         }
     }
+}
+
+/// Check resource limits before accepting Argon2 parameters or deriving a key.
+fn validate_argon2_params(params: &argon2::Params) -> Result<(), PpkParseError> {
+    for (key, value, max) in [
+        (PpkKey::Argon2Memory, params.m_cost(), MAX_ARGON2_MEMORY),
+        (PpkKey::Argon2Passes, params.t_cost(), MAX_ARGON2_PASSES),
+        (
+            PpkKey::Argon2Parallelism,
+            params.p_cost(),
+            MAX_ARGON2_PARALLELISM,
+        ),
+    ] {
+        if value > max {
+            return Err(PpkParseError::ValueFormat(key));
+        }
+    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -96,8 +126,7 @@ impl Cipher {
         match &kdf {
             Kdf::Argon2 { .. } => {
                 let mut key_iv_mac = vec![0; 80];
-                kdf.derive(password.as_bytes(), &mut key_iv_mac)
-                    .map_err(PpkParseError::Argon2)?;
+                kdf.derive(password.as_bytes(), &mut key_iv_mac)?;
                 let key = &key_iv_mac[..32];
                 let iv = &key_iv_mac[32..48];
                 let mac_key = &key_iv_mac[48..80];
@@ -212,22 +241,22 @@ impl Debug for PpkWrapper {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PpkParseError {
-    Algorithm(LabelError),
-    Header(String),
-    Syntax(String),
-    ValueFormat { key: PpkKey, value: String },
-    HexFormat(String), // FromHexError does not implement Eq
+    Algorithm,
+    Header,
+    Syntax,
+    ValueFormat(PpkKey),
+    HexFormat,
     InvalidInteger(ParseIntError),
     IncorrectMac,
-    UnknownKey(String),
+    UnknownKey,
     MissingValue(PpkKey),
     MissingPublicKey,
     MissingPrivateKey,
     Base64(base64::Error),
     Eof,
     UnsupportedFormatVersion(u8),
-    UnsupportedEncryption(String),
-    UnsupportedKdf(String),
+    UnsupportedEncryption,
+    UnsupportedKdf,
     Argon2(argon2::Error),
     Encrypted,
 }
@@ -235,16 +264,16 @@ pub enum PpkParseError {
 impl Display for PpkParseError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Self::Algorithm(err) => write!(f, "invalid algorithm: {:?}", err),
-            Self::Header(header) => write!(f, "invalid header: {:?}", header),
-            Self::Syntax(line) => write!(f, "invalid syntax: {:?}", line),
-            Self::ValueFormat { key, value } => {
-                write!(f, "invalid value format for key {:?}: {:?}", key, value)
+            Self::Algorithm => write!(f, "invalid algorithm"),
+            Self::Header => write!(f, "invalid header"),
+            Self::Syntax => write!(f, "invalid syntax"),
+            Self::ValueFormat(key) => {
+                write!(f, "invalid value format for key {:?}", key)
             }
-            Self::HexFormat(err) => write!(f, "invalid hex format: {}", err),
+            Self::HexFormat => write!(f, "invalid hex format"),
             Self::InvalidInteger(err) => write!(f, "invalid integer: {}", err),
             Self::IncorrectMac => write!(f, "incorrect MAC"),
-            Self::UnknownKey(key) => write!(f, "unknown key: {:?}", key),
+            Self::UnknownKey => write!(f, "unknown key"),
             Self::MissingValue(key) => write!(f, "missing value for key: {:?}", key),
             Self::MissingPublicKey => write!(f, "missing public key"),
             Self::MissingPrivateKey => write!(f, "missing private key"),
@@ -253,10 +282,10 @@ impl Display for PpkParseError {
             Self::UnsupportedFormatVersion(version) => {
                 write!(f, "unsupported format version: {}", version)
             }
-            Self::UnsupportedEncryption(encryption) => {
-                write!(f, "unsupported encryption mode: {:?}", encryption)
+            Self::UnsupportedEncryption => {
+                write!(f, "unsupported encryption mode")
             }
-            Self::UnsupportedKdf(kdf) => write!(f, "unsupported KDF: {:?}", kdf),
+            Self::UnsupportedKdf => write!(f, "unsupported KDF"),
             Self::Argon2(err) => write!(f, "Argon2 error: {:?}", err),
             Self::Encrypted => write!(f, "private key is encrypted"),
         }
@@ -278,29 +307,25 @@ impl TryFrom<&str> for PpkWrapper {
         let mut lines = contents.lines();
         let header = lines.next().ok_or(PpkParseError::Eof)?;
         let Some(header) = header.strip_prefix(PPK_HEADER_PREFIX) else {
-            return Err(PpkParseError::Header(header.into()));
+            return Err(PpkParseError::Header);
         };
 
-        let (header_version, header_algorithm) = header
-            .split_once(": ")
-            .ok_or(PpkParseError::Header(header.into()))?;
+        let (header_version, header_algorithm) =
+            header.split_once(": ").ok_or(PpkParseError::Header)?;
 
-        let version = header_version
-            .parse()
-            .map_err(|_| PpkParseError::Header(header.into()))?;
+        let version = header_version.parse().map_err(|_| PpkParseError::Header)?;
         if version != 3 && version != 2 {
             return Err(PpkParseError::UnsupportedFormatVersion(version));
         }
 
-        let algorithm = Algorithm::from_str(header_algorithm).map_err(PpkParseError::Algorithm)?;
+        let algorithm =
+            Algorithm::from_str(header_algorithm).map_err(|_| PpkParseError::Algorithm)?;
         let mut public_key = None;
         let mut private_key = None;
 
         let mut values = BTreeMap::new();
         while let Some(line) = lines.next() {
-            let (key, value) = line
-                .split_once(": ")
-                .ok_or(PpkParseError::Syntax(line.into()))?;
+            let (key, value) = line.split_once(": ").ok_or(PpkParseError::Syntax)?;
 
             if key.ends_with("-Lines") {
                 let n_lines: usize = value.parse().map_err(PpkParseError::InvalidInteger)?;
@@ -317,11 +342,10 @@ impl TryFrom<&str> for PpkWrapper {
                 match key {
                     "Public-Lines" => public_key = Some(decoded.to_vec()),
                     "Private-Lines" => private_key = Some(decoded.to_vec()),
-                    _ => return Err(PpkParseError::UnknownKey(key.into())),
+                    _ => return Err(PpkParseError::UnknownKey),
                 }
             } else {
-                let key =
-                    PpkKey::try_from(key).map_err(|_| PpkParseError::UnknownKey(key.into()))?;
+                let key = PpkKey::try_from(key).map_err(|_| PpkParseError::UnknownKey)?;
 
                 values.insert(key, value.to_string());
             }
@@ -370,7 +394,7 @@ impl PpkContainer {
                     v => return Err(PpkParseError::UnsupportedFormatVersion(v).into()),
                 }
             }
-            Some(v) => return Err(PpkParseError::UnsupportedEncryption(v.into()).into()),
+            Some(_) => return Err(PpkParseError::UnsupportedEncryption.into()),
         };
 
         let mac = Vec::from_hex(
@@ -378,7 +402,7 @@ impl PpkContainer {
                 .get(&PpkKey::Mac)
                 .ok_or(PpkParseError::MissingValue(PpkKey::Mac))?,
         )
-        .map_err(|e| PpkParseError::HexFormat(e.to_string()))?;
+        .map_err(|_| PpkParseError::HexFormat)?;
 
         let comment = ppk.values.remove(&PpkKey::Comment);
         let public_key = ppk.public_key.ok_or(PpkParseError::MissingPublicKey)?;
@@ -442,7 +466,7 @@ impl PpkContainer {
         }
 
         let mut public_key = PublicKey::from_bytes(&public_key)?;
-        let mut private_key_cursor = &private_key[..];
+        let mut private_key_cursor = Decoder::new(private_key.as_slice())?;
         let keypair_data =
             decode_private_key_as(&mut private_key_cursor, public_key.clone(), ppk.algorithm)?;
 
@@ -456,7 +480,7 @@ impl PpkContainer {
 }
 
 fn decode_private_key_as(
-    reader: &mut impl Reader,
+    reader: &mut Decoder<impl Reader>,
     public: PublicKey,
     algorithm: Algorithm,
 ) -> Result<KeypairData, Error> {
@@ -485,22 +509,11 @@ fn decode_private_key_as(
 
         #[cfg(feature = "ed25519")]
         (Algorithm::Ed25519, KeyData::Ed25519(pk)) => {
-            // PPK encodes Ed25519 private exponent as an mpint
-            use crate::Mpint;
             use crate::private::{Ed25519Keypair, Ed25519PrivateKey};
             use zeroize::Zeroizing;
 
-            // Copy and pad exponent
             let mut buf = Zeroizing::new([0u8; Ed25519PrivateKey::BYTE_SIZE]);
-            let e = Mpint::decode(reader)?;
-            let e_bytes = e.as_bytes();
-
-            if e_bytes.len() > buf.len() {
-                return Err(Error::Crypto);
-            }
-
-            #[allow(clippy::arithmetic_side_effects)] // length checked
-            buf[Ed25519PrivateKey::BYTE_SIZE - e_bytes.len()..].copy_from_slice(e_bytes);
+            reader.read_prefixed(|reader| reader.read(buf.as_mut()))?;
 
             let private = Ed25519PrivateKey::from_bytes(&buf);
             Ok(KeypairData::Ed25519(Ed25519Keypair {
@@ -518,7 +531,7 @@ fn decode_private_key_as(
 
             // Copy and pad exponent
             let e = Mpint::decode(reader)?;
-            let e_bytes = e.as_positive_bytes().ok_or(Error::Crypto)?;
+            let e_bytes = e.as_bytes();
             if e_bytes.len() > curve.field_size() {
                 return Err(Error::Crypto);
             }
@@ -554,5 +567,93 @@ fn decode_private_key_as(
             Ok(keypair.into())
         }
         _ => Err(algorithm.unsupported_error()),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[cfg(feature = "ed25519")]
+    use crate::private::Ed25519PrivateKey;
+
+    #[test]
+    fn argon2_params_boundaries() {
+        let mut ppk =
+            PpkWrapper::try_from(include_str!("../tests/examples/id_ed25519_enc.ppk")).unwrap();
+
+        for (key, min, max) in [
+            (PpkKey::Argon2Memory, 8, MAX_ARGON2_MEMORY),
+            (PpkKey::Argon2Passes, 1, MAX_ARGON2_PASSES),
+            (PpkKey::Argon2Parallelism, 1, MAX_ARGON2_PARALLELISM),
+        ] {
+            let original = ppk.values[&key].clone();
+            for (value, valid) in [
+                (min - 1, false),
+                (min, true),
+                (max, true),
+                (max + 1, false),
+                (u32::MAX, false),
+            ] {
+                ppk.values.insert(key, value.to_string());
+                for algorithm in ["Argon2d", "Argon2i", "Argon2id"] {
+                    // Constructing a KDF checks the boundaries without allocating its memory
+                    // or performing expensive key derivation at the accepted upper limits.
+                    assert_eq!(
+                        Kdf::new_v3(algorithm, &ppk).is_ok(),
+                        valid,
+                        "{algorithm}, {key:?}: {value}"
+                    );
+                }
+            }
+            ppk.values.insert(key, original);
+        }
+    }
+
+    #[test]
+    fn derive_rejects_excessive_argon2_params() {
+        for (key, memory, passes, parallelism) in [
+            (PpkKey::Argon2Memory, MAX_ARGON2_MEMORY + 1, 1, 1),
+            (PpkKey::Argon2Passes, 8, MAX_ARGON2_PASSES + 1, 1),
+            (
+                PpkKey::Argon2Parallelism,
+                8 * (MAX_ARGON2_PARALLELISM + 1),
+                1,
+                MAX_ARGON2_PARALLELISM + 1,
+            ),
+        ] {
+            let params = argon2::Params::new(memory, passes, parallelism, None).unwrap();
+            let kdf = Kdf::Argon2 {
+                kdf: Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params),
+                // Invalid salt distinguishes the resource check from Argon2's own validation.
+                salt: Vec::new(),
+            };
+            let mut output = [0xa5; 80];
+            assert_eq!(
+                kdf.derive(b"password", &mut output),
+                Err(PpkParseError::ValueFormat(key))
+            );
+            assert_eq!(output, [0xa5; 80]);
+        }
+    }
+
+    #[test]
+    #[cfg(feature = "ed25519")]
+    fn ed25519_seed_is_not_an_mpint() {
+        // Cover both a set sign bit and leading zeros that mpint decoding would strip.
+        for first in [0, 0x7f, 0x80, 0xff] {
+            let mut bytes = [0x42; Ed25519PrivateKey::BYTE_SIZE];
+            bytes[0] = first;
+            let private = Ed25519PrivateKey::from_bytes(&bytes);
+            let public = crate::public::Ed25519PublicKey::from(&private);
+            let mut encoded = Vec::new();
+            bytes.as_slice().encode(&mut encoded).unwrap();
+            let key = decode_private_key_as(
+                &mut encoded.as_slice().into_decoder().unwrap(),
+                PublicKey::new(public.into(), ""),
+                Algorithm::Ed25519,
+            )
+            .unwrap();
+            assert_eq!(key.ed25519().unwrap().private.as_ref(), &bytes);
+        }
     }
 }

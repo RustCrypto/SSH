@@ -1,6 +1,6 @@
 //! OpenSSH certificate builder.
 
-use super::{CertType, Certificate, Field, OptionsMap};
+use super::{CertType, Certificate, Field, MAX_PRINCIPALS, OptionsMap};
 use crate::{Algorithm, Comment, Result, Signature, SigningKey, public};
 use alloc::{string::String, vec::Vec};
 use core::fmt::{self, Debug, Formatter};
@@ -210,10 +210,16 @@ impl Builder {
     /// Add a principal (i.e. username or hostname) to `valid_principals`.
     ///
     /// # Errors
-    /// Currently does not return errors.
+    /// Returns [`Error::CertificateFieldInvalid`] if 256 principals have already been added.
     pub fn valid_principal(&mut self, principal: impl Into<String>) -> Result<&mut Self> {
         match &mut self.valid_principals {
-            Some(principals) => principals.push(principal.into()),
+            Some(principals) => {
+                if principals.len() >= MAX_PRINCIPALS {
+                    return Err(Field::ValidPrincipals.invalid_error());
+                }
+
+                principals.push(principal.into());
+            }
             None => self.valid_principals = Some(vec![principal.into()]),
         }
 
@@ -340,11 +346,14 @@ impl Builder {
         cert.encode_tbs(&mut tbs_cert)?;
         cert.signature = signing_key.try_sign(&tbs_cert)?;
 
-        #[cfg(debug_assertions)]
+        #[cfg(all(debug_assertions, feature = "sha2"))]
         cert.validate_at(
             cert.valid_after,
             &[cert.signature_key.fingerprint(Default::default())],
         )?;
+
+        #[cfg(all(debug_assertions, not(feature = "sha2")))]
+        cert.verify_signature()?;
 
         Ok(cert)
     }

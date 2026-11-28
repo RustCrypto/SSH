@@ -347,7 +347,7 @@ macro_rules! composite_key {
         impl Decode for $public_key {
             type Error = Error;
 
-            fn decode(reader: &mut impl Reader) -> Result<Self> {
+            fn decode(reader: &mut encoding::Decoder<impl Reader>) -> Result<Self> {
                 // Decode the whole `string` rather than reading `BYTE_SIZE` out of it, so that an
                 // over-long length prefix is rejected instead of silently truncated.
                 Self::new(Vec::decode(reader)?)
@@ -578,7 +578,7 @@ macro_rules! composite_key {
         impl Decode for $keypair {
             type Error = Error;
 
-            fn decode(reader: &mut impl Reader) -> Result<Self> {
+            fn decode(reader: &mut encoding::Decoder<impl Reader>) -> Result<Self> {
                 let public = $public_key::decode(reader)?;
 
                 let seed = zeroize::Zeroizing::new(Vec::decode(reader)?);

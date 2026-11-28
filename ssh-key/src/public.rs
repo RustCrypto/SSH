@@ -32,9 +32,9 @@ pub use crate::composite::MlDsa44Ed25519PublicKey;
 
 pub(crate) use self::ssh_format::SshFormat;
 
-use crate::{Algorithm, Error, Fingerprint, HashAlg, Result};
+use crate::{Algorithm, Error, Result};
 use core::str::{self, FromStr};
-use encoding::{Base64Reader, Decode, Reader};
+use encoding::{Base64Reader, Decode, Decoder, Reader};
 
 #[cfg(feature = "alloc")]
 use {
@@ -44,12 +44,14 @@ use {
         string::{String, ToString},
         vec::Vec,
     },
-    encoding::Encode,
-    sha2::Digest,
+    encoding::{Encode, digest::Digest},
 };
 
 #[cfg(all(feature = "alloc", feature = "serde"))]
 use serde::{Deserialize, Serialize, de, ser};
+
+#[cfg(feature = "sha2")]
+use crate::{Fingerprint, HashAlg};
 
 #[cfg(feature = "std")]
 use std::{fs::File, path::Path};
@@ -133,7 +135,7 @@ impl PublicKey {
     /// Returns [`Error::Encoding`] in the event of an encoding error.
     pub fn from_openssh(public_key: &str) -> Result<Self> {
         let encapsulation = SshFormat::decode(public_key.trim_end().as_bytes())?;
-        let mut reader = Base64Reader::new(encapsulation.base64_data)?;
+        let mut reader = Decoder::new(Base64Reader::new(encapsulation.base64_data)?)?;
         let key_data = KeyData::decode(&mut reader)?;
 
         // Verify that the algorithm in the Base64-encoded data matches the text
@@ -154,9 +156,9 @@ impl PublicKey {
     ///
     /// # Errors
     /// Returns [`Error::Encoding`] in the event of an encoding error.
-    pub fn from_bytes(mut bytes: &[u8]) -> Result<Self> {
-        let reader = &mut bytes;
-        let key_data = KeyData::decode(reader)?;
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
+        let mut reader = Decoder::new(bytes)?;
+        let key_data = KeyData::decode(&mut reader)?;
         Ok(reader.finish(key_data.into())?)
     }
 
@@ -254,7 +256,7 @@ impl PublicKey {
     /// - Returns [`Error::PublicKey`] if this key does not match the one in the signature.
     /// - Returns [`Error::Namespace`] if the provided `namespace` does not match the signature.
     /// - Returns [`Error::Signature`] in the event signature verification failed.
-    #[cfg(feature = "alloc")]
+    #[cfg(all(feature = "alloc", feature = "sha2"))]
     pub fn verify(&self, namespace: &str, msg: &[u8], signature: &SshSig) -> Result<()> {
         self.verify_prehash(
             namespace,
@@ -381,6 +383,7 @@ impl PublicKey {
     /// Compute key fingerprint.
     ///
     /// Use [`Default::default()`] to use the default hash function (SHA-256).
+    #[cfg(feature = "sha2")]
     #[must_use]
     pub fn fingerprint(&self, hash_alg: HashAlg) -> Fingerprint {
         self.key_data.fingerprint(hash_alg)
@@ -396,14 +399,14 @@ impl PublicKey {
     ///
     /// This is a stub implementation that ignores the comment.
     #[cfg(not(feature = "alloc"))]
-    pub(crate) fn decode_comment(&mut self, reader: &mut impl Reader) -> Result<()> {
+    pub(crate) fn decode_comment(&mut self, reader: &mut Decoder<impl Reader>) -> Result<()> {
         reader.drain_prefixed()?;
         Ok(())
     }
 
     /// Decode comment (e.g. email address)
     #[cfg(feature = "alloc")]
-    pub(crate) fn decode_comment(&mut self, reader: &mut impl Reader) -> Result<()> {
+    pub(crate) fn decode_comment(&mut self, reader: &mut Decoder<impl Reader>) -> Result<()> {
         self.comment = Comment::decode(reader)?;
         Ok(())
     }

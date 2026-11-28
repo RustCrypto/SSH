@@ -24,6 +24,7 @@ pub trait Writer: Sized {
 #[cfg(feature = "alloc")]
 impl Writer for Vec<u8> {
     fn write(&mut self, bytes: &[u8]) -> Result<()> {
+        self.try_reserve(bytes.len())?;
         self.extend_from_slice(bytes);
         Ok(())
     }

@@ -29,6 +29,14 @@ When the `ed25519`, `p256`, and/or `rsa` features of this crate are enabled,
 provides key generation and certificate signing/verification support for that
 respective SSH key algorithm.
 
+Key fingerprints, certificate validation, and `sshsig` signing/verification of
+messages compute SHA-2 hashes using the `sha2` crate, and are only available
+when the `sha2` feature is enabled. It's on by default and implied by the
+`ed25519`, `p256`, `p384`, `p521`, `ppk`, and `rsa` features. With it disabled,
+`sshsig` signatures can still be created and verified from a digest computed by
+another SHA-2 implementation, using the `*_prehash` methods, or the `*_digest`
+methods with a type that implements `AssociatedHashAlg`.
+
 ## Features
 
 - [x] Constant-time Base64 decoder/encoder using `base64ct`/`pem-rfc7468` crates
@@ -107,7 +115,7 @@ dual licensed as above, without any additional terms or conditions.
 [docs-image]: https://docs.rs/ssh-key/badge.svg
 [docs-link]: https://docs.rs/ssh-key/
 [license-image]: https://img.shields.io/badge/license-Apache2.0/MIT-blue.svg
-[rustc-image]: https://img.shields.io/badge/rustc-1.85+-blue.svg
+[rustc-image]: https://img.shields.io/badge/rustc-1.87+-blue.svg
 [chat-image]: https://img.shields.io/badge/zulip-join_chat-blue.svg
 [chat-link]: https://rustcrypto.zulipchat.com/#narrow/stream/346919-SSH
 [build-image]: https://github.com/RustCrypto/SSH/actions/workflows/ssh-key.yml/badge.svg

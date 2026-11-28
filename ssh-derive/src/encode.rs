@@ -1,10 +1,10 @@
 //! Support for deriving the `Encode` trait on structs.
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, quote};
 use syn::{DataEnum, DataStruct, DeriveInput, spanned::Spanned};
 
-use crate::attributes::{ContainerAttributes, FieldAttributes};
+use crate::attributes::{ContainerAttributes, FieldAttributes, validate_variant_attributes};
 
 pub(crate) fn try_derive_encode(input: DeriveInput) -> syn::Result<TokenStream> {
     match input.data {
@@ -26,6 +26,7 @@ fn try_derive_encode_for_struct(
     let struct_name = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
 
+    let writer = writer_ident();
     Ok(quote! {
         #[automatically_derived]
         impl #impl_generics ::ssh_encoding::Encode for #struct_name #type_generics #where_clause {
@@ -37,7 +38,7 @@ fn try_derive_encode_for_struct(
                 ].checked_sum()
             }
 
-            fn encode(&self, writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
+            fn encode(&self, #writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
                 #length_prefix_encoder
                 #(#field_encoders)*
                 Ok(())
@@ -56,6 +57,7 @@ fn try_derive_encode_for_enum(
         derive_for_variants(&container_attributes, variants.iter(), enum_name)?;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
 
+    let writer = writer_ident();
     Ok(quote! {
         #[automatically_derived]
         impl #impl_generics ::ssh_encoding::Encode for #enum_name #type_generics #where_clause {
@@ -65,7 +67,7 @@ fn try_derive_encode_for_enum(
                     #(#length_arms)*
                 }
             }
-            fn encode(&self, writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
+            fn encode(&self, #writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
                 match self {
                     #(#encode_arms)*
                 }
@@ -82,16 +84,17 @@ fn derive_for_fields(
     fields: &syn::Fields,
     names: Vec<TokenStream>,
 ) -> syn::Result<(Vec<TokenStream>, Vec<TokenStream>)> {
+    let writer = writer_ident();
     let mut lengths = Vec::new();
     let mut encoders = Vec::new();
     for (field, name) in fields.iter().zip(names) {
         let attrs = FieldAttributes::try_from(field)?;
         if attrs.length_prefixed {
             lengths.push(quote! { ::ssh_encoding::Encode::encoded_len_prefixed(#name)? });
-            encoders.push(quote! { ::ssh_encoding::Encode::encode_prefixed(#name, writer)?; });
+            encoders.push(quote! { ::ssh_encoding::Encode::encode_prefixed(#name, #writer)?; });
         } else {
             lengths.push(quote! { ::ssh_encoding::Encode::encoded_len(#name)? });
-            encoders.push(quote! { ::ssh_encoding::Encode::encode(#name, writer)?; });
+            encoders.push(quote! { ::ssh_encoding::Encode::encode(#name, #writer)?; });
         }
     }
 
@@ -103,9 +106,11 @@ fn derive_for_variants<'a>(
     variants: impl Iterator<Item = &'a syn::Variant>,
     enum_name: &'a syn::Ident,
 ) -> syn::Result<(Vec<TokenStream>, Vec<TokenStream>)> {
+    let writer = writer_ident();
     let mut length_arms = Vec::new();
     let mut encode_arms = Vec::new();
     for variant in variants {
+        validate_variant_attributes(variant)?;
         let variant_name = &variant.ident;
         let names = fields_variables(&variant.fields, false);
         let match_variant = match &variant.fields {
@@ -141,7 +146,7 @@ fn derive_for_variants<'a>(
             #enum_name::#variant_name #match_variant => {
                 [
                     #length_prefix_len
-                    ::core::mem::size_of::<#discriminant_type>(),
+                    <#discriminant_type as ::ssh_encoding::Encode>::encoded_len(&const { #discriminant })?,
                     #(#field_lengths),*
                 ].checked_sum()
             }
@@ -149,7 +154,7 @@ fn derive_for_variants<'a>(
         encode_arms.push(quote! {
             #enum_name::#variant_name #match_variant => {
                 #length_prefix_encoder
-                ::ssh_encoding::Encode::encode(&(#discriminant as #discriminant_type), writer)?;
+                <#discriminant_type as ::ssh_encoding::Encode>::encode(&const { #discriminant }, #writer)?;
                 #(#field_encoders)*
             }
         });
@@ -160,12 +165,13 @@ fn derive_for_variants<'a>(
 
 /// Generate length prefixing code or empty token streams if not needed.
 fn maybe_length_prefix(length_prefix: bool) -> (TokenStream, TokenStream) {
+    let writer = writer_ident();
     if length_prefix {
         (
             quote! { ::ssh_encoding::Encode::encoded_len(&0usize)?, },
             quote! {{
                 let len = ::ssh_encoding::Encode::encoded_len(self)? - ::ssh_encoding::Encode::encoded_len(&0usize)?;
-                ::ssh_encoding::Encode::encode(&len, writer)?;
+                ::ssh_encoding::Encode::encode(&len, #writer)?;
             }},
         )
     } else {
@@ -218,6 +224,11 @@ fn fields_variables(fields: &syn::Fields, use_self: bool) -> Vec<TokenStream> {
             })
             .collect(),
     }
+}
+
+/// Keep the generated parameter distinct from bindings taken from enum fields.
+fn writer_ident() -> syn::Ident {
+    syn::Ident::new("writer", Span::mixed_site())
 }
 
 #[cfg(test)]
@@ -364,7 +375,7 @@ mod tests {
             quote! {
                 Enum::Foo (field_0, field_1) => {
                     [
-                        ::core::mem::size_of::<u8>(),
+                        <u8 as ::ssh_encoding::Encode>::encoded_len(&const { 1 })?,
                         ::ssh_encoding::Encode::encoded_len(field_0)?,
                         ::ssh_encoding::Encode::encoded_len(field_1)?
                     ].checked_sum()
@@ -375,7 +386,7 @@ mod tests {
             encode_arms[0],
             quote! {
                 Enum::Foo(field_0, field_1) => {
-                    ::ssh_encoding::Encode::encode(&(1 as u8), writer)?;
+                    <u8 as ::ssh_encoding::Encode>::encode(&const { 1 }, writer)?;
                     ::ssh_encoding::Encode::encode(field_0, writer)?;
                     ::ssh_encoding::Encode::encode(field_1, writer)?;
                 }
@@ -386,7 +397,7 @@ mod tests {
             quote! {
                 Enum::Bar {a, b} => {
                     [
-                        ::core::mem::size_of::<u8>(),
+                        <u8 as ::ssh_encoding::Encode>::encoded_len(&const { 2 })?,
                         ::ssh_encoding::Encode::encoded_len(a)?,
                         ::ssh_encoding::Encode::encoded_len_prefixed(b)?
                     ].checked_sum()
@@ -397,7 +408,7 @@ mod tests {
             encode_arms[1],
             quote! {
                 Enum::Bar {a, b} => {
-                    ::ssh_encoding::Encode::encode(&(2 as u8), writer)?;
+                    <u8 as ::ssh_encoding::Encode>::encode(&const { 2 }, writer)?;
                     ::ssh_encoding::Encode::encode(a, writer)?;
                     ::ssh_encoding::Encode::encode_prefixed(b, writer)?;
                 }
@@ -464,14 +475,14 @@ mod tests {
                         match self {
                             Enum::Foo (field_0, field_1) => {
                                 [
-                                    ::core::mem::size_of::<u8>(),
+                                    <u8 as ::ssh_encoding::Encode>::encoded_len(&const { 1 })?,
                                     ::ssh_encoding::Encode::encoded_len(field_0)?,
                                     ::ssh_encoding::Encode::encoded_len(field_1)?
                                 ].checked_sum()
                             }
                             Enum::Bar {a, b} => {
                                 [
-                                    ::core::mem::size_of::<u8>(),
+                                    <u8 as ::ssh_encoding::Encode>::encoded_len(&const { 2 })?,
                                     ::ssh_encoding::Encode::encoded_len(a)?,
                                     ::ssh_encoding::Encode::encoded_len_prefixed(b)?
                                 ].checked_sum()
@@ -481,12 +492,12 @@ mod tests {
                     fn encode(&self, writer: &mut impl ::ssh_encoding::Writer) -> ::ssh_encoding::Result<()> {
                         match self {
                             Enum::Foo(field_0, field_1) => {
-                                ::ssh_encoding::Encode::encode(&(1 as u8), writer)?;
+                                <u8 as ::ssh_encoding::Encode>::encode(&const { 1 }, writer)?;
                                 ::ssh_encoding::Encode::encode(field_0, writer)?;
                                 ::ssh_encoding::Encode::encode(field_1, writer)?;
                             }
                             Enum::Bar {a, b} => {
-                                ::ssh_encoding::Encode::encode(&(2 as u8), writer)?;
+                                <u8 as ::ssh_encoding::Encode>::encode(&const { 2 }, writer)?;
                                 ::ssh_encoding::Encode::encode(a, writer)?;
                                 ::ssh_encoding::Encode::encode_prefixed(b, writer)?;
                             }

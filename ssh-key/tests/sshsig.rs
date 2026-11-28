@@ -11,13 +11,28 @@ use ssh_key::{Algorithm, HashAlg, LineEnding, PublicKey, SshSig};
     feature = "p256",
     feature = "rsa"
 ))]
-use {encoding::Decode, signature::Verifier, ssh_key::PrivateKey, ssh_key::Signature};
+use {
+    encoding::{Decode, Reader},
+    signature::Verifier,
+    ssh_key::Signature,
+};
+
+#[cfg(all(
+    feature = "sha2",
+    any(
+        feature = "dsa",
+        feature = "ed25519",
+        feature = "p256",
+        feature = "rsa"
+    )
+))]
+use ssh_key::PrivateKey;
 
 #[cfg(feature = "ed25519")]
 use ssh_key::Error;
 
 /// DSA OpenSSH-formatted private key.
-#[cfg(feature = "dsa")]
+#[cfg(all(feature = "dsa", feature = "sha2"))]
 const DSA_PRIVATE_KEY: &str = include_str!("examples/id_dsa_1024");
 
 /// DSA OpenSSH-formatted public key.
@@ -171,8 +186,47 @@ fn encode_sk_ed25519() {
     assert_eq!(&sshsig_pem, SK_ED25519_SIGNATURE);
 }
 
+#[cfg(feature = "serde")]
 #[test]
-#[cfg(feature = "dsa")]
+fn deserialize_binary_trailing_data() {
+    use encoding::Encode;
+    use serde::{Deserialize, de};
+
+    struct Binary<'a>(&'a [u8]);
+
+    impl<'de> de::Deserializer<'de> for Binary<'_> {
+        type Error = de::value::Error;
+
+        fn is_human_readable(&self) -> bool {
+            false
+        }
+
+        fn deserialize_any<V: de::Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
+            de::value::SeqDeserializer::new(self.0.iter().copied()).deserialize_any(visitor)
+        }
+
+        serde::forward_to_deserialize_any! {
+            bool i8 i16 i32 i64 u8 u16 u32 u64 f32 f64 char str string bytes
+            byte_buf option unit unit_struct newtype_struct seq tuple tuple_struct
+            map struct enum identifier ignored_any
+        }
+    }
+
+    for pem in [ED25519_SIGNATURE, SK_ED25519_SIGNATURE] {
+        let sshsig = pem.parse::<SshSig>().unwrap();
+        let mut bytes = sshsig.encode_vec().unwrap();
+        assert_eq!(SshSig::deserialize(Binary(&bytes)).unwrap(), sshsig);
+
+        bytes.push(0);
+        assert_eq!(
+            SshSig::deserialize(Binary(&bytes)).unwrap_err().to_string(),
+            encoding::Error::TrailingData { remaining: 1 }.to_string()
+        );
+    }
+}
+
+#[test]
+#[cfg(all(feature = "dsa", feature = "sha2"))]
 fn sign_dsa() {
     let signing_key = PrivateKey::from_openssh(DSA_PRIVATE_KEY).unwrap();
     let verifying_key = DSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
@@ -190,7 +244,13 @@ fn sign_dsa() {
 #[test]
 #[cfg(feature = "p256")]
 fn verify_sk_ecdsa_openssh_wire_format() {
-    let signature = Signature::decode(&mut SK_ECDSA_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let signature = Signature::decode(
+        &mut SK_ECDSA_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = SK_ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -206,7 +266,13 @@ fn verify_sk_ecdsa_openssh_wire_format() {
 #[test]
 #[cfg(feature = "dsa")]
 fn verify_dsa_openssh_wire_format() {
-    let signature = Signature::decode(&mut DSA_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let signature = Signature::decode(
+        &mut DSA_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = DSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -233,7 +299,13 @@ fn sign_ecdsa_p256() {
 #[test]
 #[cfg(feature = "p256")]
 fn verify_ecdsa_p256_openssh_wire_format() {
-    let signature = Signature::decode(&mut ECDSA_P256_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let signature = Signature::decode(
+        &mut ECDSA_P256_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = ECDSA_P256_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -255,7 +327,13 @@ fn sign_ed25519() {
 #[test]
 #[cfg(feature = "ed25519")]
 fn verify_ed25519_openssh_wire_format() {
-    let signature = Signature::decode(&mut ED25519_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let signature = Signature::decode(
+        &mut ED25519_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = ED25519_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()
@@ -282,7 +360,13 @@ fn sign_rsa() {
 #[test]
 #[cfg(feature = "rsa")]
 fn verify_rsa_openssh_wire_format() {
-    let signature = Signature::decode(&mut RSA_SIGNATURE_OPENSSH_WIRE.as_ref()).unwrap();
+    let signature = Signature::decode(
+        &mut RSA_SIGNATURE_OPENSSH_WIRE
+            .as_slice()
+            .into_decoder()
+            .unwrap(),
+    )
+    .unwrap();
     let verifying_key = RSA_PUBLIC_KEY.parse::<PublicKey>().unwrap();
     verifying_key
         .key_data()

@@ -4,9 +4,9 @@
 #![allow(clippy::unwrap_used, reason = "tests")]
 
 use core::str::FromStr;
-use encoding::{Base64Reader, Decode, Encode, Reader};
+use encoding::{Base64Reader, Decode, Decoder, Encode, Reader};
 use hex_literal::hex;
-use ssh_key::{Algorithm, Certificate, public::KeyData};
+use ssh_key::{Algorithm, Certificate, certificate::Field, public::KeyData};
 
 #[cfg(feature = "ecdsa")]
 use ssh_key::EcdsaCurve;
@@ -65,6 +65,48 @@ const PAST_TIMESTAMP: u64 = 1500000000;
 const EXPIRED_TIMESTAMP: u64 = 2500000000;
 
 #[test]
+fn valid_principals_limit() {
+    let original = Certificate::from_openssh(ED25519_CERT_EXAMPLE)
+        .unwrap()
+        .to_bytes()
+        .unwrap();
+    let mut reader = original.as_slice().into_decoder().unwrap();
+
+    // Locate the principals field after the algorithm, nonce, Ed25519 public key,
+    // serial, certificate type, and key ID.
+    for _ in 0..3 {
+        reader.drain_prefixed().unwrap();
+    }
+    u64::decode(&mut reader).unwrap();
+    u32::decode(&mut reader).unwrap();
+    reader.drain_prefixed().unwrap();
+    let start = original.len() - reader.remaining_len();
+    reader.drain_prefixed().unwrap();
+    let end = original.len() - reader.remaining_len();
+
+    for count in [0, 256, 257] {
+        let mut encoded = original[..start].to_vec();
+        vec![String::new(); count].encode(&mut encoded).unwrap();
+        encoded.extend_from_slice(&original[end..]);
+
+        let mut remaining = encoded.as_slice();
+        let result = Certificate::decode(&mut Decoder::new(&mut remaining).unwrap());
+
+        if count <= 256 {
+            let cert = result.unwrap();
+            assert_eq!(cert.valid_principals().len(), count);
+            assert!(cert.valid_principals().iter().all(String::is_empty));
+            assert!(remaining.is_empty());
+        } else {
+            assert_eq!(result, Err(Field::ValidPrincipals.invalid_error()));
+            // Leave principal 257's length prefix unread, along with the rest
+            // of the certificate. Empty principals still count toward the limit.
+            assert_eq!(remaining, &encoded[start + 4 + 256 * 4..]);
+        }
+    }
+}
+
+#[test]
 fn decode_dsa_openssh() {
     let cert = Certificate::from_str(DSA_CERT_EXAMPLE).unwrap();
     assert_eq!(Algorithm::Dsa, cert.public_key().algorithm());
@@ -72,14 +114,14 @@ fn decode_dsa_openssh() {
     let dsa_key = cert.public_key().dsa().unwrap();
     assert_eq!(
         &hex!(
-            "00dc3d89250ed9462114cb2c8d4816e3a511aaff1b06b0e01de17c1cb04e581bcab97176471d89fd7ca1817
+            "dc3d89250ed9462114cb2c8d4816e3a511aaff1b06b0e01de17c1cb04e581bcab97176471d89fd7ca1817
              e3c48e2ccbafd2170f69e8e5c8b6ab69b9c5f45d95e1d9293e965227eee5b879b1123371c21b1db60f14b5e
              5c05a4782ceb43a32f449647703063621e7a286bec95b16726c18b5e52383d00b297a6b03489b06068a5"
         ),
         dsa_key.p().as_bytes(),
     );
     assert_eq!(
-        &hex!("00891815378597fe42d3fd261fe76df365845bbb87"),
+        &hex!("891815378597fe42d3fd261fe76df365845bbb87"),
         dsa_key.q().as_bytes(),
     );
     assert_eq!(
@@ -167,16 +209,11 @@ fn decode_rsa_4096_openssh() {
     assert_eq!(Algorithm::Rsa { hash: None }, cert.public_key().algorithm());
 
     let rsa_key = cert.public_key().rsa().unwrap();
-    dbg!(rsa_key.n().as_bytes());
-    dbg!(
-        rsa_key.n().as_positive_bytes(),
-        rsa_key.n().as_positive_bytes().unwrap().len()
-    );
     assert_eq!(4096, rsa_key.key_size());
     assert_eq!(&hex!("010001"), rsa_key.e().as_bytes());
     assert_eq!(
         &hex!(
-            "00b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
+            "b45911edc6ec5e7d2261a48c46ab889b1858306271123e6f02dc914cf3c0352492e8a6b7a7925added527
              e547dcebff6d0c19c0bc9153975199f47f4964ed20f5aceed4e82556b228a0c1fbfaa85e6339ba2ff4094d9
              4e2b09d43a3dd68225d0bbc858293cbf167b18d6374ebe79220a633d400176f1f6b46fd626acb252bf294aa
              db2acd59626a023a8e5ec53ced8685164c72ca3a2ec646812c6e61ffcba740ff15c054f0691e3a8d52c79c4
@@ -270,7 +307,7 @@ fn decode_keydata(certificate_str: &str) {
     let cert_encoded = cert.to_bytes().unwrap();
 
     // Decode bytes-on-wire to KeyData
-    let mut reader = &cert_encoded[..];
+    let mut reader = Decoder::new(cert_encoded.as_slice()).unwrap();
     let key_data = KeyData::decode(&mut reader).unwrap();
 
     // Convert KeyData to Certificate and override comment from

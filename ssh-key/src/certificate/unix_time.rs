@@ -3,7 +3,7 @@
 use crate::{Error, Result};
 use core::fmt;
 use core::fmt::Formatter;
-use encoding::{Decode, Encode, Reader, Writer};
+use encoding::{Decode, Decoder, Encode, Reader, Writer};
 
 #[cfg(feature = "std")]
 use {
@@ -73,7 +73,7 @@ impl UnixTime {
     }
 
     /// Get the current time as a Unix timestamp.
-    #[cfg(feature = "std")]
+    #[cfg(all(feature = "sha2", feature = "std"))]
     pub(super) fn now() -> Result<Self> {
         SystemTime::now().try_into()
     }
@@ -82,7 +82,7 @@ impl UnixTime {
 impl Decode for UnixTime {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         u64::decode(reader)?.try_into()
     }
 }

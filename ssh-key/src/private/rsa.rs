@@ -3,7 +3,7 @@
 use crate::{Error, Mpint, Result, public::RsaPublicKey};
 use core::fmt::{self, Debug};
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 use zeroize::Zeroize;
 
 #[cfg(feature = "rsa")]
@@ -39,13 +39,12 @@ impl RsaPrivateKey {
     /// - `q`: Second prime factor of `n`.
     ///
     /// # Errors
-    /// Returns [`Error::FormatEncoding`] if any of the provided values are negative.
+    /// Returns [`Error::FormatEncoding`] if any of the provided values are zero.
     pub fn new(d: Mpint, iqmp: Mpint, p: Mpint, q: Mpint) -> Result<Self> {
-        if d.is_positive() && iqmp.is_positive() && p.is_positive() && q.is_positive() {
-            Ok(Self { d, iqmp, p, q })
-        } else {
-            Err(Error::FormatEncoding)
+        if d.is_zero() || iqmp.is_zero() || p.is_zero() || q.is_zero() {
+            return Err(Error::FormatEncoding);
         }
+        Ok(Self { d, iqmp, p, q })
     }
 
     /// RSA private exponent.
@@ -76,7 +75,7 @@ impl RsaPrivateKey {
 impl CtEq for RsaPrivateKey {
     fn ct_eq(&self, other: &Self) -> Choice {
         self.d.ct_eq(&other.d)
-            & self.iqmp.ct_eq(&self.iqmp)
+            & self.iqmp.ct_eq(&other.iqmp)
             & self.p.ct_eq(&other.p)
             & self.q.ct_eq(&other.q)
     }
@@ -100,7 +99,7 @@ impl Drop for RsaPrivateKey {
 impl Decode for RsaPrivateKey {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let d = Mpint::decode(reader)?;
         let iqmp = Mpint::decode(reader)?;
         let p = Mpint::decode(reader)?;
@@ -151,7 +150,7 @@ impl RsaKeypair {
     #[cfg(feature = "rsa")]
     #[expect(clippy::missing_errors_doc, reason = "TODO")]
     pub fn random<R: CryptoRng + ?Sized>(rng: &mut R, bit_size: usize) -> Result<Self> {
-        rsa::RsaPrivateKey::new(rng, bit_size)?.try_into()
+        rsa::PrivateKey::new(rng, bit_size)?.try_into()
     }
 
     /// Create a new keypair from the given `public` and `private` key components.
@@ -199,7 +198,7 @@ impl Debug for RsaKeypair {
 impl Decode for RsaKeypair {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let n = Mpint::decode(reader)?;
         let e = Mpint::decode(reader)?;
         let public = RsaPublicKey::new(e, n)?;
@@ -245,27 +244,24 @@ impl From<&RsaKeypair> for RsaPublicKey {
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<RsaKeypair> for rsa::RsaPrivateKey {
+impl TryFrom<RsaKeypair> for rsa::PrivateKey {
     type Error = Error;
 
-    fn try_from(key: RsaKeypair) -> Result<rsa::RsaPrivateKey> {
-        rsa::RsaPrivateKey::try_from(&key)
+    fn try_from(key: RsaKeypair) -> Result<rsa::PrivateKey> {
+        rsa::PrivateKey::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
+impl TryFrom<&RsaKeypair> for rsa::PrivateKey {
     type Error = Error;
 
-    fn try_from(key: &RsaKeypair) -> Result<rsa::RsaPrivateKey> {
-        let ret = rsa::RsaPrivateKey::from_components(
-            Uint::try_from(key.public.n())?,
-            Uint::try_from(key.public.e())?,
-            Uint::try_from(&key.private.d)?,
-            vec![
-                Uint::try_from(&key.private.p)?,
-                Uint::try_from(&key.private.q)?,
-            ],
+    fn try_from(key: &RsaKeypair) -> Result<rsa::PrivateKey> {
+        let ret = rsa::PrivateKey::from_components(
+            Uint::from(key.public.n()),
+            Uint::from(key.public.e()),
+            Uint::from(&key.private.d),
+            vec![Uint::from(&key.private.p), Uint::from(&key.private.q)],
         )?;
 
         Ok(ret)
@@ -273,19 +269,19 @@ impl TryFrom<&RsaKeypair> for rsa::RsaPrivateKey {
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<rsa::RsaPrivateKey> for RsaKeypair {
+impl TryFrom<rsa::PrivateKey> for RsaKeypair {
     type Error = Error;
 
-    fn try_from(key: rsa::RsaPrivateKey) -> Result<RsaKeypair> {
+    fn try_from(key: rsa::PrivateKey) -> Result<RsaKeypair> {
         RsaKeypair::try_from(&key)
     }
 }
 
 #[cfg(feature = "rsa")]
-impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
+impl TryFrom<&rsa::PrivateKey> for RsaKeypair {
     type Error = Error;
 
-    fn try_from(key: &rsa::RsaPrivateKey) -> Result<RsaKeypair> {
+    fn try_from(key: &rsa::PrivateKey) -> Result<RsaKeypair> {
         // Multi-prime keys are not supported
         if key.primes().len() > 2 {
             return Err(Error::Crypto);
@@ -298,10 +294,10 @@ impl TryFrom<&rsa::RsaPrivateKey> for RsaKeypair {
         let iqmp = key.crt_coefficient().ok_or(Error::Crypto)?;
 
         let private = RsaPrivateKey {
-            d: key.d().into(),
-            iqmp: iqmp.into(),
-            p: p.into(),
-            q: q.into(),
+            d: key.d().try_into()?,
+            iqmp: iqmp.try_into()?,
+            p: p.as_ref().try_into()?,
+            q: q.as_ref().try_into()?,
         };
 
         Ok(RsaKeypair { public, private })

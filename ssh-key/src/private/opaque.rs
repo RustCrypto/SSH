@@ -15,7 +15,7 @@ use crate::{
 use alloc::vec::Vec;
 use core::fmt::{self, Debug};
 use ctutils::{Choice, CtEq};
-use encoding::{CheckedSum, Decode, Encode, Reader, Writer};
+use encoding::{CheckedSum, Decode, Decoder, Encode, Reader, Writer};
 
 /// An opaque keypair.
 ///
@@ -46,7 +46,10 @@ impl OpaqueKeypair {
     }
 
     /// Decode [`OpaqueKeypair`] for the specified algorithm.
-    pub(super) fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub(super) fn decode_as(
+        reader: &mut Decoder<impl Reader>,
+        algorithm: Algorithm,
+    ) -> Result<Self> {
         let key = OpaqueKeypairBytes::decode(reader)?;
         let public = OpaquePublicKey {
             algorithm,
@@ -116,7 +119,7 @@ impl Debug for OpaqueKeypairBytes {
 impl Decode for OpaqueKeypairBytes {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         let public = OpaquePublicKeyBytes::decode(reader)?;
         let private = OpaquePrivateKeyBytes::decode(reader)?;
 
@@ -163,7 +166,7 @@ impl Debug for OpaquePrivateKeyBytes {
 impl Decode for OpaquePrivateKeyBytes {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Ok(Self(Vec::decode(reader)?))
     }
 }

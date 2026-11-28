@@ -10,12 +10,19 @@ pub type Result<T> = core::result::Result<T, Error>;
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub enum Error {
+    /// Memory allocation or capacity reservation failed.
+    #[cfg(feature = "alloc")]
+    Alloc(alloc::collections::TryReserveError),
+
     /// Base64-related errors.
     #[cfg(feature = "base64")]
     Base64(base64ct::Error),
 
     /// Character encoding-related errors.
     CharacterEncoding,
+
+    /// A previous read or nested decoding operation failed.
+    Failed,
 
     /// Invalid label.
     Label(LabelError),
@@ -26,6 +33,9 @@ pub enum Error {
     /// `mpint` encoding errors.
     #[cfg(feature = "alloc")]
     MpintEncoding,
+
+    /// Maximum decoding nesting depth exceeded.
+    NestingDepth,
 
     /// Overflow errors.
     Overflow,
@@ -47,6 +57,8 @@ pub enum Error {
 impl core::error::Error for Error {
     fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         match self {
+            #[cfg(feature = "alloc")]
+            Self::Alloc(err) => Some(err),
             #[cfg(feature = "base64")]
             Self::Base64(err) => Some(err),
             #[cfg(feature = "pem")]
@@ -59,13 +71,17 @@ impl core::error::Error for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            #[cfg(feature = "alloc")]
+            Error::Alloc(err) => write!(f, "allocation failed: {err}"),
             #[cfg(feature = "base64")]
             Error::Base64(err) => write!(f, "Base64 encoding error: {err}"),
             Error::CharacterEncoding => write!(f, "character encoding invalid"),
+            Error::Failed => write!(f, "decoder previously failed"),
             Error::Label(err) => write!(f, "{}", err),
             Error::Length => write!(f, "length invalid"),
             #[cfg(feature = "alloc")]
             Error::MpintEncoding => write!(f, "`mpint` encoding invalid"),
+            Error::NestingDepth => write!(f, "maximum nesting depth exceeded"),
             Error::Overflow => write!(f, "internal overflow error"),
             #[cfg(feature = "pem")]
             Error::Pem(err) => write!(f, "{err}"),
@@ -95,6 +111,13 @@ impl From<core::num::TryFromIntError> for Error {
 impl From<core::str::Utf8Error> for Error {
     fn from(_: core::str::Utf8Error) -> Error {
         Error::CharacterEncoding
+    }
+}
+
+#[cfg(feature = "alloc")]
+impl From<alloc::collections::TryReserveError> for Error {
+    fn from(err: alloc::collections::TryReserveError) -> Error {
+        Error::Alloc(err)
     }
 }
 

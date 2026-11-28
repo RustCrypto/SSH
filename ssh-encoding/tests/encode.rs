@@ -3,7 +3,26 @@
 #![cfg(feature = "alloc")]
 
 use hex_literal::hex;
-use ssh_encoding::Encode;
+use ssh_encoding::{Encode, Error, Writer};
+
+#[test]
+fn allocation_capacity_overflow() {
+    struct Oversized;
+
+    impl Encode for Oversized {
+        fn encoded_len(&self) -> Result<usize, Error> {
+            Ok(usize::MAX)
+        }
+
+        fn encode(&self, _: &mut impl Writer) -> Result<(), Error> {
+            panic!("capacity reservation must fail before encoding")
+        }
+    }
+
+    let err = Oversized.encode_vec().unwrap_err();
+    assert!(matches!(err, Error::Alloc(_)));
+    assert!(core::error::Error::source(&err).is_some());
+}
 
 #[test]
 fn encode_u8() {

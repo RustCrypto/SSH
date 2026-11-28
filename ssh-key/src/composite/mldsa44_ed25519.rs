@@ -157,12 +157,15 @@ mod tests {
     /// truncated to the first [`MlDsa44Ed25519PublicKey::BYTE_SIZE`] bytes.
     #[test]
     fn wrong_encoded_length_is_rejected() {
-        use encoding::Encode;
+        use encoding::{Encode, Reader as _};
 
         let mut encoded = Vec::new();
         KAT_PK.encode(&mut encoded).unwrap();
 
-        assert!(MlDsa44Ed25519PublicKey::decode(&mut &encoded[..]).is_ok());
+        assert!(
+            MlDsa44Ed25519PublicKey::decode(&mut encoded.as_slice().into_decoder().unwrap())
+                .is_ok()
+        );
 
         // Append a trailing byte and grow the length prefix to cover it.
         let mut over_long = encoded.clone();
@@ -170,7 +173,10 @@ mod tests {
         let len = u32::try_from(KAT_PK.len() + 1).unwrap();
         over_long[..4].copy_from_slice(&len.to_be_bytes());
 
-        assert!(MlDsa44Ed25519PublicKey::decode(&mut &over_long[..]).is_err());
+        assert!(
+            MlDsa44Ed25519PublicKey::decode(&mut over_long.as_slice().into_decoder().unwrap())
+                .is_err()
+        );
     }
 
     /// The seed pair must round-trip through the concatenated encoding.

@@ -162,13 +162,30 @@ impl str::FromStr for Entry {
         // not a reliable indicator of the fields in the line. Instead,
         // the optional marker field starts with an @, so look for that
         // and act accordingly.
-        let (marker, line) = if line.starts_with('@') {
-            let (marker_str, line) = line.split_once(' ').ok_or(Error::FormatEncoding)?;
-            (Some(marker_str.parse()?), line)
-        } else {
-            (None, line)
+        //
+        // Fields are separated by any run of whitespace rather than by exactly
+        // one space: OpenSSH writes `keytype key` with a single space, but real
+        // files are hand-edited and commonly use tabs, several spaces, or an
+        // indented first field. Splitting on whitespace also removes the leading
+        // whitespace that an indented line would otherwise leave in front of the
+        // host field, and tolerates a marker followed by a tab.
+        let mut fields = line.split_whitespace();
+
+        let first = fields.next().ok_or(Error::FormatEncoding)?;
+        let (marker, hosts_str) = match first.strip_prefix('@') {
+            Some(marker_str) => {
+                let marker = format!("@{marker_str}").parse()?;
+                (Some(marker), fields.next().ok_or(Error::FormatEncoding)?)
+            }
+            None => (None, first),
         };
-        let (hosts_str, public_key_str) = line.split_once(' ').ok_or(Error::FormatEncoding)?;
+
+        // The key parser expects `keytype key` separated by a single space, so
+        // the remainder is re-joined with single spaces.
+        let public_key_str = fields.collect::<Vec<_>>().join(" ");
+        if public_key_str.is_empty() {
+            return Err(Error::FormatEncoding);
+        }
 
         let host_patterns = hosts_str.parse()?;
         let public_key = public_key_str.parse()?;
@@ -326,6 +343,52 @@ mod tests {
     // Note: The sshd man page has this completely incomprehensible 'example known_hosts entry':
     // closenet,...,192.0.2.53 1024 37 159...93 closenet.example.net
     // I'm not sure how this one is supposed to work or what it means.
+
+    #[test]
+    fn tab_separated_fields() {
+        let entry: Entry = "cvs.example.net\tssh-ed25519\tAAAAC3NzaC1lZDI1NTE5AAAAIB9dG4kjRhQTtWTVzd2t27+t0DEHBPW7iOD23TUiYLio"
+            .parse()
+            .expect("tab-separated entry");
+        assert_eq!(entry.marker(), None);
+        assert_eq!(
+            entry.host_patterns(),
+            &HostPatterns::Patterns(vec!["cvs.example.net".to_string()])
+        );
+    }
+
+    #[test]
+    fn leading_whitespace_is_ignored() {
+        let entry: Entry = "   cvs.example.net ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB9dG4kjRhQTtWTVzd2t27+t0DEHBPW7iOD23TUiYLio"
+            .parse()
+            .expect("indented entry");
+        assert_eq!(
+            entry.host_patterns(),
+            &HostPatterns::Patterns(vec!["cvs.example.net".to_string()])
+        );
+    }
+
+    #[test]
+    fn several_spaces_between_fields() {
+        let entry: Entry = "cvs.example.net   ssh-ed25519   AAAAC3NzaC1lZDI1NTE5AAAAIB9dG4kjRhQTtWTVzd2t27+t0DEHBPW7iOD23TUiYLio"
+            .parse()
+            .expect("entry with runs of spaces");
+        assert_eq!(
+            entry.host_patterns(),
+            &HostPatterns::Patterns(vec!["cvs.example.net".to_string()])
+        );
+    }
+
+    #[test]
+    fn a_marker_may_be_followed_by_a_tab() {
+        let entry: Entry = "@revoked\tcvs.example.net\tssh-ed25519\tAAAAC3NzaC1lZDI1NTE5AAAAIB9dG4kjRhQTtWTVzd2t27+t0DEHBPW7iOD23TUiYLio"
+            .parse()
+            .expect("tab-separated entry with a marker");
+        assert_eq!(entry.marker(), Some(&Marker::Revoked));
+        assert_eq!(
+            entry.host_patterns(),
+            &HostPatterns::Patterns(vec!["cvs.example.net".to_string()])
+        );
+    }
 
     #[test]
     fn single_host_pattern() {

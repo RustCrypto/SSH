@@ -10,7 +10,7 @@
 
 use crate::{Algorithm, Error, Result};
 use alloc::vec::Vec;
-use encoding::{Decode, Encode, Reader, Writer};
+use encoding::{Decode, Decoder, Encode, Reader, Writer};
 
 /// An opaque public key with a custom algorithm name.
 ///
@@ -41,7 +41,10 @@ impl OpaquePublicKey {
     }
 
     /// Decode [`OpaquePublicKey`] for the specified algorithm.
-    pub(super) fn decode_as(reader: &mut impl Reader, algorithm: Algorithm) -> Result<Self> {
+    pub(super) fn decode_as(
+        reader: &mut Decoder<impl Reader>,
+        algorithm: Algorithm,
+    ) -> Result<Self> {
         Ok(Self {
             algorithm,
             key: OpaquePublicKeyBytes::decode(reader)?,
@@ -75,7 +78,7 @@ pub struct OpaquePublicKeyBytes(Vec<u8>);
 impl Decode for OpaquePublicKeyBytes {
     type Error = Error;
 
-    fn decode(reader: &mut impl Reader) -> Result<Self> {
+    fn decode(reader: &mut Decoder<impl Reader>) -> Result<Self> {
         Ok(Self(Vec::decode(reader)?))
     }
 }

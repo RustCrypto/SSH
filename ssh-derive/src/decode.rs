@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DataEnum, DataStruct, DeriveInput, spanned::Spanned};
 
-use crate::attributes::{ContainerAttributes, FieldAttributes};
+use crate::attributes::{ContainerAttributes, FieldAttributes, validate_variant_attributes};
 
 pub(crate) fn try_derive_decode(input: DeriveInput) -> syn::Result<TokenStream> {
     match input.data {
@@ -29,7 +29,7 @@ fn try_derive_decode_for_struct(
         impl #impl_generics ::ssh_encoding::Decode for #struct_name #type_generics #where_clause {
             type Error = ::ssh_encoding::Error;
 
-            fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+            fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                 #body
             }
         }
@@ -51,9 +51,10 @@ fn try_derive_decode_for_enum(
                 "enums must have a repr attribute to derive `Decode`",
             )
         })?;
-    let variant_arms = variants
+    let variant_branches = variants
         .iter()
         .map(|variant| {
+            validate_variant_attributes(variant)?;
             let variant_name = &variant.ident;
             let discriminant = variant
                 .discriminant
@@ -66,16 +67,18 @@ fn try_derive_decode_for_enum(
                     )
                 })?;
             let body = derive_for_fields(&variant.fields, quote! { #enum_name::#variant_name })?;
-            Ok(quote! { #discriminant => { #body } })
+            Ok(quote! { if discriminant == const { #discriminant } { #body } })
         })
         .collect::<syn::Result<Vec<_>>>()?;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
 
     let body = quote! {
         let discriminant = <#discriminant_type as ::ssh_encoding::Decode>::decode(reader)?;
-        match discriminant {
-            #(#variant_arms,)*
-            _ => return Err(::ssh_encoding::Error::InvalidDiscriminant(discriminant.into()).into()),
+        #(#variant_branches else)* {
+            return Err(::ssh_encoding::Error::InvalidDiscriminant(
+                ::core::convert::TryFrom::try_from(discriminant)
+                    .map_err(|_| ::ssh_encoding::Error::Overflow)?,
+            ));
         }
     };
     let body = maybe_length_prefixed_result(container_attributes.length_prefixed, &body);
@@ -85,7 +88,7 @@ fn try_derive_decode_for_enum(
         impl #impl_generics ::ssh_encoding::Decode for #enum_name #type_generics #where_clause {
             type Error = ::ssh_encoding::Error;
 
-            fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+            fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                 #body
             }
         }
@@ -245,7 +248,7 @@ mod tests {
             impl ::ssh_encoding::Decode for Foo {
                 type Error = ::ssh_encoding::Error;
 
-                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+                fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                     Ok({
                         Self {
                             a: reader.read_prefixed(|reader| <u32 as ::ssh_encoding::Decode>::decode(reader))?,
@@ -274,14 +277,19 @@ mod tests {
             impl ::ssh_encoding::Decode for Foo {
                 type Error = ::ssh_encoding::Error;
 
-                fn decode(reader: &mut impl ::ssh_encoding::Reader) -> ::core::result::Result<Self, Self::Error> {
+                fn decode(reader: &mut ::ssh_encoding::Decoder<impl ::ssh_encoding::Reader>) -> ::core::result::Result<Self, Self::Error> {
                     reader.read_prefixed(|reader| {
                         Ok::<_, ::ssh_encoding::Error>({
                             let discriminant = <u8 as ::ssh_encoding::Decode>::decode(reader)?;
-                            match discriminant {
-                                0 => { Foo :: A },
-                                1 => { Foo :: B },
-                                _ => return Err(::ssh_encoding::Error::InvalidDiscriminant(discriminant.into()).into()),
+                            if discriminant == const { 0 } {
+                                Foo::A
+                            } else if discriminant == const { 1 } {
+                                Foo::B
+                            } else {
+                                return Err(::ssh_encoding::Error::InvalidDiscriminant(
+                                    ::core::convert::TryFrom::try_from(discriminant)
+                                        .map_err(|_| ::ssh_encoding::Error::Overflow)?,
+                                ));
                             }
                         })
                     })
