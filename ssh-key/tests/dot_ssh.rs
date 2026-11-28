@@ -10,6 +10,18 @@ use {
     ssh_key::{Algorithm, Fingerprint},
 };
 
+/// Number of `mldsa44_ed25519` example keys, which only parse when the
+/// algorithm is enabled.
+#[cfg(feature = "mldsa-eddsa")]
+const MLDSA_EDDSA_PRIVATE_KEYS: usize = 3;
+#[cfg(not(feature = "mldsa-eddsa"))]
+const MLDSA_EDDSA_PRIVATE_KEYS: usize = 0;
+
+#[cfg(feature = "mldsa-eddsa")]
+const MLDSA_EDDSA_PUBLIC_KEYS: usize = 1;
+#[cfg(not(feature = "mldsa-eddsa"))]
+const MLDSA_EDDSA_PUBLIC_KEYS: usize = 0;
+
 /// Open `.ssh` using the `test/examples`.
 fn dot_ssh() -> DotSsh {
     DotSsh::open("tests/examples")
@@ -25,7 +37,10 @@ fn path_round_trip() {
 #[test]
 fn private_keys() {
     let dot_ssh = dot_ssh();
-    assert_eq!(dot_ssh.private_keys().unwrap().count(), 24);
+    assert_eq!(
+        dot_ssh.private_keys().unwrap().count(),
+        24 + MLDSA_EDDSA_PRIVATE_KEYS
+    );
 }
 
 #[cfg(feature = "sha2")]
@@ -43,7 +58,10 @@ fn private_key_with_fingerprint() {
 #[test]
 fn public_keys() {
     let dot_ssh = dot_ssh();
-    assert_eq!(dot_ssh.public_keys().unwrap().count(), 12);
+    assert_eq!(
+        dot_ssh.public_keys().unwrap().count(),
+        12 + MLDSA_EDDSA_PUBLIC_KEYS
+    );
 }
 
 #[cfg(feature = "sha2")]
